@@ -108,6 +108,7 @@ body {
     border-radius: 10px;
     font-family: 'Inter', sans-serif;
     font-weight: bold;
+    cursor: pointer;
 }
 
 .solid-line-with-text {

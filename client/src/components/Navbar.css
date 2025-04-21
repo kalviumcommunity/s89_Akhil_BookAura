@@ -1,0 +1,26 @@
+.navbar{
+    background-color: bisque;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.left{
+    list-style: none;
+    font-size: 1.35rem;
+    align-items: center;
+    padding: 15px;
+    cursor: pointer;
+}
+.right{
+    display: flex;
+    list-style: none;
+    font-size: 1.35rem;
+    align-items: center;
+    gap:2rem;
+    margin: 10px;
+}
+.navbar ul li:hover{
+    color:brown;
+    border-bottom: 2px solid brown;
+    cursor: pointer;
+}

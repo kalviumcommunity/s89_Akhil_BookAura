@@ -2,12 +2,16 @@ import React from 'react'
 import { useState } from 'react'
 import axios from 'axios'
 import '../pagescss/login.css'
+import { useNavigate } from 'react-router-dom'
+
 const Login = () => {
+  const navigate = useNavigate();
     const [form,setForm]=useState({email:"",password:""})
 const handleSubmit= async(e)=>{
     e.preventDefault();
     try {
         await axios.post("http://localhost:5000/router/login", form, { withCredentials: true });
+        navigate('/home');
         console.log("Login successful");
     } catch (error) {
         console.error("Error logging in:", error);
@@ -19,14 +23,14 @@ const handleGoogle = async(e) =>{
     try {
         await axios.get("http://localhost:5000/router/login")
     } catch (error) {
-        onsole.error("Error logging in:", error);
+        console.error("Error logging in:", error);
     }
 }
   return (
     <>
     <div className='boxes'>
     <div className='colourbox'>
-      <h2>BookAura</h2>
+      <h2 onClick={()=>navigate('/home')}>BookAura</h2>
       <h1>Welcome to</h1>
       <h1> BookAura</h1>
       <br />
