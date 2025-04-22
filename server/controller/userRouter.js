@@ -81,7 +81,7 @@ router.post('/forgotpassword', async (req, res) => {
         });
 
         await transporter.sendMail({
-            from: "akhil031215n@gmail.com",
+            from: "bookaura.ba@gmail.com",
             to: user.email,
             subject: "Your Password Reset Code",
             text: `Your code is: ${code}`
@@ -94,7 +94,7 @@ router.post('/forgotpassword', async (req, res) => {
 });
 
 // Reset Password Route
-router.post('/resetpassword', async (req, res) => {
+router.put('/resetpassword', async (req, res) => {
     try {
         const { email, code, newpassword } = req.body;
         if (!email || !code || !newpassword) {
