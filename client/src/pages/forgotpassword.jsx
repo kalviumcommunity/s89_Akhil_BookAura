@@ -6,7 +6,7 @@ const Forgotpassword = () => {
   const [hidden,setHidden] = useState(false);
   const [code,setCode] =useState("");
   const [newpassword,setNewPassword]=useState("");
-  const handelSubmit = async(e)=>{
+  const handleSubmit = async(e)=>{
     e.preventDefault();
     try {
       await axios.post('http://localhost:5000/router/forgotpassword', form, {
@@ -30,7 +30,7 @@ const Forgotpassword = () => {
     e.preventDefault();
     try {
       
-+            await axios.post('http://localhost:5000/router/resetpassword',{email:form.email,code,newpassword},{ withCredentials: true })
+           await axios.put('http://localhost:5000/router/resetpassword',{email:form.email,code,newpassword},{ withCredentials: true })
       console.log('password chaged sucessfully')
     } catch (error) {
       console.log("error in reseting the password",error);
@@ -39,11 +39,11 @@ const Forgotpassword = () => {
   return (
     
     <div>
-      <form onSubmit={handelSubmit}>
+      <form onSubmit={handleSubmit}>
         <h1>Forgotpassword</h1>
         <label htmlFor="">Email</label>
         <input type="email" placeholder='email...' value={form.email} onChange={(e)=>setForm({...form,email:e.target.value})} />
-        <input type="submit" onClick={handelSubmit}/>
+        <input type="submit" onClick={handleSubmit}/>
         {hidden &&(
           <>
           <label htmlFor="">Code</label>
