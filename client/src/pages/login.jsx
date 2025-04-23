@@ -1,65 +1,95 @@
-import React from 'react'
-import { useState } from 'react'
-import axios from 'axios'
-import '../pagescss/login.css'
-import { useNavigate } from 'react-router-dom'
+import React, { useState } from 'react';
+import axios from 'axios';
+import '../pagescss/login.css';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const navigate = useNavigate();
-    const [form,setForm]=useState({email:"",password:""})
-const handleSubmit= async(e)=>{
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [error, setError] = useState(""); // State to handle error messages
+
+  // Handle form submission for login
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(""); // Clear any previous errors
     try {
-        await axios.post("http://localhost:5000/router/login", form, { withCredentials: true });
-        navigate('/home');
-        console.log("Login successful");
+      const response = await axios.post(
+        "http://localhost:5000/router/login",
+        form,
+        { withCredentials: true }
+      );
+      console.log("Login successful:", response.data);
+      navigate('/home'); // Navigate to the home page on successful login
     } catch (error) {
-        console.error("Error logging in:", error);
+      console.error("Error logging in:", error.response?.data || error.message);
+      setError(error.response?.data?.message || "An error occurred during login.");
     }
+  };
 
-}
-
-const handleGoogle = async(e) =>{
+  // Handle Google login
+  const handleGoogle = async () => {
     try {
-        await axios.get("http://localhost:5000/router/login")
+      const response = await axios.get("http://localhost:5000/router/login/google", { withCredentials: true });
+      console.log("Google login successful:", response.data);
+      navigate('/home'); // Navigate to the home page on successful Google login
     } catch (error) {
-        console.error("Error logging in:", error);
+      console.error("Error logging in with Google:", error.response?.data || error.message);
+      setError("An error occurred during Google login.");
     }
-}
+  };
+
   return (
     <>
-    <div className='boxes'>
-    <div className='colourbox'>
-      <h2 onClick={()=>navigate('/home')}>BookAura</h2>
-      <h1>Welcome to</h1>
-      <h1> BookAura</h1>
-      <br />
-      <p>Step into the future of digital reading.</p>
-      <p> Your neon-lit library awaits.</p>
-      <img src="https://images.stockcake.com/public/c/e/9/ce956fa4-37f2-4738-b3c2-650d7bb4f067_large/enchanted-forest-book-stockcake.jpg" alt="" />
-    </div>
-    <div className='loginbox'>
-      <h1>Sign In</h1>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="">Email</label>
-        <input type="text" placeholder='Email...' value={form.email} onChange={(e)=>setForm({...form,email:e.target.value})} required />
-        <label htmlFor="">Password</label>
-        <input type="password" placeholder='Password' value={form.password} onChange={(e)=>setForm({...form,password:e.target.value})} required />
-        <a href="/forgotpassword">Forgot Password</a>
-        <input type="submit" />
-        <div className="solid-line-with-text">
-        <div className="line"></div>
-        <span>or sign in with</span>
-        <div className="line"></div>
+      <div className="boxes">
+        <div className="colourbox">
+          <h2 onClick={() => navigate('/home')}>BookAura</h2>
+          <h1>Welcome to</h1>
+          <h1>BookAura</h1>
+          <br />
+          <p>Step into the future of digital reading.</p>
+          <p>Your neon-lit library awaits.</p>
+          <img
+            src="https://images.stockcake.com/public/c/e/9/ce956fa4-37f2-4738-b3c2-650d7bb4f067_large/enchanted-forest-book-stockcake.jpg"
+            alt="Enchanted Forest"
+          />
         </div>
-      </form>
-      <div className='google-signin' onClick={handleGoogle}>
-        <p>Google</p>
+        <div className="loginbox">
+          <h1>Sign In</h1>
+          <form onSubmit={handleSubmit}>
+            <label htmlFor="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              placeholder="Email..."
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
+            />
+            <label htmlFor="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              placeholder="Password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              required
+            />
+            <a href="/forgotpassword">Forgot Password</a>
+            <input type="submit" value="Sign In" />
+            <div className="solid-line-with-text">
+              <div className="line"></div>
+              <span>or sign in with</span>
+              <div className="line"></div>
+            </div>
+          </form>
+          {error && <p className="error-message">{error}</p>} {/* Display error messages */}
+          <div className="google-signin" onClick={handleGoogle}>
+            <p>Google</p>
+          </div>
+        </div>
       </div>
-    </div>
-    </div>
     </>
-  )
-}
+  );
+};
 
-export default Login
+export default Login;

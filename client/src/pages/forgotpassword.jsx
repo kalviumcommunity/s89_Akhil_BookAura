@@ -50,7 +50,7 @@ const Forgotpassword = () => {
           <input type="text" placeholder='code...' value={code} onChange={(e)=>setCode(e.target.value)} />
           <label htmlFor="">newPassword</label>
           <input type="password" placeholder='newpassword' value={newpassword} onChange={(e)=>setNewPassword(e.target.value)} />
-          <input type="submit" onClick={handlecode} />
+          <input type="submit" value="Reset Password" onClick={handlecode} />
           </>
         )}
       </form>
