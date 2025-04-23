@@ -25,7 +25,7 @@ router.post('/signup', async (req, res) => {
         const savedUser = await user.save();
         const token =jwt.sign({email:savedUser.email},process.env.JWT_SECRET,{expiresIn:"7d"});
         res.cookie("token",token,{httpOnly:true,secure:true,sameSite:"none"});
-        res.status(201).json({ message: 'User registered successfully', user: token });
+        res.status(201).json({ message: 'User registered successfully', user: user });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal server error' });
