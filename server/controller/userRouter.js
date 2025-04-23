@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require('../model/usermodel');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 // Register Route
@@ -22,8 +23,9 @@ router.post('/signup', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 13);
         const user = new User({ username, email, password: hashedPassword });
         const savedUser = await user.save();
-
-        res.status(201).json({ message: 'User registered successfully', user: savedUser });
+        const token =jwt.sign({email:savedUser.email},process.env.JWT_SECRET,{expiresIn:"7d"});
+        res.cookie("token",token,{httpOnly:true,secure:true,sameSite:"none"});
+        res.status(201).json({ message: 'User registered successfully', user: token });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal server error' });
@@ -47,7 +49,8 @@ router.post('/login', async (req, res) => {
         if (!isPasswordCorrect) {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
-
+        const token = jwt.sign({email:user.email},process.env.JWT_SECRET,{expiresIn:"7d"});
+        res.cookie("token",token,{httpOnly:true,secure:true,sameSite:"none"});
         res.status(200).json({ message: 'Login successful', user });
     } catch (error) {
         console.error(error);
@@ -81,7 +84,7 @@ router.post('/forgotpassword', async (req, res) => {
         });
 
         await transporter.sendMail({
-            from: "bookaura.ba@gmail.com",
+            from: process.env.email_nodemailer,
             to: user.email,
             subject: "Your Password Reset Code",
             text: `Your code is: ${code}`

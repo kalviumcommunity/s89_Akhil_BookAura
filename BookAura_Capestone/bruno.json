@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "BookAura_Capestone",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}
