@@ -1,95 +1,87 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import '../pagescss/login.css';
-import { useNavigate } from 'react-router-dom';
+import '../pagescss/Auth.css';
+import { useNavigate, useLocation } from 'react-router-dom';
+import AuthImage from '../images/Auth.png';
+import Google from '../images/google.png';
+import logo from'../images/logo.png'
 
 const Login = () => {
-  const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState(""); // State to handle error messages
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // Handle form submission for login
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const errorParam = params.get('error');
+    if (errorParam) {
+      setError('Authentication failed. Please try again.');
+    }
+  }, [location]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); // Clear any previous errors
     try {
-      const response = await axios.post(
-        "http://localhost:5000/router/login",
-        form,
-        { withCredentials: true }
-      );
-      console.log("Login successful:", response.data);
-      navigate('/home'); // Navigate to the home page on successful login
+      const response = await axios.post("http://localhost:5000/router/login", form, { withCredentials: true });
+      localStorage.setItem('authToken', response.data.token);
+      console.log("Login successful");
+      await setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+      }, 3000); 
+      setTimeout(() => {
+        navigate('/home');
+      }, 2000);
     } catch (error) {
-      console.error("Error logging in:", error.response?.data || error.message);
-      setError(error.response?.data?.message || "An error occurred during login.");
+      console.error("Error logging in:", error);
+      setError(error.response?.data?.message || 'Login failed. Please try again.');
     }
-  };
+  }
 
-  // Handle Google login
-  const handleGoogle = async () => {
-    try {
-      const response = await axios.get("http://localhost:5000/router/login/google", { withCredentials: true });
-      console.log("Google login successful:", response.data);
-      navigate('/home'); // Navigate to the home page on successful Google login
-    } catch (error) {
-      console.error("Error logging in with Google:", error.response?.data || error.message);
-      setError("An error occurred during Google login.");
-    }
-  };
+  const handleGoogleSignIn = () => {
+    setError('');
+    window.location.href = "http://localhost:5000/router/auth/google";
+  }
 
   return (
-    <>
-      <div className="boxes">
-        <div className="colourbox">
-          <h2 onClick={() => navigate('/home')}>BookAura</h2>
-          <h1>Welcome to</h1>
-          <h1>BookAura</h1>
-          <br />
-          <p>Step into the future of digital reading.</p>
-          <p>Your neon-lit library awaits.</p>
-          <img
-            src="https://images.stockcake.com/public/c/e/9/ce956fa4-37f2-4738-b3c2-650d7bb4f067_large/enchanted-forest-book-stockcake.jpg"
-            alt="Enchanted Forest"
-          />
-        </div>
-        <div className="loginbox">
+    <div className='boxes'>
+      <div className='colourbox'>
+        <img className='logoimage' onClick={()=>navigate('/home')} src={logo} alt="logo" />
+        <img className='authimage' src={AuthImage} alt="Login" />
+        <br />
+      </div>
+      <div className='loginbox'>
+        <div className='login-form'>
           <h1>Sign In</h1>
+          {error && <div className="error-message">{error}</div>}
           <form onSubmit={handleSubmit}>
-            <label htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              placeholder="Email..."
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              required
-            />
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              placeholder="Password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              required
-            />
-            <a href="/forgotpassword">Forgot Password</a>
-            <input type="submit" value="Sign In" />
+            <label>Email</label>
+            <input type="text" placeholder='Email...' value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+            <label>Password</label>
+            <input type="password" placeholder='Password' value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+            <a href="/signup">Don't have account</a>
+            <a href="/forgotpassword">Forgot Password?</a>
+            <input type="submit" value="Login" />
             <div className="solid-line-with-text">
               <div className="line"></div>
               <span>or sign in with</span>
               <div className="line"></div>
             </div>
           </form>
-          {error && <p className="error-message">{error}</p>} {/* Display error messages */}
-          <div className="google-signin" onClick={handleGoogle}>
-            <p>Google</p>
-          </div>
+          <div className='google-signin'>
+            <button onClick={handleGoogleSignIn}><img src={Google} alt="Google" className='google-icon' />Sign in with Google</button>
+            </div>
+          
         </div>
+        
       </div>
-    </>
+      {success && 
+          <div className="success-message">Login successful!</div>
+          }
+    </div>
   );
-};
+}
 
 export default Login;

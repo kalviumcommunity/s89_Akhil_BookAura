@@ -1,17 +1,56 @@
-import React from 'react';
-import './Navbar.css'
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import './Navbar.css';
+import { useNavigate, useLocation } from 'react-router-dom';
+import Logo from '../images/logo.png';
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation(); // Get the current location
+  const [scrolled, setScrolled] = useState(false);
+
+  // Add scroll event listener
+  useEffect(() => {
+    const handleScroll = () => {
+      const offset = window.scrollY;
+      if (offset > 50) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+
+    // Clean up the event listener when component unmounts
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
   return (
-    <div className='navbar'>
-     
-        <div className='left' onClick={()=>navigate('/home')}>BookAura</div>
-        <ul className='right'>
-        <li onClick={()=>navigate('/home')}>Home</li>
-        <li onClick={()=>navigate('/marketplace')}>Marketplace</li>
-        <li onClick={()=>navigate('/login')}>Login</li>
+    <div className={`navbar ${scrolled ? 'scrolled' : ''}`}>
+      <div className='left' onClick={() => navigate('/home')}>
+        <img src={Logo} alt="logo" className='logo' />
+      </div>
+      <ul className='right'>
+        <li
+          className={location.pathname === '/home' ? 'active' : 'notactive'} // Highlight Home
+          onClick={() => navigate('/home')}
+        >
+          Home
+        </li>
+        <li
+          className={location.pathname === '/marketplace' ? 'active' : 'notactive'} // Highlight Marketplace
+          onClick={() => navigate('/marketplace')}
+        >
+          Marketplace
+        </li>
+        <li
+          className='login'
+          onClick={() => navigate('/signup')}
+        >
+          Create Account
+        </li>
       </ul>
     </div>
   );

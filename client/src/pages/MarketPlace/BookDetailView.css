@@ -1,0 +1,498 @@
+/* BookDetailView.css - Clean CSS for full page book detail view */
+
+.book-detail {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background-color: #E6D9CC;
+  z-index: 1000;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.3s ease-out;
+  padding-top: 86px; /* Same as navbar height */
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* No overlay needed for full page view */
+
+.book-detail-header {
+  display: flex;
+  position: fixed;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 150px;
+  background-color: #fff;
+  border-bottom: 1px solid #eee;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 86px; /* Same as navbar height */
+  z-index: 10;
+}
+
+.book-detail-header h1.book-detail-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  font-size: 1.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 50%;
+}
+
+.book-detail-back {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.2s ease;
+  padding: 8px 15px;
+  border-radius: 6px;
+}
+
+.book-detail-back:hover {
+  color: #A67C52;
+  background-color: #f9f5f1;
+}
+
+.book-detail-back-icon {
+  margin-right: 8px;
+}
+
+.book-detail-content {
+  display: flex;
+  padding: 40px 150px;
+  gap: 60px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.book-detail-image {
+  top: 0;
+  flex: 0 0 auto;
+  height: 70vh;
+  width: 300px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  transition: transform 0.3s ease;
+  position: sticky;
+  top: 50px; /* Navbar + header + some padding */
+}
+.go-back-button{
+  all:unset;
+  width: 10%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  margin-top: 18px;
+  margin-left: 10px;
+  padding: 10px 20px;
+  background-color: #A67C52;
+  color: white;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.go-back-button:hover{
+  background-color: #8C6239;
+  transition: all 0.3s ease;
+  transform: scale(1.05);
+}
+
+.book-detail-image:hover {
+  transform: scale(1.03);
+}
+
+.book-detail-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 700px;
+}
+
+.book-detail-title {
+  font-family: serif;
+  font-size: 2.5rem;
+  font-weight: 600;
+  margin: 0 0 15px 0;
+  color: #333;
+  line-height: 1.2;
+}
+
+.book-detail-author {
+  font-size: 1.3rem;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.book-detail-price {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #A67C52;
+  margin-bottom: 25px;
+}
+
+.book-detail-genre {
+  display: inline-block;
+  background-color: #f0e6dd;
+  color: #845b32;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 1rem;
+  margin-bottom: 25px;
+  font-weight: 500;
+}
+
+.book-detail-description {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: #444;
+  margin-bottom: 30px;
+  background-color: #fff;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.book-detail-actions {
+  display: flex;
+  gap: 20px;
+  margin-top: auto;
+}
+
+.book-detail-button {
+  padding: 15px 30px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  max-width: 200px;
+  text-align: center;
+}
+
+.book-detail-buy {
+  background-color: #A67C52;
+  color: white;
+  border: none;
+  box-shadow: 0 4px 10px rgba(166, 124, 82, 0.3);
+}
+
+.book-detail-buy:hover {
+  background-color: #845b32;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(166, 124, 82, 0.4);
+}
+
+.book-detail-cart {
+  background-color: white;
+  color: #A67C52;
+  border: 2px solid #A67C52;
+}
+
+.book-detail-cart:hover {
+  background-color: #f9f5f1;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Additional sections */
+.book-detail-additional {
+  margin-top: 40px;
+  background-color: #fff;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.book-detail-section-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.book-detail-specs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.book-detail-spec-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.book-detail-spec-label {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.book-detail-spec-value {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+/* Responsive styles */
+@media screen and (max-width: 1200px) {
+  .book-detail-header {
+    padding: 20px 80px;
+  }
+
+  .book-detail-content {
+    padding: 40px 80px;
+    gap: 40px;
+  }
+
+  .book-detail-image {
+    width: 250px;
+  }
+
+  .book-detail-title {
+    font-size: 2.2rem;
+  }
+}
+
+@media screen and (max-width: 992px) {
+  .book-detail-header {
+    padding: 15px 40px;
+  }
+
+  .book-detail-header h1.book-detail-title {
+    font-size: 1.6rem;
+    max-width: 40%;
+  }
+
+  .book-detail-content {
+    padding: 30px 40px;
+    gap: 30px;
+  }
+
+  .book-detail-image {
+    width: 220px;
+    position: static;
+  }
+
+  .book-detail-info .book-detail-title {
+    font-size: 2rem;
+  }
+
+  .book-detail-author {
+    font-size: 1.2rem;
+  }
+
+  .book-detail-price {
+    font-size: 1.6rem;
+  }
+
+  .book-detail-specs {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .book-detail-header {
+    padding: 15px 20px;
+  }
+
+  .book-detail-header h1.book-detail-title {
+    font-size: 1.4rem;
+    max-width: 60%;
+  }
+
+  .book-detail-content {
+    flex-direction: column;
+    padding: 25px 20px;
+    gap: 25px;
+    align-items: center;
+  }
+
+  .book-detail-image {
+    width: 200px;
+    margin: 0 auto;
+  }
+
+  .book-detail-info {
+    text-align: center;
+  }
+
+  .book-detail-info .book-detail-title {
+    font-size: 1.8rem;
+    text-align: center;
+  }
+
+  .book-detail-author {
+    text-align: center;
+    font-size: 1.1rem;
+  }
+
+  .book-detail-price {
+    text-align: center;
+    font-size: 1.5rem;
+  }
+
+  .book-detail-genre {
+    margin: 0 auto 20px;
+  }
+
+  .book-detail-description {
+    text-align: left;
+    font-size: 1rem;
+  }
+
+  .book-detail-actions {
+    flex-direction: row;
+    justify-content: center;
+    width: 100%;
+    gap: 15px;
+  }
+
+  .book-detail-button {
+    flex: 1;
+    max-width: 180px;
+    padding: 12px 20px;
+    font-size: 1rem;
+  }
+
+  .book-detail-additional {
+    padding: 20px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .book-detail-header {
+    padding: 12px 15px;
+  }
+
+  .book-detail-header h1.book-detail-title {
+    font-size: 1.2rem;
+    max-width: 50%;
+  }
+
+  .book-detail-back {
+    font-size: 0.9rem;
+    padding: 6px 10px;
+  }
+
+  .book-detail-content {
+    padding: 20px 15px;
+    gap: 20px;
+  }
+
+  .book-detail-image {
+    width: 180px;
+  }
+
+  .book-detail-info .book-detail-title {
+    font-size: 1.5rem;
+  }
+
+  .book-detail-author {
+    font-size: 1rem;
+    margin-bottom: 15px;
+  }
+
+  .book-detail-price {
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+  }
+
+  .book-detail-genre {
+    font-size: 0.9rem;
+    padding: 6px 12px;
+    margin-bottom: 15px;
+  }
+
+  .book-detail-description {
+    font-size: 0.95rem;
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+
+  .book-detail-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .book-detail-button {
+    padding: 12px 20px;
+    font-size: 0.95rem;
+    max-width: none;
+  }
+
+  .book-detail-additional {
+    margin-top: 20px;
+    padding: 15px;
+  }
+
+  .book-detail-section-title {
+    font-size: 1.2rem;
+  }
+
+  .book-detail-spec-value {
+    font-size: 1rem;
+  }
+}
+
+/* Extra small screens */
+@media screen and (max-width: 360px) {
+  .book-detail-header {
+    padding: 10px;
+  }
+
+  .book-detail-header h1.book-detail-title {
+    font-size: 1rem;
+    max-width: 40%;
+  }
+
+  .book-detail-back {
+    font-size: 0.8rem;
+    padding: 5px 8px;
+  }
+
+  .book-detail-back-icon {
+    margin-right: 4px;
+  }
+
+  .book-detail-content {
+    padding: 15px 10px;
+    gap: 15px;
+  }
+
+  .book-detail-image {
+    width: 150px;
+  }
+
+  .book-detail-info .book-detail-title {
+    font-size: 1.3rem;
+  }
+
+  .book-detail-description {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    padding: 12px;
+  }
+
+  .book-detail-button {
+    padding: 10px 15px;
+    font-size: 0.9rem;
+  }
+}
