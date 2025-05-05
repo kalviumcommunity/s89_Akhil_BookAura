@@ -1,33 +1,101 @@
-import React from 'react'
+import React, { useState } from 'react';
 import axios from 'axios';
-import { useState } from 'react'
+import { useNavigate } from 'react-router-dom';
+import AuthImage from '../images/Auth.png'; // Same login image
+import Google from '../images/google.png'; // Google icon
+import '../pagescss/Auth.css'; // CSS for signup page
+import logo from '../images/logo.png'
 
 const Signup = () => {
-    const [form,setForm] = useState({username:'',email:'',password:''})
+  const [form, setForm] = useState({ username: "", email: "", password: "" });
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-    const handelSubmit = async (e)=>{
-      e.preventDefault();
-      try {
-        await axios.post('http://localhost:5000/router/signup',form, { withCredentials: true })
-        console.log("signup successful");
-      } catch (error) {
-        console.error("Error sigin in:", error);
-      }
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post("http://localhost:5000/router/signup", form, { withCredentials: true });
+      console.log("Signup successful:", response.data);
+      alert("Signup successful!");
+      navigate('/home'); // Redirect to home after successful signup
+    } catch (error) {
+      console.error("Error signing up:", error);
+      setError(error.response?.data?.message || "Signup failed. Please try again.");
     }
-  return (
-    <div>
-      <form onSubmit={handelSubmit}>
-        <h1>Signup</h1>
-        <label htmlFor="">UserName</label>
-        <input type="text" placeholder='username...' value={form.username} onChange={(e)=>setForm({...form,username:e.target.value})} required />
-        <label htmlFor="">email</label>
-        <input type="text" placeholder='email...' value={form.email} onChange={(e)=>setForm({...form,email:e.target.value})} required/>
-        <label htmlFor="">Password</label>
-        <input type="password" placeholder='password' value={form.password} onChange={(e)=>setForm({...form,password:e.target.value})} required />
-        <input type="submit" onClick={handelSubmit} />
-      </form>
-    </div>
-  )
-}
+  };
 
-export default Signup
+  const handleGoogleSignIn = () => {
+    setError('');
+    window.location.href = "http://localhost:5000/router/auth/google";
+    // Let backend handle redirect after Google login
+  };
+
+  return (
+    <div className="boxes">
+      <div className="colourbox">
+        <img className='logoimage' onClick={()=>navigate('/home')} src={logo} alt="logo" />
+        <img className='authimage' src={AuthImage} alt="Signup" />
+        <br />
+      </div>
+      <div className="loginbox">
+        <div className="login-form">
+          <h1>Sign Up</h1>
+          {error && <div className="error-message">{error}</div>}
+          <form onSubmit={handleSubmit}>
+            <label>Username</label>
+            <input
+              type="text"
+              name="username"
+              placeholder="Username"
+              value={form.username}
+              onChange={handleChange}
+              required
+            />
+
+            <label>Email</label>
+            <input
+              type="text"
+              name="email"
+              placeholder="Email"
+              value={form.email}
+              onChange={handleChange}
+              required
+            />
+
+            <label>Password</label>
+            <input
+              type="password"
+              name="password"
+              placeholder="Password"
+              value={form.password}
+              onChange={handleChange}
+              required
+            />
+
+            <a href="/login">Already have an account?</a>
+            <input type="submit" value="Sign Up" />
+
+            <div className="solid-line-with-text">
+              <div className="line"></div>
+              <span>or sign up with</span>
+              <div className="line"></div>
+            </div>
+          </form>
+
+          <div className="google-signin">
+            <button onClick={handleGoogleSignIn}>
+              <img src={Google} alt="Google" className="google-icon" />
+              Sign up with Google
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Signup;

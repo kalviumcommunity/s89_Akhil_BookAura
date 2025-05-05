@@ -1,0 +1,18 @@
+[
+  { "id": "1", "name": "Fiction" },
+  { "id": "2", "name": "Mystery" },
+  { "id": "3", "name": "Thriller" },
+  { "id": "4", "name": "Science Fiction" },
+  { "id": "5", "name": "Adventure" },
+  { "id": "6", "name": "Romance" },
+  { "id": "7", "name": "Historical Fiction" },
+  { "id": "8", "name": "Self-Help" },
+  { "id": "9", "name": "Psychology" },
+  { "id": "10", "name": "Wellness" },
+  { "id": "11", "name": "Horror" },
+  { "id": "12", "name": "Supernatural" },
+  { "id": "13", "name": "Bussiness" },
+  { "id": "14", "name": "Economics" },
+  { "id": "15", "name": "Finance" },
+  { "id": "16", "name": "Fantasy" }
+]

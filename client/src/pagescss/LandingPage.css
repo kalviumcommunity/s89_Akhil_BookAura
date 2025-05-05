@@ -1,0 +1,45 @@
+.landing-page {
+    height: 100vh;
+    background-color: #DBD7D1;
+    color: black;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Poppins', sans-serif;
+    align-items: center;
+    justify-content: center;
+}
+.landing-page button {
+    background: #75E6DA;
+    padding: 15px 25px;
+    border: none;
+    border-radius: 30px;
+    animation: updown 0.5s ease-in-out infinite alternate;
+    animation-delay: 0.5s;
+}
+.landing-page button:hover{
+    cursor: pointer;
+    animation: none;
+}
+@keyframes updown {
+    0% {
+        transform: translateY(0px);
+    }
+    100% {
+        transform: translateY(-10px);
+    }
+}
+.quote{
+    border-right: black 2px solid;
+    animation: blink 1s linear infinite;
+}
+@keyframes blink {
+    0% {
+        border-color: transparent;
+    }
+    50% {
+        border-color: black;
+    }
+    100% {
+        border-color: transparent;
+    }
+}

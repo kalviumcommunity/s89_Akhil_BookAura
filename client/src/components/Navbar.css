@@ -1,26 +1,116 @@
-.navbar{
-    background-color: bisque;
+.navbar {
+    position: fixed;
+    border-bottom: 1px solid rgba(0, 0, 0, 1);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    padding-right: 0;
+    padding: 10px 20px;
+    flex-wrap: wrap;
+    background-color: #E6D9CC; /* Using the #DBD7D1 background with opacity */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 1000;
+    transition: all 0.3s ease;
+    width: 100%;
+    
 }
-.left{
+
+.left {
     list-style: none;
     font-size: 1.35rem;
     align-items: center;
     padding: 15px;
     cursor: pointer;
+    position: relative;
+    z-index: 2;
 }
-.right{
+
+.right {
     display: flex;
     list-style: none;
-    font-size: 1.35rem;
+    font-size: clamp(1rem, 1.5vw, 1.35rem);
     align-items: center;
-    gap:2rem;
-    margin: 10px;
+    gap: clamp(1rem, 2vw, 2rem);
+    z-index: 2;
+    flex-wrap: wrap;
+    margin-left: auto;
+    padding-left: 0;
 }
-.navbar ul li:hover{
-    color:brown;
+
+.notactive:hover {
+    color: brown;
     border-bottom: 2px solid brown;
     cursor: pointer;
+    transition: all 0.3s ease;
 }
+
+.logo {
+    width: clamp(80px, 10vw, 100px);
+    height: auto;
+    padding-top: 5px;
+    margin-left: -10px;
+    cursor: pointer;
+}
+
+.active {
+    cursor: pointer;
+    font-weight: bold;
+    color: #333333;
+    border-bottom: 2px solid #333333;
+}
+
+.login {
+    padding: clamp(6px, 1vw, 10px);
+    font-size: clamp(0.8rem, 1vw, 1rem);
+    font-weight: bold;
+    border: 2.5px solid black;
+    transition: all 0.3s ease;
+}
+
+.login:hover {
+    cursor: pointer;
+    box-shadow: 3px 3px 1px rgba(1, 1, 1, 1);
+    transform: scale(1.05);
+}
+
+/* Responsive styles */
+@media screen and (max-width: 768px) {
+    .navbar {
+        padding: 10px;
+    }
+
+    .right {
+        gap: 1rem;
+    }
+
+    .left {
+        padding: 10px;
+    }
+}
+
+/* Small screens */
+@media screen and (max-width: 480px) {
+    .navbar {
+        padding: 5px 10px;
+    }
+
+    .logo {
+        width: 70px;
+    }
+
+    .left {
+        padding: 5px;
+    }
+
+    .right {
+        gap: 0.8rem;
+    }
+
+    .login {
+        padding: 8px;
+        font-size: 0.8rem;
+    }
+    
+}
+
