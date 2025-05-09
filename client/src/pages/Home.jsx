@@ -1,9 +1,25 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import '../pagescss/Home.css'
 import bestseller from '../images/bestseller.png'
 import Footer from '../components/Footer'
+import { useCart } from './MarketPlace/cart'
+import { SafeImage, getProxiedImageUrl, handleImageError } from '../utils/imageUtils'
+
 const Home = () => {
+  const { syncCartWithServer } = useCart();
+
+  // Check if we need to sync cart after Google login
+  useEffect(() => {
+    const shouldSyncCart = localStorage.getItem('syncCartAfterLogin');
+    if (shouldSyncCart === 'true') {
+      // Sync cart with server
+      syncCartWithServer();
+      // Remove the flag
+      localStorage.removeItem('syncCartAfterLogin');
+    }
+  }, [syncCartWithServer]);
+
   return (
     <div>
       <Navbar/>
@@ -66,7 +82,7 @@ const Home = () => {
           <div className='featured-books-container'>
             <div className='featured-book'>
               <div className='book-cover'>
-                <img src="https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1348805097i/10534.jpg" alt="The Hobbit" />
+                <SafeImage src="https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1348805097i/10534.jpg" alt="The Hobbit" />
               </div>
               <div className='book-info'>
                 <h3>The Hobbit</h3>
@@ -80,7 +96,7 @@ const Home = () => {
 
             <div className='featured-book'>
               <div className='book-cover'>
-                <img src="https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1631088473i/5907.jpg" alt="Pride and Prejudice" />
+                <SafeImage src="https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1631088473i/5907.jpg" alt="Pride and Prejudice" />
               </div>
               <div className='book-info'>
                 <h3>Pride and Prejudice</h3>
@@ -94,7 +110,7 @@ const Home = () => {
 
             <div className='featured-book'>
               <div className='book-cover'>
-                <img src="https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1673869741i/1885.jpg" alt="Frankenstein" />
+                <SafeImage src="https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1673869741i/1885.jpg" alt="Frankenstein" />
               </div>
               <div className='book-info'>
                 <h3>Frankenstein</h3>
@@ -108,7 +124,7 @@ const Home = () => {
 
             <div className='featured-book'>
               <div className='book-cover'>
-                <img src="https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1572098085i/18135.jpg" alt="Romeo and Juliet" />
+                <SafeImage src="https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1572098085i/18135.jpg" alt="Romeo and Juliet" />
               </div>
               <div className='book-info'>
                 <h3>Romeo and Juliet</h3>

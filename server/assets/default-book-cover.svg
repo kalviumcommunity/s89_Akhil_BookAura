@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="200" height="300" xmlns="http://www.w3.org/2000/svg">
+  <!-- Book cover background -->
+  <rect width="200" height="300" fill="#E6D9CC" />
+  
+  <!-- Book spine shadow -->
+  <rect x="10" y="10" width="180" height="280" fill="#D7C6B9" rx="5" ry="5" />
+  
+  <!-- Book cover -->
+  <rect x="15" y="15" width="170" height="270" fill="#F5F1EC" rx="3" ry="3" />
+  
+  <!-- Book title placeholder -->
+  <rect x="30" y="80" width="140" height="20" fill="#A67C52" rx="2" ry="2" />
+  <rect x="30" y="110" width="100" height="15" fill="#A67C52" rx="2" ry="2" opacity="0.7" />
+  
+  <!-- Book icon -->
+  <g transform="translate(75, 160)">
+    <rect x="0" y="0" width="50" height="70" fill="#A67C52" rx="2" ry="2" />
+    <rect x="5" y="5" width="40" height="60" fill="#F5F1EC" rx="1" ry="1" />
+    <line x1="10" y1="15" x2="40" y2="15" stroke="#A67C52" stroke-width="2" />
+    <line x1="10" y1="25" x2="40" y2="25" stroke="#A67C52" stroke-width="2" />
+    <line x1="10" y1="35" x2="40" y2="35" stroke="#A67C52" stroke-width="2" />
+    <line x1="10" y1="45" x2="30" y2="45" stroke="#A67C52" stroke-width="2" />
+  </g>
+  
+  <!-- Text -->
+  <text x="100" y="250" font-family="Arial" font-size="12" text-anchor="middle" fill="#5A4B41">Book Cover Not Available</text>
+</svg>

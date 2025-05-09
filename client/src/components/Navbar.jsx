@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import './Navbar.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Logo from '../images/logo.png';
+import { ShoppingCart, Calendar } from 'lucide-react';
+import { useCart } from '../pages/MarketPlace/cart';
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation(); // Get the current location
   const [scrolled, setScrolled] = useState(false);
+  const { cartCount } = useCart();
 
   // Add scroll event listener
   useEffect(() => {
@@ -46,10 +49,30 @@ const Navbar = () => {
           Marketplace
         </li>
         <li
+          className={location.pathname === '/my-books' ? 'active' : 'notactive'} // Highlight My Books
+          onClick={() => navigate('/my-books')}
+        >
+          My Books
+        </li>
+        <li
+        className={location.pathname === '/studyhome' ? 'active' : 'notactive'}
+        onClick={() => navigate('/studyhome')}
+        >
+          StudyHub
+        </li>
+        
+        <li
           className='login'
           onClick={() => navigate('/signup')}
         >
           Create Account
+        </li>
+        <li
+          className='cart-icon'
+          onClick={() => navigate('/cart')}
+        >
+          <ShoppingCart size={20} />
+          {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
         </li>
       </ul>
     </div>

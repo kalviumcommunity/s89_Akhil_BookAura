@@ -13,7 +13,7 @@
     z-index: 1000;
     transition: all 0.3s ease;
     width: 100%;
-    
+
 }
 
 .left {
@@ -74,6 +74,39 @@
     transform: scale(1.05);
 }
 
+.cart-icon {
+    position: relative;
+    cursor: pointer;
+    padding: 8px;
+    color: #333;
+    transition: all 0.3s ease;
+}
+
+.cart-icon:hover {
+    color: #A67C52;
+    transform: translateY(-2px);
+}
+
+.cart-count {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: #A67C52;
+    color: white;
+    font-size: 0.7rem;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.nav-icon {
+    margin-right: 6px;
+}
+
 /* Responsive styles */
 @media screen and (max-width: 768px) {
     .navbar {
@@ -111,6 +144,6 @@
         padding: 8px;
         font-size: 0.8rem;
     }
-    
+
 }
 

@@ -29,8 +29,26 @@ router.post('/signup', async (req, res) => {
     const user = new User({ username, email, password: hashedPassword });
     const savedUser = await user.save();
     const token = jwt.sign({ id: savedUser._id, email: savedUser.email }, JWT_SECRET, { expiresIn: '7d' });
+
+    // Set both cookie names for better compatibility
     res.cookie('authToken', token, {
       httpOnly: true,
+      secure: false,
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    // Also set as 'token' for client-side checks
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    // Add a non-httpOnly cookie for client-side detection
+    res.cookie('isLoggedIn', 'true', {
+      httpOnly: false,
       secure: false,
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -60,8 +78,26 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
     const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+
+    // Set both cookie names for better compatibility
     res.cookie('authToken', token, {
       httpOnly: true,
+      secure: false,
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    // Also set as 'token' for client-side checks
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    // Add a non-httpOnly cookie for client-side detection
+    res.cookie('isLoggedIn', 'true', {
+      httpOnly: false,
       secure: false,
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000
@@ -145,7 +181,7 @@ router.get('/user', verifyToken, (req, res) => {
 
 // Google OAuth Login Route
 router.get('/auth/google',
-  passport.authenticate('google', { 
+  passport.authenticate('google', {
     scope: ['profile', 'email'],
     prompt: 'select_account' // Force account selection
   })
@@ -153,27 +189,43 @@ router.get('/auth/google',
 
 // Google OAuth Callback Route
 router.get('/auth/google/callback',
-  passport.authenticate('google', { 
+  passport.authenticate('google', {
     failureRedirect: '/login',
     failureMessage: true
   }),
   (req, res) => {
     try {
       // Generate JWT Token for Google OAuth
-      const token = jwt.sign({ 
-        id: req.user._id, 
+      const token = jwt.sign({
+        id: req.user._id,
         email: req.user.email,
         username: req.user.username
       }, JWT_SECRET, { expiresIn: '7d' });
-      
-      // Set the token in a cookie
+
+      // Set both cookie names for better compatibility
       res.cookie('authToken', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
         maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
       });
-      
+
+      // Also set as 'token' for client-side checks
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+
+      // Add a non-httpOnly cookie for client-side detection
+      res.cookie('isLoggedIn', 'true', {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+
       // Redirect to frontend with success message and user data
       res.redirect(`http://localhost:5173/home?success=true&token=${token}`);
     } catch (error) {
@@ -182,5 +234,25 @@ router.get('/auth/google/callback',
     }
   }
 );
+
+// Logout Route
+router.get('/logout', (req, res) => {
+  try {
+    // Clear all auth cookies
+    res.clearCookie('authToken');
+    res.clearCookie('token');
+    res.clearCookie('isLoggedIn');
+
+    // If using passport session
+    if (req.logout) {
+      req.logout();
+    }
+
+    res.status(200).json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Error during logout:', error);
+    res.status(500).json({ message: 'Error during logout' });
+  }
+});
 
 module.exports = router;

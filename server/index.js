@@ -6,16 +6,21 @@ const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
 const passport = require('passport');
+const cookieParser = require('cookie-parser');
 require('./passport.config'); // Import passport configuration
 const app = express();
 const MONGODB_URI = process.env.MONGODB_URI;
 
 // Middleware
 app.use(cors({
-    origin: ['http://localhost:5173', 'http://localhost:5174'],
+    origin: function(origin, callback) {
+        // Allow all origins during development
+        return callback(null, true);
+    },
     credentials: true
 }));
 app.use(express.json());
+app.use(cookieParser());
 
 // Session middleware
 app.use(session({
@@ -36,11 +41,24 @@ app.use(passport.session());
 const userRouter = require('./routes/userRouter');
 const bookRouter = require('./routes/BookRouter');
 const paymentRoutes = require("./routes/Payment");
-app.use("/api/payment", paymentRoutes);
+const pdfProxyRoutes = require("./routes/PdfProxy");
+const cartRouter = require('./routes/CartRouter');
+const eventRouter = require('./routes/EventRouter');
+const flashcardRouter = require('./routes/FlashcardRouter');
 
+app.use("/api/payment", paymentRoutes);
+app.use("/api/pdf", pdfProxyRoutes);
+app.use("/api/cart", cartRouter);
+app.use("/api/events", eventRouter);
+app.use("/api/flashcards", flashcardRouter);
 
 app.use('/router', userRouter);
 app.use('/router', bookRouter);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'Server is running' });
+});
 
 // Start server
 app.listen(5000, async () => {

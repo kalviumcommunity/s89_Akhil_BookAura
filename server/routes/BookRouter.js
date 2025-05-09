@@ -31,10 +31,19 @@ const uploadToCloudinary = (fileBuffer, folder, mimetype) => {
   const isBook = ['application/pdf', 'application/epub+zip', 'application/x-mobipocket-ebook'].includes(mimetype);
 
   return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream({
+    const uploadOptions = {
       folder,
       resource_type: isBook ? 'raw' : 'auto'
-    }, (error, result) => {
+    };
+
+    // For PDFs, set access mode to public
+    if (mimetype === 'application/pdf') {
+      // Use public access mode for simplicity
+      uploadOptions.access_mode = 'public';
+      uploadOptions.type = 'upload';
+    }
+
+    const stream = cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
       if (result) resolve(result);
       else reject(error);
     });
@@ -47,7 +56,17 @@ router.post('/uploadBook', upload.fields([
   { name: 'bookFile', maxCount: 1 }
 ]), async (req, res) => {
   try {
-    const { title, author, description, genre, price } = req.body;
+    const {
+      title,
+      author,
+      description,
+      genre,
+      price,
+      categories,
+      isBestSeller,
+      isFeatured,
+      isNewRelease
+    } = req.body;
 
     if (!req.files?.coverImage || !req.files?.bookFile) {
       return res.status(400).json({ success: false, message: 'Both cover image and book file are required' });
@@ -66,6 +85,18 @@ router.post('/uploadBook', upload.fields([
       req.files.bookFile[0].mimetype
     );
 
+    // Parse categories if provided as a string
+    let parsedCategories = [];
+    if (categories) {
+      try {
+        parsedCategories = typeof categories === 'string' ? JSON.parse(categories) : categories;
+      } catch (e) {
+        console.error('Error parsing categories:', e);
+        // If parsing fails, try to split by comma
+        parsedCategories = typeof categories === 'string' ? categories.split(',').map(c => c.trim()) : [];
+      }
+    }
+
     // Save book data
     const newBook = new Book({
       title,
@@ -74,7 +105,11 @@ router.post('/uploadBook', upload.fields([
       genre,
       price,
       coverimage: coverImageResult.secure_url,
-      url: bookFileResult.secure_url
+      url: bookFileResult.secure_url,
+      categories: parsedCategories,
+      isBestSeller: isBestSeller === 'true' || isBestSeller === true,
+      isFeatured: isFeatured === 'true' || isFeatured === true,
+      isNewRelease: isNewRelease === 'true' || isNewRelease === true
     });
 
     await newBook.save();
@@ -96,13 +131,36 @@ router.post('/uploadBook', upload.fields([
 
 router.get('/getBooks',async(req,res)=>{
   try {
-    const books = await Book.find();
+    const { category, featured, bestseller, newrelease } = req.query;
+
+    // Build query based on parameters
+    const query = {};
+
+    if (category) {
+      query.categories = category;
+    }
+
+    if (featured === 'true') {
+      query.isFeatured = true;
+    }
+
+    if (bestseller === 'true') {
+      query.isBestSeller = true;
+    }
+
+    if (newrelease === 'true') {
+      query.isNewRelease = true;
+    }
+
+    const books = await Book.find(query);
+
     if (!books || books.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'No books found'
       });
     }
+
     res.status(200).json({
       success: true,
       message: 'Books fetched successfully',
@@ -115,8 +173,67 @@ router.get('/getBooks',async(req,res)=>{
       message: 'Error fetching books',
       error: error.message
     });
-    
   }
 })
+
+// Get bestseller books
+router.get('/bestsellers', async (req, res) => {
+  try {
+    const books = await Book.find({ isBestSeller: true });
+
+    res.status(200).json({
+      success: true,
+      message: 'Bestseller books fetched successfully',
+      data: books
+    });
+  } catch (error) {
+    console.error('Error fetching bestseller books:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching bestseller books',
+      error: error.message
+    });
+  }
+});
+
+// Get featured books
+router.get('/featured', async (req, res) => {
+  try {
+    const books = await Book.find({ isFeatured: true });
+
+    res.status(200).json({
+      success: true,
+      message: 'Featured books fetched successfully',
+      data: books
+    });
+  } catch (error) {
+    console.error('Error fetching featured books:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching featured books',
+      error: error.message
+    });
+  }
+});
+
+// Get new releases
+router.get('/newreleases', async (req, res) => {
+  try {
+    const books = await Book.find({ isNewRelease: true });
+
+    res.status(200).json({
+      success: true,
+      message: 'New release books fetched successfully',
+      data: books
+    });
+  } catch (error) {
+    console.error('Error fetching new release books:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching new release books',
+      error: error.message
+    });
+  }
+});
 
 module.exports = router;

@@ -10,6 +10,15 @@ import LandingPage from './pages/LandingPage';
 import AddProducts from './pages/AddProducts';
 import Pdf from './pages/Pdf';
 import Book from './pages/MarketPlace/Book';
+import CartPage from './pages/MarketPlace/CartPage';
+import SuccessPage from './pages/MarketPlace/SuccessPage';
+import MyBooksPage from './pages/MarketPlace/MyBooksPage';
+import PdfTest from './pages/PdfTest';
+import CalendarPage from './pages/Calendar/CalendarPage';
+import CalendarCallback from './pages/Calendar/CalendarCallback';
+import StudyHome from './pages/studyhub/StudyHome';
+import Flashcards from './pages/studyhub/FlashcardsFixed';
+import AiChat from './pages/studyhub/AiChat';
 
 const pageTransition = {
   initial: { opacity: 0, x: -100 },
@@ -18,7 +27,7 @@ const pageTransition = {
 };
 
 const AllRouting = () => {
-  const location = useLocation(); 
+  const location = useLocation();
 
   return (
     <AnimatePresence mode="wait">
@@ -41,57 +50,105 @@ const AllRouting = () => {
           path="/login"
           element={
               <Login />
-            
+
           }
         />
         <Route
           path="/signup"
           element={
               <Signup />
-            
+
           }
         />
         <Route
           path="/forgotpassword"
           element={
               <Forgotpassword />
-            
+
           }
         />
         <Route
           path="/home"
           element={
               <Home />
-            
+
           }
         />
         <Route
           path="/marketplace"
           element={
               <Marketplace />
-            
+
           }
         />
         <Route
           path="/addproducts"
           element={
               <AddProducts />
-            
+
           }
         />
         <Route
           path="/pdfviewer"
           element={
               <Pdf />
-            
+
           }
         />
         <Route
           path="/books"
           element={
               <Book />
-            
+
           }
+        />
+        <Route
+          path="/cart"
+          element={
+              <CartPage />
+
+          }
+        />
+        <Route
+          path="/success"
+          element={
+              <SuccessPage />
+
+          }
+        />
+        <Route
+          path="/my-books"
+          element={
+              <MyBooksPage />
+
+          }
+        />
+        <Route
+          path="/pdf-test"
+          element={
+              <PdfTest />
+
+          }
+        />
+        <Route
+        path='/studyhome'
+        element={<StudyHome/>}
+        />
+        <Route
+          path="/calendar"
+          element={<CalendarPage />}
+        />
+        <Route
+          path="/calendar/callback"
+          element={<CalendarCallback />}
+        />
+        <Route
+          path="/flashcards"
+          element={<Flashcards />}
+        />
+        <Route
+          path="/aichat"
+          element={<AiChat />}
         />
       </Routes>
     </AnimatePresence>

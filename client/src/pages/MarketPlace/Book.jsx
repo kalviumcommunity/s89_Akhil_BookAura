@@ -6,20 +6,49 @@ import { Search } from 'lucide-react';
 import ProductCard from '../../components/ProductCard';
 import axios from 'axios';
 import BookDetailView from './BookDetailView';
+import {useCart} from './cart';
+
 
 const Book = () => {
   const [books, setBooks] = useState([]);
   const [searchText, setSearchText] = useState('');
   const [priceRange, setPriceRange] = useState(1000); // adjust max if needed
   const [selectedGenres, setSelectedGenres] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
   const [hidden, setHidden] = useState(false);
   const [selectedBook, setSelectedBook] = useState(null);
+  const [showBestsellers, setShowBestsellers] = useState(false);
+  const [showFeatured, setShowFeatured] = useState(false);
+  const [showNewReleases, setShowNewReleases] = useState(false);
 
 
   useEffect(() => {
     const fetchBooks = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/router/getBooks');
+        // Build query parameters based on filters
+        const params = new URLSearchParams();
+
+        if (showBestsellers) {
+          params.append('bestseller', 'true');
+        }
+
+        if (showFeatured) {
+          params.append('featured', 'true');
+        }
+
+        if (showNewReleases) {
+          params.append('newrelease', 'true');
+        }
+
+        // If any category is selected, use the first one as a filter
+        if (selectedCategories.length > 0) {
+          params.append('category', selectedCategories[0]);
+        }
+
+        const queryString = params.toString();
+        const url = `http://localhost:5000/router/getBooks${queryString ? `?${queryString}` : ''}`;
+
+        const response = await axios.get(url);
         setBooks(response.data.data);
       } catch (error) {
         console.error('Failed to fetch books:', error);
@@ -27,7 +56,7 @@ const Book = () => {
     };
 
     fetchBooks();
-  }, []);
+  }, [showBestsellers, showFeatured, showNewReleases, selectedCategories]);
 
   const handleGenreChange = (genre) => {
     setSelectedGenres((prev) =>
@@ -37,24 +66,56 @@ const Book = () => {
     );
   };
 
+  const handleCategoryChange = (category) => {
+    setSelectedCategories((prev) =>
+      prev.includes(category)
+        ? prev.filter((c) => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  const handleSpecialCategoryChange = (type) => {
+    if (type === 'bestseller') {
+      setShowBestsellers(!showBestsellers);
+    } else if (type === 'featured') {
+      setShowFeatured(!showFeatured);
+    } else if (type === 'newrelease') {
+      setShowNewReleases(!showNewReleases);
+    }
+  };
+
   const clearAllFilters = () => {
     setSearchText('');
     setPriceRange(1000);
     setSelectedGenres([]);
+    setSelectedCategories([]);
+    setShowBestsellers(false);
+    setShowFeatured(false);
+    setShowNewReleases(false);
   };
 
   const filteredBooks = books.filter((book) => {
+    // Match search text in title or author
     const matchesSearch =
       book.title.toLowerCase().includes(searchText.toLowerCase()) ||
       book.author.toLowerCase().includes(searchText.toLowerCase());
 
-      const matchesGenre =
+    // Match primary genre
+    const matchesGenre =
       selectedGenres.length === 0 ||
       selectedGenres.some((g) => g.toLowerCase() === book.genre.toLowerCase());
 
+    // Match price range
     const matchesPrice = book.price <= priceRange;
 
-    return matchesSearch && matchesGenre && matchesPrice;
+    // Match additional categories if any are selected
+    const matchesCategories =
+      selectedCategories.length === 0 ||
+      (book.categories && selectedCategories.some(cat =>
+        book.categories.includes(cat)
+      ));
+
+    return matchesSearch && matchesGenre && matchesPrice && matchesCategories;
   });
 
   const handleBookClick = (book) => {
@@ -70,6 +131,8 @@ const Book = () => {
     // Re-enable scrolling when modal is closed
     document.body.style.overflow = 'auto';
   }
+
+
 
   return (
     <>
@@ -100,7 +163,6 @@ const Book = () => {
               />
               <label>{priceRange}</label>
             </div>
-
             <div>
               <p>Genre</p>
               <div className='checkbox-menu'>
@@ -118,6 +180,9 @@ const Book = () => {
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="filter-section">
             </div>
           </div>
 

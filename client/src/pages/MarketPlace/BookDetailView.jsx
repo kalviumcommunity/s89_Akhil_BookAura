@@ -1,22 +1,43 @@
 import React from 'react';
 import './BookDetailView.css';
 import Navbar from '../../components/Navbar';
-import { ArrowLeft } from 'lucide-react';
-import axios from 'axios'
+import { ArrowLeft, ShoppingCart, Check } from 'lucide-react';
+import axios from 'axios';
+import { useCart } from './cart';
+import { SafeImage } from '../../utils/imageUtils';
 
 const BookDetailView = ({ book, onClose }) => {
   if (!book) return null;
+
+  const { addToCart, cartItems } = useCart();
+
+  // Check if book is already in cart
+  const isInCart = cartItems.some(item => item._id === book._id);
+
+  const handleAddToCart = () => {
+    addToCart(book);
+  };
 
   const handleBuy = async() => {
     try {
         const response = await axios.post(
             'http://localhost:5000/api/payment/create-checkout-session',
-            { book }
-          );
-          const { url } = response.data;
-          window.location.href = url;
+            { book },
+            {
+                withCredentials: true // This will send cookies with the request
+            }
+        );
+
+        const { url } = response.data;
+        window.location.href = url;
     } catch (error) {
-        console.log(error)
+        console.error('Checkout error:', error);
+        if (error.response?.status === 401) {
+            alert('Please log in to checkout');
+            onClose();
+        } else {
+            alert('There was an error processing your payment. Please try again.');
+        }
     }
   };
 
@@ -27,7 +48,7 @@ const BookDetailView = ({ book, onClose }) => {
       </div>
       <button onClick={onClose} className="go-back-button" ><ArrowLeft/>Back to Books</button>
       <div className="book-detail-content">
-        <img
+        <SafeImage
           className="book-detail-image"
           src={book.coverimage}
           alt={`Cover of ${book.title}`}
@@ -45,7 +66,19 @@ const BookDetailView = ({ book, onClose }) => {
 
           <div className="book-detail-actions">
             <button className="book-detail-button book-detail-buy" onClick={handleBuy}>Buy Now</button>
-            <button className="book-detail-button book-detail-cart">Add to Cart</button>
+            <button
+              className={`book-detail-button book-detail-cart ${isInCart ? 'in-cart' : ''}`}
+              onClick={handleAddToCart}
+              disabled={isInCart}
+            >
+              {isInCart ? (
+                <>
+                  <ShoppingCart size={16} /> In Cart
+                </>
+              ) : (
+                'Add to Cart'
+              )}
+            </button>
           </div>
 
           <div className="book-detail-additional">
