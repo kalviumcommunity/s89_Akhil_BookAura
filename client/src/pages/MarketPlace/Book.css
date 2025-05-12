@@ -52,6 +52,16 @@
 main {
   padding-top: 86px;
   font-size: 1rem;
+  min-height: 100vh;
+  background-color: #E6D9CC;
+}
+
+.books-loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 86px);
+  width: 100%;
 }
 .navbar {
   display: flex;
@@ -106,6 +116,9 @@ main {
   -webkit-text-fill-color: #845b32;
 }
 .checkbox-menu{
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
   max-height: 180px;
   overflow-y: scroll;
   scrollbar-width: 100px;

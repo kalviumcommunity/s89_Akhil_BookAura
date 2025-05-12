@@ -19,7 +19,22 @@ const bookSchema = mongoose.Schema({
         // Temporarily removed enum validation for debugging
         // enum: ['Fiction', 'Non-fiction', 'Fantasy', 'Romance', 'Science Fiction', 'Mystery', 'Biography', 'Horror', 'Thriller', 'Self-help', 'History', 'Others']
     },
-
+    categories: {
+        type: [String],
+        default: []
+    },
+    isBestSeller: {
+        type: Boolean,
+        default: false
+    },
+    isFeatured: {
+        type: Boolean,
+        default: false
+    },
+    isNewRelease: {
+        type: Boolean,
+        default: false
+    },
     price:{
         type:Number,
         required:true
@@ -31,8 +46,12 @@ const bookSchema = mongoose.Schema({
     url:{
         type:String,
         required:true,
+    },
+    publishedDate: {
+        type: Date,
+        default: Date.now
     }
-})
+}, { timestamps: true })
 
 const Book = mongoose.model('Book',bookSchema);
 

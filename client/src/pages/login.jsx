@@ -4,7 +4,8 @@ import '../pagescss/Auth.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AuthImage from '../images/Auth.png';
 import Google from '../images/google.png';
-import logo from'../images/logo.png'
+import logo from'../images/logo.png';
+import { useCart } from './MarketPlace/cart';
 
 const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -12,6 +13,7 @@ const Login = () => {
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { syncCartWithServer } = useCart();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -27,10 +29,14 @@ const Login = () => {
       const response = await axios.post("http://localhost:5000/router/login", form, { withCredentials: true });
       localStorage.setItem('authToken', response.data.token);
       console.log("Login successful");
+
+      // Sync cart with server after successful login
+      await syncCartWithServer();
+
       await setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
-      }, 3000); 
+      }, 3000);
       setTimeout(() => {
         navigate('/home');
       }, 2000);
@@ -42,6 +48,8 @@ const Login = () => {
 
   const handleGoogleSignIn = () => {
     setError('');
+    // Store a flag to sync cart after Google login
+    localStorage.setItem('syncCartAfterLogin', 'true');
     window.location.href = "http://localhost:5000/router/auth/google";
   }
 
@@ -73,11 +81,11 @@ const Login = () => {
           <div className='google-signin'>
             <button onClick={handleGoogleSignIn}><img src={Google} alt="Google" className='google-icon' />Sign in with Google</button>
             </div>
-          
+
         </div>
-        
+
       </div>
-      {success && 
+      {success &&
           <div className="success-message">Login successful!</div>
           }
     </div>

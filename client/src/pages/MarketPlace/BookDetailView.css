@@ -213,6 +213,23 @@
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
 }
 
+.book-detail-cart.in-cart {
+  background-color: #f0e6dd;
+  color: #845b32;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: default;
+  border: none;
+}
+
+.book-detail-cart.in-cart:hover {
+  background-color: #f0e6dd;
+  transform: none;
+  box-shadow: none;
+}
+
 /* Additional sections */
 .book-detail-additional {
   margin-top: 40px;

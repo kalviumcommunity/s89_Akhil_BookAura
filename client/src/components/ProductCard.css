@@ -28,9 +28,10 @@
   transform: translateY(-4px);
 }
 
-.book-cover {
-  width: 100%;
-  aspect-ratio: 3/4;
+.book-cover-image {
+  width: auto;
+  height: 100%;
+  max-height: 280px;
   object-fit: cover;
 }
 
@@ -83,5 +84,19 @@
 }
 
 .buy-button:hover {
-  background-color: #845b32; /* Tailwind blue-600 */
+  background-color: #845b32;
+}
+
+.buy-button.in-cart {
+  background-color: #f0e6dd;
+  color: #845b32;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: default;
+}
+
+.buy-button.in-cart:hover {
+  background-color: #f0e6dd;
 }
