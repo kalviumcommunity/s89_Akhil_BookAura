@@ -9,6 +9,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import './CalendarPage.css';
 import { Calendar as CalendarIcon, Clock, User, Book, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import StudyHubNavbar from '../../components/StudyHubNavbar';
+import LoadingAnimation from '../../components/LoadingAnimation';
 
 // Setup the localizer for react-big-calendar
 const localizer = momentLocalizer(moment);
@@ -494,8 +495,7 @@ const CalendarPage = () => {
       <>
         <StudyHubNavbar />
         <div className="calendar-page loading">
-          <div className="loading-spinner"></div>
-          <p>Loading your calendar...</p>
+          <LoadingAnimation text="Loading your calendar..." />
         </div>
         <Footer />
       </>

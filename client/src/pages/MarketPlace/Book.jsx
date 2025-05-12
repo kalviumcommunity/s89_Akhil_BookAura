@@ -7,6 +7,7 @@ import ProductCard from '../../components/ProductCard';
 import axios from 'axios';
 import BookDetailView from './BookDetailView';
 import {useCart} from './cart';
+import LoadingAnimation from '../../components/LoadingAnimation';
 
 
 const Book = () => {
@@ -20,11 +21,13 @@ const Book = () => {
   const [showBestsellers, setShowBestsellers] = useState(false);
   const [showFeatured, setShowFeatured] = useState(false);
   const [showNewReleases, setShowNewReleases] = useState(false);
+  const [loading, setLoading] = useState(true);
 
 
   useEffect(() => {
     const fetchBooks = async () => {
       try {
+        setLoading(true);
         // Build query parameters based on filters
         const params = new URLSearchParams();
 
@@ -50,8 +53,10 @@ const Book = () => {
 
         const response = await axios.get(url);
         setBooks(response.data.data);
+        setLoading(false);
       } catch (error) {
         console.error('Failed to fetch books:', error);
+        setLoading(false);
       }
     };
 
@@ -140,86 +145,91 @@ const Book = () => {
         <Navbar />
       </div>
       <main>
-        <div className='main-box-books'>
-          {/* Left filter panel */}
-          <div className='left-box-books'>
-            <div className='filter-heading'>
-              <p>Filters</p>
-              <button className='clearall-button' onClick={clearAllFilters}>
-                Clear All
-              </button>
-            </div>
-
-            <div className='range-box'>
-              <p>Price Range</p>
-              <label>0</label>
-              <input
-                className='range-input-bar'
-                type='range'
-                min={0}
-                max={1000}
-                value={priceRange}
-                onChange={(e) => setPriceRange(Number(e.target.value))}
-              />
-              <label>{priceRange}</label>
-            </div>
-            <div>
-              <p>Genre</p>
-              <div className='checkbox-menu'>
-                {categories.map((category) => (
-                  <div key={category.id}>
-                    <input
-                      type='checkbox'
-                      id={`genre-${category.id}`}
-                      checked={selectedGenres.includes(category.name)}
-                      onChange={() => handleGenreChange(category.name)}
-                    />
-                    <label htmlFor={`genre-${category.id}`}>
-                      {category.name}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="filter-section">
-            </div>
+        {loading ? (
+          <div className="books-loading-container">
+            <LoadingAnimation text="Loading books..." />
           </div>
+        ) : (
+          <div className='main-box-books'>
+            {/* Left filter panel */}
+            <div className='left-box-books'>
+              <div className='filter-heading'>
+                <p>Filters</p>
+                <button className='clearall-button' onClick={clearAllFilters}>
+                  Clear All
+                </button>
+              </div>
 
-          {/* Right book list panel */}
-          <div className='right-box-books'>
-            <div className='search1-button'>
-              <div className='search1'>
-                <Search />
+              <div className='range-box'>
+                <p>Price Range</p>
+                <label>0</label>
                 <input
-                  type='text'
-                  placeholder='Search for books, authors, or genres...'
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
+                  className='range-input-bar'
+                  type='range'
+                  min={0}
+                  max={1000}
+                  value={priceRange}
+                  onChange={(e) => setPriceRange(Number(e.target.value))}
                 />
+                <label>{priceRange}</label>
+              </div>
+              <div>
+                <p>Genre</p>
+                <div className='checkbox-menu'>
+                  {categories.map((category) => (
+                    <div key={category.id}>
+                      <input
+                        type='checkbox'
+                        id={`genre-${category.id}`}
+                        checked={selectedGenres.includes(category.name)}
+                        onChange={() => handleGenreChange(category.name)}
+                      />
+                      <label htmlFor={`genre-${category.id}`}>
+                        {category.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="filter-section">
               </div>
             </div>
 
-            <div className='allbooks-list'>
-              {filteredBooks.length > 0 ? (
-                filteredBooks.map((book, index) => (
-                  <div key={index} onClick={() => handleBookClick(book)}>
-                    <ProductCard book={book} />
-                  </div>
-                ))
-              ) : (
-                <p>No books found matching the filters.</p>
-              )}
-            </div>
-          </div>
-          {hidden && selectedBook && (
-            <BookDetailView
-              book={selectedBook}
-              onClose={handleCloseDetail}
-            />
-          )}
+            {/* Right book list panel */}
+            <div className='right-box-books'>
+              <div className='search1-button'>
+                <div className='search1'>
+                  <Search />
+                  <input
+                    type='text'
+                    placeholder='Search for books, authors, or genres...'
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                  />
+                </div>
+              </div>
 
-        </div>
+              <div className='allbooks-list'>
+                {filteredBooks.length > 0 ? (
+                  filteredBooks.map((book, index) => (
+                    <div key={index} onClick={() => handleBookClick(book)}>
+                      <ProductCard book={book} />
+                    </div>
+                  ))
+                ) : (
+                  <p>No books found matching the filters.</p>
+                )}
+              </div>
+            </div>
+            {hidden && selectedBook && (
+              <BookDetailView
+                book={selectedBook}
+                onClose={handleCloseDetail}
+              />
+            )}
+          </div>
+        )}
       </main>
     </>
   );

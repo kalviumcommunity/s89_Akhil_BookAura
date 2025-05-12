@@ -8,17 +8,18 @@ import Home from './pages/Home';
 import Marketplace from './pages/MarketPlace/Marketplace';
 import LandingPage from './pages/LandingPage';
 import AddProducts from './pages/AddProducts';
-import Pdf from './pages/Pdf';
 import Book from './pages/MarketPlace/Book';
 import CartPage from './pages/MarketPlace/CartPage';
 import SuccessPage from './pages/MarketPlace/SuccessPage';
+import CancelPage from './pages/MarketPlace/CancelPage';
 import MyBooksPage from './pages/MarketPlace/MyBooksPage';
-import PdfTest from './pages/PdfTest';
 import CalendarPage from './pages/Calendar/CalendarPage';
 import CalendarCallback from './pages/Calendar/CalendarCallback';
 import StudyHome from './pages/studyhub/StudyHome';
 import Flashcards from './pages/studyhub/FlashcardsFixed';
 import AiChat from './pages/studyhub/AiChat';
+import Profile from './pages/Profile';
+import TestPdfViewer from './pages/TestPdfViewer';
 
 const pageTransition = {
   initial: { opacity: 0, x: -100 },
@@ -88,13 +89,7 @@ const AllRouting = () => {
 
           }
         />
-        <Route
-          path="/pdfviewer"
-          element={
-              <Pdf />
 
-          }
-        />
         <Route
           path="/books"
           element={
@@ -117,19 +112,20 @@ const AllRouting = () => {
           }
         />
         <Route
+          path="/cancel"
+          element={
+              <CancelPage />
+
+          }
+        />
+        <Route
           path="/my-books"
           element={
               <MyBooksPage />
 
           }
         />
-        <Route
-          path="/pdf-test"
-          element={
-              <PdfTest />
 
-          }
-        />
         <Route
         path='/studyhome'
         element={<StudyHome/>}
@@ -149,6 +145,14 @@ const AllRouting = () => {
         <Route
           path="/aichat"
           element={<AiChat />}
+        />
+        <Route
+          path="/profile"
+          element={<Profile />}
+        />
+        <Route
+          path="/test-pdf"
+          element={<TestPdfViewer />}
         />
       </Routes>
     </AnimatePresence>

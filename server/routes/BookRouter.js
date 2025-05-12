@@ -36,16 +36,31 @@ const uploadToCloudinary = (fileBuffer, folder, mimetype) => {
       resource_type: isBook ? 'raw' : 'auto'
     };
 
-    // For PDFs, set access mode to public
+    // For PDFs, set access mode to public and ensure proper format handling
     if (mimetype === 'application/pdf') {
       // Use public access mode for simplicity
       uploadOptions.access_mode = 'public';
       uploadOptions.type = 'upload';
+
+      // Generate a unique public_id with .pdf extension for better compatibility
+      const uniqueId = Date.now().toString();
+      uploadOptions.public_id = uniqueId;
+
+      // Set the file extension explicitly
+      uploadOptions.format = 'pdf';
     }
 
     const stream = cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
-      if (result) resolve(result);
-      else reject(error);
+      if (result) {
+        // For PDFs, ensure the URL has the correct format
+        if (mimetype === 'application/pdf' && !result.secure_url.toLowerCase().endsWith('.pdf')) {
+          // Modify the result to include the .pdf extension
+          result.secure_url = `${result.secure_url}.pdf`;
+        }
+        resolve(result);
+      } else {
+        reject(error);
+      }
     });
     streamifier.createReadStream(fileBuffer).pipe(stream);
   });
@@ -97,6 +112,15 @@ router.post('/uploadBook', upload.fields([
       }
     }
 
+    // Process the book file URL to ensure it has the correct format
+    let bookFileUrl = bookFileResult.secure_url;
+
+    // For PDF files, ensure the URL ends with .pdf for better compatibility
+    if (req.files.bookFile[0].mimetype === 'application/pdf' && !bookFileUrl.toLowerCase().endsWith('.pdf')) {
+      console.log('Adding .pdf extension to Cloudinary URL for better compatibility');
+      bookFileUrl = `${bookFileUrl}.pdf`;
+    }
+
     // Save book data
     const newBook = new Book({
       title,
@@ -105,7 +129,7 @@ router.post('/uploadBook', upload.fields([
       genre,
       price,
       coverimage: coverImageResult.secure_url,
-      url: bookFileResult.secure_url,
+      url: bookFileUrl,
       categories: parsedCategories,
       isBestSeller: isBestSeller === 'true' || isBestSeller === true,
       isFeatured: isFeatured === 'true' || isFeatured === true,
@@ -231,6 +255,51 @@ router.get('/newreleases', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching new release books',
+      error: error.message
+    });
+  }
+});
+
+// Fix PDF URLs for existing books
+router.get('/fix-pdf-urls', verifyToken, async (req, res) => {
+  try {
+    // Find all books with URLs that don't end with .pdf
+    const books = await Book.find({
+      url: { $exists: true, $ne: null },
+      $expr: {
+        $not: { $regexMatch: { input: "$url", regex: /\.pdf$/i } }
+      }
+    });
+
+    console.log(`Found ${books.length} books with URLs that need fixing`);
+
+    // Update each book
+    const updatedBooks = [];
+    for (const book of books) {
+      if (book.url && book.url.includes('cloudinary') && book.url.includes('raw')) {
+        const oldUrl = book.url;
+        const newUrl = `${oldUrl}.pdf`;
+
+        console.log(`Updating book "${book.title}" URL:`);
+        console.log(`  Old: ${oldUrl}`);
+        console.log(`  New: ${newUrl}`);
+
+        book.url = newUrl;
+        await book.save();
+        updatedBooks.push({ id: book._id, title: book.title });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Updated ${updatedBooks.length} book URLs`,
+      updatedBooks
+    });
+  } catch (error) {
+    console.error('Error fixing PDF URLs:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fixing PDF URLs',
       error: error.message
     });
   }

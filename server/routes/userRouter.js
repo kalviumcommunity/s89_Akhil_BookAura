@@ -179,6 +179,69 @@ router.get('/user', verifyToken, (req, res) => {
   res.status(200).send({ username: req.user.email });
 });
 
+// Get user profile data
+router.get('/profile', verifyToken, async (req, res) => {
+  try {
+    // The ID is stored in the JWT token
+    const userId = req.user.id;
+    console.log('User ID from token:', userId);
+    const user = await User.findById(userId).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      user: {
+        username: user.username,
+        email: user.email,
+        profileImage: user.profileImage
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching user profile',
+      error: error.message
+    });
+  }
+});
+
+// Get user profile image
+router.get('/profile-image', verifyToken, async (req, res) => {
+  try {
+    // The ID is stored in the JWT token
+    const userId = req.user.id;
+    console.log('User ID from token (profile-image):', userId);
+    const user = await User.findById(userId).select('profileImage username');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      profileImage: user.profileImage,
+      username: user.username
+    });
+  } catch (error) {
+    console.error('Error fetching profile image:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching profile image',
+      error: error.message
+    });
+  }
+});
+
 // Google OAuth Login Route
 router.get('/auth/google',
   passport.authenticate('google', {
@@ -252,6 +315,220 @@ router.get('/logout', (req, res) => {
   } catch (error) {
     console.error('Error during logout:', error);
     res.status(500).json({ message: 'Error during logout' });
+  }
+});
+
+// Update user profile
+router.put('/update-profile', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { username, email, profileImage } = req.body;
+
+    // Validate input
+    if (!username && !email && !profileImage) {
+      return res.status(400).json({
+        success: false,
+        message: 'No fields to update'
+      });
+    }
+
+    // Check if username is already taken (if changing username)
+    if (username) {
+      const existingUser = await User.findOne({ username, _id: { $ne: userId } });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'Username is already taken'
+        });
+      }
+    }
+
+    // Check if email is already taken (if changing email)
+    if (email) {
+      const existingUser = await User.findOne({ email, _id: { $ne: userId } });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is already taken'
+        });
+      }
+    }
+
+    // Update user
+    const updateData = {};
+    if (username) updateData.username = username;
+    if (email) updateData.email = email;
+    if (profileImage) updateData.profileImage = profileImage;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateData },
+      { new: true, select: '-password' }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Generate new token with updated info if email or username changed
+    if (username || email) {
+      const newToken = jwt.sign({
+        id: updatedUser._id,
+        email: updatedUser.email,
+        username: updatedUser.username
+      }, JWT_SECRET, { expiresIn: '7d' });
+
+      // Update cookies
+      res.cookie('authToken', newToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
+
+      res.cookie('token', newToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: {
+        username: updatedUser.username,
+        email: updatedUser.email,
+        profileImage: updatedUser.profileImage
+      }
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating profile',
+      error: error.message
+    });
+  }
+});
+
+// Update password
+router.put('/update-password', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    // Validate input
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password and new password are required'
+      });
+    }
+
+    // Get user with password
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check if user has a password (Google users might not)
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot update password for accounts without a password (e.g., Google accounts)'
+      });
+    }
+
+    // Verify current password
+    const isPasswordCorrect = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordCorrect) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 13);
+
+    // Update password
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating password:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating password',
+      error: error.message
+    });
+  }
+});
+
+// Delete account
+router.delete('/delete-account', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { password } = req.body;
+
+    // Get user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // If user has a password (not Google account), verify it
+    if (user.password) {
+      if (!password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password is required to delete account'
+        });
+      }
+
+      const isPasswordCorrect = await bcrypt.compare(password, user.password);
+      if (!isPasswordCorrect) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password is incorrect'
+        });
+      }
+    }
+
+    // Delete user
+    await User.findByIdAndDelete(userId);
+
+    // Clear cookies
+    res.clearCookie('authToken');
+    res.clearCookie('token');
+    res.clearCookie('isLoggedIn');
+
+    res.status(200).json({
+      success: true,
+      message: 'Account deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting account',
+      error: error.message
+    });
   }
 });
 

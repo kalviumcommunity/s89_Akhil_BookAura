@@ -6,6 +6,7 @@ import {Link} from 'react-router-dom'
 import Footer from '../../components/Footer'
 import axios from 'axios';
 import ProductCard from '../../components/ProductCard';
+import LoadingAnimation from '../../components/LoadingAnimation';
 
 const Marketplace = () => {
   const [featuredBooks, setFeaturedBooks] = useState([]);
@@ -52,26 +53,34 @@ const Marketplace = () => {
   return (
     <>
     <Navbar />
-      <div className='marketplace-main'>
-        <div className='marketplace-box'>
-          <h1 className='marketplace-title'>Discover Your Next<br/><span className='highlight'>Favorite Book</span></h1>
+      {loading ? (
+        <div className="marketplace-loading">
+          <LoadingAnimation text="Loading books..." />
         </div>
-        <div>
-          <h2>Explore our curated collection of books spanning every genre. From timeless classics to the latest bestsellers, find your perfect read today.</h2>
-        </div>
-        <div className='search-button'>
-          <form onSubmit={handleSearch} className='search'>
-            <Search/>
-            <input
-              type="text"
-              placeholder="Search for books, authors, or genres..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-            />
-          </form>
-          <Link className='link-button-marketplace' to={'/books'}>Browse All Books</Link>
-        </div>
-      </div>
+      ) : (
+        <>
+          <div className='marketplace-main'>
+            <div className='marketplace-box'>
+              <h1 className='marketplace-title'>Discover Your Next<br/><span className='highlight'>Favorite Book</span></h1>
+            </div>
+            <div>
+              <h2>Explore our curated collection of books spanning every genre. From timeless classics to the latest bestsellers, find your perfect read today.</h2>
+            </div>
+            <div className='search-button'>
+              <form onSubmit={handleSearch} className='search'>
+                <Search/>
+                <input
+                  type="text"
+                  placeholder="Search for books, authors, or genres..."
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                />
+              </form>
+              <Link className='link-button-marketplace' to={'/books'}>Browse All Books</Link>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className='features'>
         <div className='collection'>

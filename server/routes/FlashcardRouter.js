@@ -5,20 +5,22 @@ const axios = require('axios');
 const auth = require('../middleware/auth');
 const FlashcardDeck = require('../model/FlashcardModel');
 const mongoose = require('mongoose');
-const FormData = require('form-data');
 
+// Configure multer for file uploads
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
+// Get all flashcard decks for the current user
 router.get('/decks', auth, async (req, res) => {
   try {
     const userId = req.user.id;
+
     const decks = await FlashcardDeck.find({ userId })
       .sort({ createdAt: -1 })
-      .select('-flashcards');
+      .select('-flashcards'); // Exclude flashcards for better performance
 
     res.status(200).json({
       success: true,
@@ -35,6 +37,7 @@ router.get('/decks', auth, async (req, res) => {
   }
 });
 
+// Get a specific flashcard deck by ID
 router.get('/decks/:deckId', auth, async (req, res) => {
   try {
     const { deckId } = req.params;
@@ -71,6 +74,7 @@ router.get('/decks/:deckId', auth, async (req, res) => {
   }
 });
 
+// Generate flashcards from PDF using the external AI API
 router.post('/generate', auth, upload.single('pdfFile'), async (req, res) => {
   try {
     const userId = req.user.id;
@@ -90,27 +94,36 @@ router.post('/generate', auth, upload.single('pdfFile'), async (req, res) => {
       });
     }
 
+    console.log('Preparing to send file to chatbot-api:', req.file.originalname, 'Size:', req.file.size);
+
+    // Create form data to send to the AI API
+    const FormData = require('form-data');
     const formData = new FormData();
     formData.append('file', req.file.buffer, {
       filename: req.file.originalname,
       contentType: req.file.mimetype
     });
 
+    console.log('Sending request to chatbot-api...');
+
+    // Call the external AI API to generate flashcards
     const aiResponse = await axios.post('http://localhost:5001/chatbot-file', formData, {
       headers: {
         ...formData.getHeaders()
       },
-      timeout: 300000
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+      timeout: 300000 // 5 minutes
     });
 
-    if (!aiResponse.data || !Array.isArray(aiResponse.data)) {
-      throw new Error('Invalid response from AI service');
-    }
+    console.log('Response received from chatbot-api with', aiResponse.data.length, 'flashcards');
 
+    // Create a new flashcard deck with the generated flashcards
     const newDeck = new FlashcardDeck({
       userId,
       title,
       description: description || '',
+      sourceDocumentName: req.file.originalname,
       flashcards: aiResponse.data.map(card => ({
         question: card.question,
         answer: card.answer
@@ -118,10 +131,11 @@ router.post('/generate', auth, upload.single('pdfFile'), async (req, res) => {
     });
 
     await newDeck.save();
-    
+    console.log('Saved new flashcard deck with ID:', newDeck._id);
+
     res.status(201).json({
       success: true,
-      message: 'Flashcards generated and saved successfully',
+      message: 'Flashcards generated successfully',
       data: {
         deckId: newDeck._id,
         flashcardCount: newDeck.flashcards.length
@@ -130,22 +144,32 @@ router.post('/generate', auth, upload.single('pdfFile'), async (req, res) => {
   } catch (error) {
     console.error('Error generating flashcards:', error);
 
+    // Detailed error logging
+    if (error.response) {
+      console.error('Error response data:', error.response.data);
+      console.error('Error response status:', error.response.status);
+    } else if (error.request) {
+      console.error('No response received from API');
+    }
+
     let errorMessage = 'Error generating flashcards';
 
-    if (error.response) {
+    // Extract more detailed error information if available
+    if (error.response && error.response.data) {
+      console.error('API error response:', error.response.data);
       errorMessage = error.response.data.message || errorMessage;
-    } else if (error.code === 'ECONNREFUSED') {
-      errorMessage = 'AI service is not available. Please try again later.';
     }
 
     res.status(500).json({
       success: false,
       message: errorMessage,
-      error: error.message
+      error: error.message,
+      details: error.response?.data || 'No additional details'
     });
   }
 });
 
+// Save pre-generated flashcards (alternative approach)
 router.post('/save-generated', auth, express.json(), async (req, res) => {
   try {
     const userId = req.user.id;
@@ -165,6 +189,9 @@ router.post('/save-generated', auth, express.json(), async (req, res) => {
       });
     }
 
+    console.log('Saving pre-generated flashcards, count:', flashcards.length);
+
+    // Create a new flashcard deck with the provided flashcards
     const newDeck = new FlashcardDeck({
       userId,
       title,
@@ -176,6 +203,7 @@ router.post('/save-generated', auth, express.json(), async (req, res) => {
     });
 
     await newDeck.save();
+    console.log('Saved new flashcard deck with ID:', newDeck._id);
 
     res.status(201).json({
       success: true,
@@ -195,6 +223,7 @@ router.post('/save-generated', auth, express.json(), async (req, res) => {
   }
 });
 
+// Delete a flashcard deck
 router.delete('/decks/:deckId', auth, async (req, res) => {
   try {
     const { deckId } = req.params;
@@ -231,4 +260,3 @@ router.delete('/decks/:deckId', auth, async (req, res) => {
 });
 
 module.exports = router;
-

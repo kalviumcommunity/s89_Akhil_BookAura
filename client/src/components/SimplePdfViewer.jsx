@@ -8,7 +8,7 @@ import './PdfViewer.css';
 const pdfjsVersion = '4.8.69';
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.mjs`;
 
-const PdfViewer = ({ fileUrl }) => {
+const SimplePdfViewer = ({ fileUrl }) => {
   const [numPages, setNumPages] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [scale, setScale] = useState(1.0);
@@ -25,6 +25,12 @@ const PdfViewer = ({ fileUrl }) => {
       try {
         setLoading(true);
         setError(null);
+
+        // Ensure fileUrl is defined before using it
+        if (!fileUrl) {
+          console.error('File URL is undefined');
+          throw new Error('File URL is undefined');
+        }
 
         // If the URL is already a data URL or blob URL, use it directly
         if (fileUrl.startsWith('data:') || fileUrl.startsWith('blob:')) {
@@ -386,4 +392,4 @@ const PdfViewer = ({ fileUrl }) => {
   );
 };
 
-export default PdfViewer;
+export default SimplePdfViewer;

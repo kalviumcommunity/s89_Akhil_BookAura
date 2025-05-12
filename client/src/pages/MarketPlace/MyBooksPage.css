@@ -260,6 +260,15 @@
   padding: 10px;
 }
 
+.download-unavailable {
+  color: #999;
+  font-size: 0.8rem;
+  padding: 8px 12px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  display: inline-block;
+}
+
 /* PDF Viewer Overlay */
 .pdf-viewer-overlay {
   position: fixed;
@@ -320,6 +329,43 @@
   flex: 1;
   overflow: hidden;
   height: calc(100% - 60px);
+}
+
+.pdf-viewer-container-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* Override styles for PDF viewer when inside the modal */
+.pdf-viewer-container-wrapper .pdf-viewer-container {
+  height: 100%;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.pdf-viewer-container-wrapper .pdf-content {
+  height: calc(100% - 100px);
+}
+
+.pdf-viewer-container-wrapper .pdf-toolbar {
+  position: relative;
+  z-index: 20;
+}
+
+.pdf-viewer-container-wrapper .arrow-button {
+  z-index: 15;
+}
+
+/* Fix fullscreen mode for the PDF viewer inside the modal */
+.pdf-viewer-container-wrapper .pdf-viewer-container.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 2000;
 }
 
 /* Responsive styles */

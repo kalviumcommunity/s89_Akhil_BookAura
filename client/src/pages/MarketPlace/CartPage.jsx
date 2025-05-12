@@ -7,6 +7,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 import { SafeImage } from '../../utils/imageUtils';
+import LoadingAnimation from '../../components/LoadingAnimation';
 
 const CartPage = () => {
   const { cartItems, removeFromCart, clearCart, totalPrice, isLoading } = useCart();
@@ -64,8 +65,7 @@ const CartPage = () => {
 
           {isLoading ? (
             <div className="loading-cart">
-              <div className="loading-spinner"></div>
-              <p>Loading your cart...</p>
+              <LoadingAnimation text="Loading your cart..." />
             </div>
           ) : cartItems.length === 0 ? (
             <div className="empty-cart">

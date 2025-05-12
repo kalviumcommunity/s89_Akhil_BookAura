@@ -7,6 +7,8 @@ import PdfViewer from '../../components/PdfViewer';
 import { Book, Calendar, ArrowLeft, FileText } from 'lucide-react';
 import { SafeImage } from '../../utils/imageUtils';
 import './MyBooksPage.css';
+import LoadingAnimation from '../../components/LoadingAnimation';
+import { pdfjs } from 'react-pdf';
 
 const MyBooksPage = () => {
   const [purchasedBooks, setPurchasedBooks] = useState([]);
@@ -27,12 +29,47 @@ const MyBooksPage = () => {
 
         if (response.data.success) {
           console.log('Purchased books fetched successfully:', response.data);
+          console.log(response.data.purchasedBooks)
+          // Process books to ensure URLs are valid and remove duplicates
+          const bookMap = new Map();
+          const processedBooks = [];
 
-          // Store the raw purchased books
-          setPurchasedBooks(response.data.purchasedBooks || []);
+          // Process each book
+          (response.data.purchasedBooks || []).forEach(book => {
+            const bookId = book.bookId.toString();
+
+            // Process the book URL
+            let processedBook = book;
+
+            // Ensure book has a valid URL
+            if (!book.url || book.url === 'placeholder' || book.url.includes('placeholder.url')) {
+              console.log(`Book ${book.title} has invalid URL: ${book.url}, using default PDF`);
+              processedBook = {
+                ...book,
+                url: '/assets/better-placeholder.pdf'
+              };
+            } else {
+              // Keep the original URL - we'll add .pdf extension only when needed for display/download
+              processedBook = { ...book };
+            }
+
+            // Check if this is a duplicate book
+            if (!bookMap.has(bookId)) {
+              // First time seeing this book, add it
+              bookMap.set(bookId, processedBook);
+              processedBooks.push(processedBook);
+            } else {
+              console.log(`Skipping duplicate book: ${book.title} (${bookId})`);
+            }
+          });
+
+          console.log(`Processed ${processedBooks.length} unique books out of ${response.data.purchasedBooks?.length || 0} total`);
+
+          // Store the processed purchased books
+          setPurchasedBooks(processedBooks);
 
           // Group books by purchase date for display
-          const books = response.data.purchasedBooks || [];
+          const books = processedBooks;
 
           // Group books by payment ID (same transaction)
           const groupedByPaymentId = {};
@@ -101,8 +138,7 @@ const MyBooksPage = () => {
 
           {loading ? (
             <div className="loading-container">
-              <div className="loading-spinner"></div>
-              <p>Loading your books...</p>
+              <LoadingAnimation text="Loading your books..." />
             </div>
           ) : error ? (
             <div className="error-container">
@@ -149,28 +185,20 @@ const MyBooksPage = () => {
                           <h3 className="book-title">{book.title}</h3>
                           <p className="book-author">by {book.author}</p>
                           <div className="book-actions">
-                            {book.url ? (
-                              <>
-                                <button
-                                  className="read-button"
-                                  onClick={() => setSelectedPdf(book.url)}
-                                >
-                                  <FileText size={14} />
-                                  Read Now
-                                </button>
-                                <a
-                                  href={book.url}
-                                  download={`${book.title}.pdf`}
-                                  className="download-button"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  Download
-                                </a>
-                              </>
-                            ) : (
-                              <p className="no-url-message">Book content not available</p>
-                            )}
+                            {/* Always show Read Now button, even if URL is missing */}
+                            <button
+                              className="read-button"
+                              onClick={() => {
+                                // Check if the URL is valid before setting it
+                                if (book.url && book.url.startsWith('http')) {
+                                  setSelectedPdf(book.url);
+                                } else {
+                                  setSelectedPdf('/assets/better-placeholder.pdf');
+                                }
+                              }}
+                            >
+                              <FileText size={16} /> Read Now
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -194,7 +222,9 @@ const MyBooksPage = () => {
                 </button>
               </div>
               <div className="pdf-viewer-content">
-                <PdfViewer fileUrl={selectedPdf} />
+                <div className="pdf-viewer-container-wrapper">
+                  <PdfViewer fileUrl={selectedPdf} />
+                </div>
               </div>
             </div>
           </div>
@@ -207,3 +237,6 @@ const MyBooksPage = () => {
 };
 
 export default MyBooksPage;
+
+// This ensures we're using the correct worker version that matches the PDF.js version used by react-pdf
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;

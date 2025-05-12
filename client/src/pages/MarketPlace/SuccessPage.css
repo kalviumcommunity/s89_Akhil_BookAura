@@ -15,6 +15,18 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   padding: 40px;
   text-align: center;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.success-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
 }
 
 .success-icon {
@@ -48,6 +60,27 @@
 .success-details {
   color: #666;
   margin-bottom: 30px;
+}
+
+.order-summary {
+  background-color: #f9f5f0;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.order-summary h3 {
+  font-size: 1.2rem;
+  color: #333;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.order-summary p {
+  font-size: 0.95rem;
+  color: #555;
+  margin-bottom: 8px;
 }
 
 .success-actions {
