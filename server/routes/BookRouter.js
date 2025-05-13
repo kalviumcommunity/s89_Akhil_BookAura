@@ -5,6 +5,7 @@ const cloudinary = require('../cloudnary');
 const Book = require('../model/BookModel');
 const verifyToken = require('../middleware/auth');
 const streamifier = require('streamifier');
+const verifyAdmin = require('../middleware/auth');
 
 // Use in-memory storage (no disk write)
 const storage = multer.memoryStorage();
@@ -66,7 +67,7 @@ const uploadToCloudinary = (fileBuffer, folder, mimetype) => {
   });
 };
 
-router.post('/uploadBook', upload.fields([
+router.post('/uploadBook', verifyAdmin, upload.fields([
   { name: 'coverImage', maxCount: 1 },
   { name: 'bookFile', maxCount: 1 }
 ]), async (req, res) => {

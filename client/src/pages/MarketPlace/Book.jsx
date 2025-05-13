@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './Book.css';
 import Navbar from '../../components/Navbar';
 import categories from './categories.json';
-import { Search } from 'lucide-react';
+import { Search, Filter, X } from 'lucide-react';
 import ProductCard from '../../components/ProductCard';
 import axios from 'axios';
 import BookDetailView from './BookDetailView';
@@ -22,7 +22,28 @@ const Book = () => {
   const [showFeatured, setShowFeatured] = useState(false);
   const [showNewReleases, setShowNewReleases] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [filterOpen, setFilterOpen] = useState(false);
 
+
+  // Effect to handle filter visibility on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setFilterOpen(true); // Always show filters on larger screens
+      } else {
+        setFilterOpen(false); // Hide filters by default on mobile
+      }
+    };
+
+    // Set initial state
+    handleResize();
+
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+
+    // Clean up
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const fetchBooks = async () => {
@@ -71,6 +92,8 @@ const Book = () => {
     );
   };
 
+  // These functions can be uncommented if you want to add category filters in the future
+  /*
   const handleCategoryChange = (category) => {
     setSelectedCategories((prev) =>
       prev.includes(category)
@@ -88,6 +111,7 @@ const Book = () => {
       setShowNewReleases(!showNewReleases);
     }
   };
+  */
 
   const clearAllFilters = () => {
     setSearchText('');
@@ -139,6 +163,10 @@ const Book = () => {
 
 
 
+  const toggleFilter = () => {
+    setFilterOpen(!filterOpen);
+  };
+
   return (
     <>
       <div className='navbar'>
@@ -151,8 +179,21 @@ const Book = () => {
           </div>
         ) : (
           <div className='main-box-books'>
+            {/* Mobile filter toggle button */}
+            <button className="filter-toggle" onClick={toggleFilter}>
+              {filterOpen ? (
+                <>
+                  <X size={18} /> Hide Filters
+                </>
+              ) : (
+                <>
+                  <Filter size={18} /> Show Filters
+                </>
+              )}
+            </button>
+
             {/* Left filter panel */}
-            <div className='left-box-books'>
+            <div className={`left-box-books ${filterOpen ? 'open' : ''}`}>
               <div className='filter-heading'>
                 <p>Filters</p>
                 <button className='clearall-button' onClick={clearAllFilters}>
@@ -184,7 +225,7 @@ const Book = () => {
                         checked={selectedGenres.includes(category.name)}
                         onChange={() => handleGenreChange(category.name)}
                       />
-                      <label htmlFor={`genre-${category.id}`}>
+                      <label htmlFor={`genre-${category.id}` } className='checkbox-label'>
                         {category.name}
                       </label>
                     </div>
@@ -193,6 +234,7 @@ const Book = () => {
               </div>
 
               <div className="filter-section">
+                {/* Special categories can be added here if needed */}
               </div>
             </div>
 
@@ -200,7 +242,7 @@ const Book = () => {
             <div className='right-box-books'>
               <div className='search1-button'>
                 <div className='search1'>
-                  <Search />
+                  <Search size={20} />
                   <input
                     type='text'
                     placeholder='Search for books, authors, or genres...'

@@ -1,19 +1,50 @@
 .navbar {
     position: fixed;
-    border-bottom: 1px solid rgba(0, 0, 0, 1);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.2);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-right: 0;
     padding: 10px 20px;
     flex-wrap: wrap;
-    background-color: #E6D9CC; /* Using the #DBD7D1 background with opacity */
+    background-color: rgba(230, 217, 204, 0.95); /* Using the #E6D9CC background with opacity */
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     z-index: 1000;
     transition: all 0.3s ease;
     width: 100%;
+    box-sizing: border-box;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
 
+/* Navbar when scrolled */
+.navbar.scrolled {
+    background-color: rgba(230, 217, 204, 0.98);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+/* Always visible items container */
+.always-visible-items {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    z-index: 1001;
+}
+
+/* Mobile menu toggle button */
+.mobile-menu-toggle {
+    cursor: pointer;
+    color: #333;
+    z-index: 1001;
+    padding: 8px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    display: none;
+}
+
+.mobile-menu-toggle:hover {
+    color: #A67C52;
 }
 
 .left {
@@ -35,12 +66,32 @@
     z-index: 2;
     flex-wrap: wrap;
     margin-left: auto;
+    margin-right: 10px;
     padding-left: 0;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Close button for mobile menu */
+.close-mobile-menu {
+    display: none;
+    margin-top: 20px;
+    padding: 10px;
+    cursor: pointer;
+    align-self: center;
+}
+
+.close-mobile-menu:hover {
+    color: #A67C52;
+}
+
+/* Profile item styling */
+.profile-item {
+    transition: all 0.3s ease;
 }
 
 .notactive:hover {
-    color: brown;
-    border-bottom: 2px solid brown;
+    color: #A67C52;
+    border-bottom: 2px solid #A67C52;
     cursor: pointer;
     transition: all 0.3s ease;
 }
@@ -56,22 +107,51 @@
 .active {
     cursor: pointer;
     font-weight: bold;
-    color: #333333;
-    border-bottom: 2px solid #333333;
+    color: #A67C52;
+    border-bottom: 2px solid #A67C52;
 }
 
 .login {
     padding: clamp(6px, 1vw, 10px);
     font-size: clamp(0.8rem, 1vw, 1rem);
     font-weight: bold;
-    border: 2.5px solid black;
+    border: 2px solid #333;
+    border-radius: 4px;
     transition: all 0.3s ease;
+    cursor: pointer;
+    background-color: transparent;
+    color: #333;
 }
 
 .login:hover {
+    background-color: #A67C52;
+    color: white;
+    border-color: #A67C52;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Profile item in always-visible-items */
+.always-visible-items .profile-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     cursor: pointer;
-    box-shadow: 3px 3px 1px rgba(1, 1, 1, 1);
-    transform: scale(1.05);
+    transition: transform 0.3s ease;
+}
+
+.always-visible-items .profile-item:hover {
+    transform: translateY(-2px);
+}
+
+.always-visible-items .profile-item img {
+    border-radius: 50%;
+    object-fit: cover;
+    transition: all 0.3s ease;
+}
+
+.always-visible-items .profile-item:hover img {
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
 }
 
 .cart-icon {
@@ -82,9 +162,20 @@
     transition: all 0.3s ease;
 }
 
-.cart-icon:hover {
+.cart-icon:hover, .cart-icon-mobile:hover {
     color: #A67C52;
     transform: translateY(-2px);
+}
+
+/* Overlay for when mobile menu is open */
+.navbar.menu-open::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 999;
 }
 
 .cart-count {
@@ -104,7 +195,15 @@
 }
 
 .nav-icon {
-    margin-right: 6px;
+    margin-right: 8px;
+    vertical-align: middle;
+    display: inline-block;
+    transition: transform 0.2s ease;
+}
+
+.notactive:hover .nav-icon,
+.active .nav-icon {
+    transform: translateY(-2px);
 }
 
 .display-flex {
@@ -126,25 +225,117 @@
     font-weight: 500;
 }
 
+/* Desktop-only elements */
+.desktop-only {
+    display: flex;
+}
+
 /* Responsive styles */
 @media screen and (max-width: 768px) {
     .navbar {
-        padding: 10px;
+        padding: 10px 15px;
     }
 
+    /* Show mobile menu toggle */
+    .mobile-menu-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: transparent;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        transition: background-color 0.3s ease;
+    }
+
+    .mobile-menu-toggle:hover {
+        background-color: rgba(166, 124, 82, 0.1);
+    }
+
+    /* Mobile menu styling */
     .right {
-        gap: 1rem;
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 80%;
+        max-width: 320px;
+        height: 100vh;
+        background-color: rgba(230, 217, 204, 0.98);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 80px 20px 20px;
+        gap: 1.5rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: -5px 0 20px rgba(0, 0, 0, 0.15);
+        overflow-y: auto;
+        z-index: 1001;
+    }
+
+    /* Show mobile menu when active */
+    .right.show-mobile-menu {
+        right: 0;
+    }
+
+    /* Show close button in mobile menu */
+    .close-mobile-menu {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        transition: background-color 0.3s ease;
+    }
+
+
+    /* Adjust list items for mobile */
+    .right li {
+        width: 100%;
+        padding: 12px 0;
+        font-size: 1.1rem;
+        transition: all 0.2s ease;
+    }
+
+    .right li:hover {
+        padding-left: 5px;
+    }
+
+    /* Remove hover border effect on mobile */
+    .notactive:hover {
+        border-bottom: none;
+        color: #A67C52;
+    }
+
+    /* Adjust active state for mobile */
+    .active {
+        border-bottom: none;
+        border-left: 3px solid #A67C52;
+        padding-left: 10px !important;
+        color: #A67C52;
     }
 
     .left {
         padding: 10px;
+    }
+
+    /* Adjust cart icon for mobile */
+    .cart-icon {
+        padding: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 }
 
 /* Small screens */
 @media screen and (max-width: 480px) {
     .navbar {
-        padding: 5px 10px;
+        padding: 8px 12px;
     }
 
     .logo {
@@ -156,13 +347,89 @@
     }
 
     .right {
-        gap: 0.8rem;
+        width: 85%;
+        padding: 70px 15px 15px;
     }
 
     .login {
-        padding: 8px;
+        padding: 6px 10px;
         font-size: 0.8rem;
     }
 
+    .always-visible-items {
+        gap: 8px;
+    }
+
+    /* Adjust profile item for mobile */
+    .profile-item {
+        flex-direction: row !important;
+        gap: 5px;
+        align-items: center;
+    }
+
+    .username {
+        font-size: 0.65rem;
+        margin-top: 0;
+    }
+
+    /* Adjust mobile menu toggle for small screens */
+    .mobile-menu-toggle {
+        width: 36px;
+        height: 36px;
+    }
+
+    /* Adjust cart icon for small screens */
+    .cart-icon {
+        padding: 6px;
+    }
+
+    .cart-count {
+        width: 16px;
+        height: 16px;
+        font-size: 0.65rem;
+    }
+}
+
+/* Very small screens */
+@media screen and (max-width: 360px) {
+    .navbar {
+        padding: 6px 10px;
+    }
+
+    .logo {
+        width: 60px;
+    }
+
+    .login {
+        padding: 5px 8px;
+        font-size: 0.75rem;
+    }
+
+    .always-visible-items {
+        gap: 6px;
+    }
+
+    .username {
+        font-size: 0.6rem;
+        max-width: 50px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mobile-menu-toggle {
+        width: 32px;
+        height: 32px;
+    }
+
+    .right {
+        width: 90%;
+        padding: 60px 12px 12px;
+    }
+
+    .right li {
+        font-size: 1rem;
+        padding: 10px 0;
+    }
 }
 

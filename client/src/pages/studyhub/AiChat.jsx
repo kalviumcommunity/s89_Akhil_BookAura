@@ -311,10 +311,48 @@ const AiChat = () => {
               </div>
             )}
           </div>
+
+          {/* Desktop input (part of chat container) */}
+          <div className="desktop-input">
+            <form className="chat-input" onSubmit={handleSendMessage}>
+              <button
+                onClick={handleImageUpload}
+                className="border-none"
+                disabled={isLoading}
+                title="Upload an image for analysis"
+                type="button"
+              >
+                {isLoading ? (
+                  <Loader2 className="animate-spin" size={26} />
+                ) : (
+                  <Image size={26} />
+                )}
+              </button>
+              <input
+                type="text"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                placeholder="Type your question here..."
+                disabled={isLoading}
+              />
+              <button
+                type="submit"
+                disabled={isLoading || !inputMessage.trim()}
+                className="send-button"
+                title="Send message"
+              >
+                {isLoading ? (
+                  <Loader2 className="animate-spin" size={18} />
+                ) : (
+                  <Send size={18} />
+                )}
+              </button>
+            </form>
+          </div>
         </div>
 
-        <div className="input-container">
-
+        {/* Mobile input (fixed at bottom) */}
+        <div className="mobile-input-container">
           <form className="chat-input" onSubmit={handleSendMessage}>
             <button
               onClick={handleImageUpload}

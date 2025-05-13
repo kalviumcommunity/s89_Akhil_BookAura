@@ -115,6 +115,11 @@ const userSchema = new mongoose.Schema({
     codeExpires: {
         type: Date
     },
+    userType: {
+        type: String,
+        enum: ['admin', 'user'],
+        default: 'user'
+    },
     createdAt: {
         type: Date,
         default: Date.now

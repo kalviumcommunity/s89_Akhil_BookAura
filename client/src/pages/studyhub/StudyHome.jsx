@@ -6,13 +6,13 @@ import {
   ChevronRight,
   Calendar,
   BookOpen,
-  Brain,
   MessageSquare,
   Clock,
   TrendingUp,
   Award,
   BookMarked
 } from 'lucide-react';
+import logo from '../../images/logo.png';
 import moment from 'moment';
 import { useSchedule } from '../../context/ScheduleContext';
 
@@ -29,6 +29,8 @@ const StudyHome = () => {
   const goToCalendar = () => {
     navigate('/calendar');
   };
+
+
 
   // Show loading state
   if (loading) {
@@ -89,7 +91,7 @@ const StudyHome = () => {
               <div className="stat-item">
                 <Clock size={40} />
                 <div>
-                  <h3>{schedules.length}</h3>
+                  <h3>{upcomingSchedules.length}</h3>
                   <p>Study Sessions</p>
                 </div>
               </div>
@@ -111,7 +113,7 @@ const StudyHome = () => {
           </div>
           <div className="hero-image">
             <div className="image-placeholder">
-              <Brain size={80} className="hero-icon" />
+              <img src={logo}  className="hero-icon" />
             </div>
           </div>
         </div>
@@ -171,48 +173,7 @@ const StudyHome = () => {
           </div>
         </div>
 
-        {/* Upcoming Schedule Section */}
-        <div className="upcoming-section">
-          <div className="section-header">
-            <h2>Upcoming Schedule</h2>
-            <button className="view-all-btn" onClick={() => navigate('/calendar')}>
-              View All
-              <ChevronRight size={16} />
-            </button>
-          </div>
-
-          <div className="schedule-cards">
-            {upcomingSchedules.length > 0 ? (
-              upcomingSchedules.map((schedule) => {
-                const scheduleDate = new Date(schedule.date);
-                return (
-                  <div className="schedule-card" key={schedule.id}>
-                    <div className="schedule-card-date">
-                      <span className="schedule-day">{scheduleDate.getDate()}</span>
-                      <span className="schedule-month">
-                        {scheduleDate.toLocaleString('default', { month: 'short' })}
-                      </span>
-                    </div>
-                    <div className="schedule-card-content">
-                      <h3>{schedule.title}</h3>
-                      <p className="schedule-time">{schedule.time}</p>
-                      <p className="schedule-desc">{schedule.description}</p>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="no-schedules-card">
-                <Clock size={32} />
-                <h3>No Upcoming Sessions</h3>
-                <p>You don't have any study sessions scheduled for the next few days.</p>
-                <button className="schedule-now-btn" onClick={() => navigate('/calendar')}>
-                  Schedule Now
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        
 
         {/* Quick Tips Section */}
         <div className="tips-section">

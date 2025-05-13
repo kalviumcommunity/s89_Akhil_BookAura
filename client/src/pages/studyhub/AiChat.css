@@ -9,6 +9,7 @@
   margin-left: 200px; /* Match the width of StudyHubNavbar */
   width: calc(100% - 200px);
   padding: 30px;
+  transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
 }
 
 .aichat-header {
@@ -67,7 +68,9 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
-  height: 600px;
+  height: calc(100vh - 250px); /* Responsive height based on viewport */
+  min-height: 400px; /* Minimum height */
+  max-height: 600px; /* Maximum height */
   overflow: hidden;
 }
 
@@ -78,6 +81,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  max-height: calc(100% - 80px); /* Leave space for the input */
 }
 
 .welcome-message {
@@ -185,11 +189,40 @@
   animation: spin 1s linear infinite;
 }
 
+/* Desktop input (part of chat container) */
+.desktop-input {
+  display: block;
+  border-top: 1px solid #E6D9CC;
+}
+
+/* Mobile input (fixed at bottom) */
+.mobile-input-container {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  max-width: 900px;
+  margin: 0 auto;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  padding: 0 20px;
+  box-sizing: border-box;
+  background-color: rgba(245, 241, 236, 0.95); /* Semi-transparent background */
+  backdrop-filter: blur(5px); /* Blur effect for modern browsers */
+  -webkit-backdrop-filter: blur(5px); /* For Safari */
+  padding-bottom: env(safe-area-inset-bottom); /* For notched phones */
+}
+
 .chat-input {
   display: flex;
   padding: 16px;
   background-color: #F5F1EC;
   border-top: 1px solid #E6D9CC;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .chat-input input {
@@ -454,6 +487,116 @@
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Responsive styles for tablets and mobile */
+@media (max-width: 768px) {
+  .aichat-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 20px;
+    padding-top: 60px; /* Add space for mobile navbar button */
+  }
+
+  .aichat-header h1 {
+    font-size: 2rem;
+  }
+
+  .chat-container {
+    height: calc(100vh - 220px); /* Adjusted for mobile */
+    min-height: 350px;
+    margin-bottom: 70px; /* Adjust space for fixed input */
+    border-radius: 12px 12px 0 0; /* Rounded corners only at the top */
+  }
+
+  .message {
+    max-width: 90%;
+  }
+
+  .ai-message {
+    max-width: 95%;
+  }
+
+  .suggestion-chips {
+    gap: 8px;
+  }
+
+  .suggestion-chip {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
+
+  /* Hide desktop input and show mobile input on smaller screens */
+  .desktop-input {
+    display: none;
+  }
+
+  .mobile-input-container {
+    display: block;
+    padding: 0 15px;
+    width: 100%;
+    left: 0;
+    right: 0;
+    transform: none;
+    max-width: 100%;
+  }
+}
+
+/* Additional adjustments for very small screens */
+@media (max-width: 480px) {
+  .aichat-content {
+    padding: 15px;
+    padding-top: 60px;
+  }
+
+  .aichat-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .aichat-header p {
+    font-size: 1rem;
+  }
+
+  .chat-container {
+    height: calc(100vh - 200px); /* Adjusted for small mobile */
+    min-height: 300px;
+    margin-bottom: 65px; /* Adjust space for fixed input */
+  }
+
+  .message {
+    max-width: 95%;
+  }
+
+  .message-content {
+    padding: 10px 12px;
+  }
+
+  .mobile-input-container {
+    padding: 0 10px;
+  }
+
+  .chat-input {
+    padding: 10px;
+  }
+
+  .chat-input input {
+    padding: 10px 12px;
+  }
+
+  .send-button {
+    width: 38px;
+    height: 38px;
+  }
+
+  .upload-image-button {
+    width: 32px;
+    height: 32px;
+  }
+
+  /* Ensure the input doesn't get hidden behind mobile browser UI */
+  .aichat-container {
+    padding-bottom: 10px;
+  }
 }
 
 /* Flashcard Study Area */
