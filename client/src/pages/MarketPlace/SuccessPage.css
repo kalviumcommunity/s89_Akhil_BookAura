@@ -122,6 +122,64 @@
   transform: translateY(-2px);
 }
 
+.retry-button {
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 15px;
+  transition: all 0.2s ease;
+}
+
+.retry-button:hover {
+  background-color: #0b7dda;
+  transform: translateY(-2px);
+}
+
+.error-details {
+  background-color: #ffebee;
+  border: 1px solid #ffcdd2;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 15px 0;
+  text-align: left;
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: #d32f2f;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.error-details p {
+  margin: 5px 0;
+}
+
+.recovery-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.recovery-button {
+  background-color: #ff9800;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.recovery-button:hover {
+  background-color: #f57c00;
+  transform: translateY(-2px);
+}
+
 @media (max-width: 768px) {
   .success-page {
     padding: 100px 15px 40px;

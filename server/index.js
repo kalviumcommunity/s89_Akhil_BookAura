@@ -45,12 +45,14 @@ const pdfProxyRoutes = require("./routes/PdfProxy");
 const cartRouter = require('./routes/CartRouter');
 const eventRouter = require('./routes/EventRouter');
 const flashcardRouter = require('./routes/FlashcardRouter');
+const chatHistoryRouter = require('./routes/ChatHistoryRouter');
 
 app.use("/api/payment", paymentRoutes);
 app.use("/api/pdf", pdfProxyRoutes);
 app.use("/api/cart", cartRouter);
 app.use("/api/events", eventRouter);
 app.use("/api/flashcards", flashcardRouter);
+app.use("/api/chat-history", chatHistoryRouter);
 
 app.use('/router', userRouter);
 app.use('/router', bookRouter);

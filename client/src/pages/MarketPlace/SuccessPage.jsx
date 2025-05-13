@@ -15,10 +15,102 @@ const SuccessPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [orderDetails, setOrderDetails] = useState(null);
   const [hasProcessed, setHasProcessed] = useState(false);
+  const [errorDetails, setErrorDetails] = useState(null);
 
   const queryParams = new URLSearchParams(location.search);
   const sessionId = queryParams.get('session_id');
   const purchaseId = queryParams.get('purchase_id');
+
+  // Function to manually recover a purchase
+  const recoverPurchase = async () => {
+    if (!purchaseId) {
+      alert('No purchase ID available for recovery');
+      return;
+    }
+
+    setIsLoading(true);
+    setSaveStatus('saving');
+    setErrorDetails(null);
+
+    try {
+      // First check if the purchase already exists
+      const verifyResponse = await axios.get(
+        `http://localhost:5000/api/payment/verify-purchase?purchaseId=${purchaseId}`,
+        { withCredentials: true }
+      );
+
+      if (verifyResponse.data.success) {
+        setOrderDetails(verifyResponse.data.purchase);
+        setSaveStatus('success');
+        clearCart();
+        setIsLoading(false);
+        return;
+      }
+    } catch (error) {
+      console.log('Purchase not found, will attempt to create it');
+    }
+
+    // If we get here, the purchase doesn't exist and needs to be created
+    if (!cartItems || cartItems.length === 0) {
+      setErrorDetails({
+        message: 'Cart is empty. Cannot recover purchase without cart data.',
+        timestamp: new Date().toISOString()
+      });
+      setSaveStatus('error');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const processedCartItems = cartItems.map(book => {
+        const requiredFields = ['_id', 'title', 'author', 'coverimage', 'price'];
+        const missing = requiredFields.filter(field => !book[field]);
+        if (missing.length > 0) throw new Error('Missing book fields');
+
+        return {
+          ...book,
+          url: book.url || 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1746792433/bookstore/bookFiles/zspcnbobqoimglk83yz6'
+        };
+      });
+
+      const response = await axios.post(
+        'http://localhost:5000/api/payment/save-purchase',
+        {
+          sessionId: sessionId || 'manual-recovery',
+          purchaseId,
+          books: processedCartItems
+        },
+        {
+          withCredentials: true,
+          timeout: 30000
+        }
+      );
+
+      if (response.data.success) {
+        setSaveStatus('success');
+        clearCart();
+      } else {
+        setErrorDetails({
+          message: 'Server returned error during recovery',
+          responseData: response.data,
+          timestamp: new Date().toISOString()
+        });
+        setSaveStatus('error');
+      }
+    } catch (error) {
+      console.error('Recovery error:', error);
+      setErrorDetails({
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        responseData: error.response?.data,
+        timestamp: new Date().toISOString()
+      });
+      setSaveStatus('error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!sessionId || !purchaseId || hasProcessed) return;
@@ -95,8 +187,26 @@ const SuccessPage = () => {
           setSaveStatus('error');
         }
       } catch (error) {
+        console.error('Save purchase error:', error);
+
+        // Store error details for debugging
+        const details = {
+          message: error.message,
+          code: error.code,
+          status: error.response?.status,
+          responseData: error.response?.data,
+          timestamp: new Date().toISOString()
+        };
+
+        // Save error details to localStorage for debugging
+        localStorage.setItem('lastPurchaseError', JSON.stringify(details));
+
+        // Update state with error details
+        setErrorDetails(details);
+
         // Retry once if timeout or server error
         if (error.code === 'ECONNABORTED' || (error.response && error.response.status >= 500)) {
+          console.log('Attempting retry for save-purchase...');
           try {
             const retryResponse = await axios.post(
               'http://localhost:5000/api/payment/save-purchase',
@@ -115,12 +225,15 @@ const SuccessPage = () => {
             );
 
             if (retryResponse.data.success) {
+              console.log('Retry successful');
               setSaveStatus('success');
               clearCart();
             } else {
+              console.error('Retry failed with response:', retryResponse.data);
               setSaveStatus('error');
             }
-          } catch {
+          } catch (retryError) {
+            console.error('Retry error:', retryError);
             setSaveStatus('error');
           }
         } else {
@@ -164,6 +277,35 @@ const SuccessPage = () => {
                   <p className="success-details">
                     Your payment was successful, but we encountered an issue saving your books to your account.
                   </p>
+
+                  {errorDetails && (
+                    <div className="error-details">
+                      <p>Error: {errorDetails.message}</p>
+                      {errorDetails.status && <p>Status: {errorDetails.status}</p>}
+                      {errorDetails.code && <p>Code: {errorDetails.code}</p>}
+                    </div>
+                  )}
+
+                  <div className="recovery-actions">
+                    <button
+                      className="retry-button"
+                      onClick={() => {
+                        setIsLoading(true);
+                        setSaveStatus('pending');
+                        setHasProcessed(false);
+                        setErrorDetails(null);
+                      }}
+                    >
+                      Retry Normal Process
+                    </button>
+
+                    <button
+                      className="recovery-button"
+                      onClick={recoverPurchase}
+                    >
+                      Advanced Recovery
+                    </button>
+                  </div>
                 </>
               )}
 

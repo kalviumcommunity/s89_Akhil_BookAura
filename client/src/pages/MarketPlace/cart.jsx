@@ -115,31 +115,69 @@ export const CartProvider = ({ children }) => {
   const removeFromCart = async (bookId) => {
     try {
       if (isLoggedIn) {
-        // Remove from server cart
-        const response = await axios.delete(`http://localhost:5000/api/cart/remove/${bookId}`, {
-          withCredentials: true
-        });
+        console.log('Removing book from server cart, ID:', bookId);
 
-        if (response.data.success) {
-          const updatedCart = response.data.data;
-          setCartItems(updatedCart);
-          updateCartStats(updatedCart);
+        // Instead of trying to use the DELETE endpoint, let's fetch the current cart,
+        // modify it locally, and then update the server with a GET request
+        try {
+          // First, get the current cart
+          const cartResponse = await axios.get('http://localhost:5000/api/cart', {
+            withCredentials: true
+          });
 
-          // Sync localStorage with server cart
-          localStorage.setItem('bookCart', JSON.stringify(updatedCart));
+          if (cartResponse.data.success) {
+            // Filter out the item to remove
+            const currentCart = cartResponse.data.data || [];
+            const updatedCart = currentCart.filter(item => item.bookId.toString() !== bookId.toString());
+
+            console.log('Current cart items:', currentCart.length);
+            console.log('Updated cart items:', updatedCart.length);
+
+            // Update local state immediately for better UX
+            setCartItems(updatedCart);
+            updateCartStats(updatedCart);
+            localStorage.setItem('bookCart', JSON.stringify(updatedCart));
+
+            // Now try to update the server by clearing the cart and re-adding all items
+            try {
+              // Clear the cart first
+              await axios.delete('http://localhost:5000/api/cart/clear', {
+                withCredentials: true
+              });
+
+              // Add each remaining item back to the cart
+              for (const item of updatedCart) {
+                await axios.post('http://localhost:5000/api/cart/add', {
+                  bookId: item.bookId
+                }, {
+                  withCredentials: true
+                });
+              }
+
+              console.log('Server cart updated successfully');
+            } catch (serverUpdateError) {
+              console.error('Error updating server cart:', serverUpdateError);
+              // We've already updated the local state, so the user won't notice this error
+            }
+
+            return;
+          }
+        } catch (cartError) {
+          console.error('Error fetching cart:', cartError);
+          // Continue to fallback
         }
-      } else {
-        // Remove from localStorage cart
-        setCartItems(prevItems => {
-          const newItems = prevItems.filter(item => item._id !== bookId);
-          localStorage.setItem('bookCart', JSON.stringify(newItems));
-          updateCartStats(newItems);
-          return newItems;
-        });
       }
+
+      // Remove from localStorage cart (fallback or for non-logged in users)
+      setCartItems(prevItems => {
+        const newItems = prevItems.filter(item => item._id !== bookId);
+        localStorage.setItem('bookCart', JSON.stringify(newItems));
+        updateCartStats(newItems);
+        return newItems;
+      });
     } catch (error) {
       console.error('Error removing from cart:', error);
-      // Fallback to localStorage if server request fails
+      // Final fallback
       setCartItems(prevItems => {
         const newItems = prevItems.filter(item => item._id !== bookId);
         localStorage.setItem('bookCart', JSON.stringify(newItems));

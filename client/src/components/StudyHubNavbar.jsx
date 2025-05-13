@@ -1,7 +1,7 @@
 import React from "react";
 import "./StudyHubNavbar.css";
 import { useNavigate, useLocation } from "react-router-dom";
-import Calendar from "../pages/studyhub/calendar";
+import { Calendar as CalendarIcon,ArrowLeft } from "lucide-react";
 const StudyHubNavbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -9,7 +9,7 @@ const StudyHubNavbar = () => {
     <div>
       <div className="main-div-study">
         <ul>
-          <li onClick={() => navigate("/home")}>Back to Main Home</li>
+          <li onClick={() => navigate("/home")}><ArrowLeft size={15}/>Back to Main Home</li>
           <li
             className={
               location.pathname === "/studyhome" ? "active-1" : "notactive-1"
@@ -24,7 +24,7 @@ const StudyHubNavbar = () => {
             }
             onClick={() => navigate("/calendar")}
           >
-            <Calendar size={16} className="nav-icon" />
+            <CalendarIcon size={16} className="nav-icon" />
             Calendar
           </li>
           <li

@@ -1,14 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import LeftNavbar from '../../components/StudyHubNavbar';
+import StudyHubNavbar from '../../components/StudyHubNavbar';
 import './StudyHome.css';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  ChevronRight,
+  Calendar,
+  BookOpen,
+  Brain,
+  MessageSquare,
+  Clock,
+  TrendingUp,
+  Award,
+  BookMarked
+} from 'lucide-react';
 import moment from 'moment';
 import { useSchedule } from '../../context/ScheduleContext';
 
 const StudyHome = () => {
   const navigate = useNavigate();
-  const [currentDate, setCurrentDate] = useState(new Date());
   const { schedules, loading, error, fetchSchedules } = useSchedule();
 
   // Refresh schedules when component mounts
@@ -21,55 +30,11 @@ const StudyHome = () => {
     navigate('/calendar');
   };
 
-  // Function to navigate to previous/next month
-  const navigateMonth = (direction) => {
-    const newDate = new Date(currentDate);
-    if (direction === 'prev') {
-      newDate.setMonth(newDate.getMonth() - 1);
-    } else {
-      newDate.setMonth(newDate.getMonth() + 1);
-    }
-    setCurrentDate(newDate);
-  };
-
-  // Get current month's days
-  const getDaysInMonth = () => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    const days = [];
-    // Add empty cells for days before the first day of month
-    for (let i = 0; i < firstDay; i++) {
-      days.push({ day: '', isCurrentMonth: false });
-    }
-
-    // Add days of current month
-    for (let i = 1; i <= daysInMonth; i++) {
-      const date = new Date(year, month, i);
-      const hasEvent = schedules.some(schedule =>
-        date.getDate() === schedule.date.getDate() &&
-        date.getMonth() === schedule.date.getMonth() &&
-        date.getFullYear() === schedule.date.getFullYear()
-      );
-
-      days.push({
-        day: i,
-        isCurrentMonth: true,
-        hasEvent,
-        date
-      });
-    }
-
-    return days;
-  };
-
   // Show loading state
   if (loading) {
     return (
       <div className="study-home-container">
-        <LeftNavbar />
+        <StudyHubNavbar />
         <div className="study-content">
           <div className="loading-container">
             <div className="loading-spinner"></div>
@@ -84,7 +49,7 @@ const StudyHome = () => {
   if (error) {
     return (
       <div className="study-home-container">
-        <LeftNavbar />
+        <StudyHubNavbar />
         <div className="study-content">
           <div className="error-container">
             <p className="error-message">{error}</p>
@@ -97,120 +62,179 @@ const StudyHome = () => {
     );
   }
 
+  // Get upcoming schedules (next 3 days)
+  const upcomingSchedules = schedules
+    .filter(schedule => {
+      const scheduleDate = new Date(schedule.date);
+      const today = new Date();
+      const threeDaysLater = new Date();
+      threeDaysLater.setDate(today.getDate() + 3);
+      return scheduleDate >= today && scheduleDate <= threeDaysLater;
+    })
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .slice(0, 3);
+
   return (
     <div className="study-home-container">
-      <LeftNavbar />
+      <StudyHubNavbar />
 
       <div className="study-content">
-        <div className="study-welcome">
-          <h1>StudyDome</h1>
-          <p>Your personal learning hub for organizing study schedules and enhancing your reading experience</p>
+        {/* Hero Section */}
+        <div className="study-hero">
+          <div className="hero-content">
+            <h1>Welcome to StudyHub</h1>
+            <p>Your personal learning hub for organizing study schedules and enhancing your reading experience</p>
 
-          <div className="quick-nav-buttons">
-            <button className="nav-feature-btn" onClick={() => navigate('/calendar')}>
-              <ChevronRight size={16} />
-              Calendar
-            </button>
-            <button className="nav-feature-btn" onClick={() => navigate('/flashcards')}>
-              <ChevronRight size={16} />
-              Flashcards
-            </button>
-            <button className="nav-feature-btn" onClick={() => navigate('/aichat')}>
-              <ChevronRight size={16} />
-              AI Chat
-            </button>
-            <button className="nav-feature-btn" onClick={() => navigate('/my-books')}>
-              <ChevronRight size={16} />
-              My Books
-            </button>
+            <div className="hero-stats">
+              <div className="stat-item">
+                <Clock size={40} />
+                <div>
+                  <h3>{schedules.length}</h3>
+                  <p>Study Sessions</p>
+                </div>
+              </div>
+              <div className="stat-item">
+                <BookMarked size={40} />
+                <div>
+                  <h3>24/7</h3>
+                  <p>Learning Access</p>
+                </div>
+              </div>
+              <div className="stat-item">
+                <Award size={40} />
+                <div>
+                  <h3>100%</h3>
+                  <p>Success Rate</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="hero-image">
+            <div className="image-placeholder">
+              <Brain size={80} className="hero-icon" />
+            </div>
           </div>
         </div>
 
-        <div className="study-calendar-section">
-          <div className="calendar-header">
-            <h2>Study Schedule</h2>
-            <div className="calendar-navigation">
-              <button onClick={() => navigateMonth('prev')} className="nav-button">
-                <ChevronLeft size={18} />
+        {/* Features Section */}
+        <div className="features-section">
+          <h2>Explore Features</h2>
+
+          <div className="features-grid">
+            <div className="feature-card" onClick={() => navigate('/calendar')}>
+              <div className="feature-icon">
+                <Calendar size={24} />
+              </div>
+              <h3>Calendar</h3>
+              <p>Schedule and manage your study sessions efficiently</p>
+              <button className="feature-btn">
+                <ChevronRight size={16} />
+                Open Calendar
               </button>
-              <h3>{moment(currentDate).format('MMMM YYYY')}</h3>
-              <button onClick={() => navigateMonth('next')} className="nav-button">
-                <ChevronRight size={18} />
+            </div>
+
+            <div className="feature-card" onClick={() => navigate('/flashcards')}>
+              <div className="feature-icon">
+                <BookOpen size={24} />
+              </div>
+              <h3>Flashcards</h3>
+              <p>Create and review flashcards to reinforce your learning</p>
+              <button className="feature-btn">
+                <ChevronRight size={16} />
+                Study Now
+              </button>
+            </div>
+
+            <div className="feature-card" onClick={() => navigate('/aichat')}>
+              <div className="feature-icon">
+                <MessageSquare size={24} />
+              </div>
+              <h3>AI Chat</h3>
+              <p>Get instant help with your questions and study materials</p>
+              <button className="feature-btn">
+                <ChevronRight size={16} />
+                Start Chatting
+              </button>
+            </div>
+
+            <div className="feature-card" onClick={() => navigate('/my-books')}>
+              <div className="feature-icon">
+                <BookMarked size={24} />
+              </div>
+              <h3>My Books</h3>
+              <p>Access your purchased books and study materials</p>
+              <button className="feature-btn">
+                <ChevronRight size={16} />
+                View Library
               </button>
             </div>
           </div>
+        </div>
 
-          <div className="simple-calendar">
-            <div className="calendar-weekdays">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
-                <div key={index} className="weekday">{day}</div>
-              ))}
-            </div>
-            <div className="calendar-days">
-              {getDaysInMonth().map((day, index) => (
-                <div
-                  key={index}
-                  className={`calendar-day ${!day.isCurrentMonth ? 'other-month' : ''} ${day.hasEvent ? 'has-event' : ''}`}
-                >
-                  {day.day}
-                  {day.hasEvent && <div className="event-indicator"></div>}
-                </div>
-              ))}
-            </div>
+        {/* Upcoming Schedule Section */}
+        <div className="upcoming-section">
+          <div className="section-header">
+            <h2>Upcoming Schedule</h2>
+            <button className="view-all-btn" onClick={() => navigate('/calendar')}>
+              View All
+              <ChevronRight size={16} />
+            </button>
           </div>
 
-          <div className="upcoming-schedules">
-            <h3>Upcoming Sessions</h3>
-
-            {schedules.length > 0 ? (
-              schedules.map(schedule => (
-                <div key={schedule.id} className="schedule-item">
-                  <div className="schedule-date">
-                    <div className="schedule-day">{moment(schedule.date).format('DD')}</div>
-                    <div className="schedule-month">{moment(schedule.date).format('MMM')}</div>
+          <div className="schedule-cards">
+            {upcomingSchedules.length > 0 ? (
+              upcomingSchedules.map((schedule) => {
+                const scheduleDate = new Date(schedule.date);
+                return (
+                  <div className="schedule-card" key={schedule.id}>
+                    <div className="schedule-card-date">
+                      <span className="schedule-day">{scheduleDate.getDate()}</span>
+                      <span className="schedule-month">
+                        {scheduleDate.toLocaleString('default', { month: 'short' })}
+                      </span>
+                    </div>
+                    <div className="schedule-card-content">
+                      <h3>{schedule.title}</h3>
+                      <p className="schedule-time">{schedule.time}</p>
+                      <p className="schedule-desc">{schedule.description}</p>
+                    </div>
                   </div>
-                  <div className="schedule-details">
-                    <h4>{schedule.title}</h4>
-                    <p className="schedule-time">{schedule.time}</p>
-                    <p className="schedule-description">{schedule.description}</p>
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : (
-              <div className="no-schedules">
-                <p>You don't have any upcoming study sessions.</p>
-                <p>Create your first session to get started!</p>
+              <div className="no-schedules-card">
+                <Clock size={32} />
+                <h3>No Upcoming Sessions</h3>
+                <p>You don't have any study sessions scheduled for the next few days.</p>
+                <button className="schedule-now-btn" onClick={() => navigate('/calendar')}>
+                  Schedule Now
+                </button>
               </div>
             )}
-
-            <button className="view-all-button" onClick={goToCalendar}>
-              {schedules.length > 0 ? 'View Full Calendar' : 'Create New Session'}
-            </button>
           </div>
         </div>
-      </div>
 
-      {/* Persistent Schedule Reminder */}
-      <div className="schedule-reminder">
-        <div className="reminder-content">
-          <h4>Next Session</h4>
-          {schedules.length > 0 ? (
-            <div className="reminder-details">
-              <p className="reminder-title">{schedules[0].title}</p>
-              <p className="reminder-time">
-                {moment(schedules[0].date).format('MMM DD')} • {schedules[0].time}
-              </p>
+        {/* Quick Tips Section */}
+        <div className="tips-section">
+          <h2>Study Tips</h2>
+          <div className="tips-container">
+            <div className="tip-card">
+              <div className="tip-number">01</div>
+              <h3>Set Clear Goals</h3>
+              <p>Define specific, measurable goals for each study session to stay focused and track progress.</p>
             </div>
-          ) : (
-            <div className="reminder-details">
-              <p className="reminder-title">No upcoming sessions</p>
-              <p className="reminder-time">Schedule your first study session</p>
+            <div className="tip-card">
+              <div className="tip-number">02</div>
+              <h3>Use Active Recall</h3>
+              <p>Test yourself regularly instead of passive re-reading to strengthen memory retention.</p>
             </div>
-          )}
+            <div className="tip-card">
+              <div className="tip-number">03</div>
+              <h3>Take Regular Breaks</h3>
+              <p>Follow the Pomodoro Technique: 25 minutes of focused study followed by a 5-minute break.</p>
+            </div>
+          </div>
         </div>
-        <button className="reminder-btn" onClick={goToCalendar}>
-          {schedules.length > 0 ? 'View Calendar' : 'Create Session'}
-        </button>
       </div>
     </div>
   );

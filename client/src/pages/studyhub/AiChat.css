@@ -15,6 +15,13 @@
   margin-bottom: 40px;
 }
 
+.aichat-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
 .aichat-header h1 {
   font-size: 2.5rem;
   color: #3B3B3B;
@@ -28,6 +35,28 @@
   max-width: 800px;
   line-height: 1.6;
 }
+
+.clear-history-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #f8f0e8;
+  color: #A67C52;
+  border: 1px solid #E6D9CC;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-history-button:hover {
+  background-color: #f0e6dd;
+  color: #8a6642;
+  border-color: #A67C52;
+}
+
+
 
 /* Chat Container */
 .chat-container {
@@ -199,6 +228,31 @@
 
 .send-button:disabled {
   background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.upload-image-button {
+  background-color: transparent;
+  color: #A67C52;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  margin-right: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.upload-image-button:hover:not(:disabled) {
+  background-color: #F0E6DD;
+  color: #8a6642;
+}
+
+.upload-image-button:disabled {
+  color: #ccc;
   cursor: not-allowed;
 }
 
