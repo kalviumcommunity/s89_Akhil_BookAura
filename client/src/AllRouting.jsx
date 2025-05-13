@@ -13,8 +13,7 @@ import CartPage from './pages/MarketPlace/CartPage';
 import SuccessPage from './pages/MarketPlace/SuccessPage';
 import CancelPage from './pages/MarketPlace/CancelPage';
 import MyBooksPage from './pages/MarketPlace/MyBooksPage';
-import CalendarPage from './pages/Calendar/CalendarPage';
-import CalendarCallback from './pages/Calendar/CalendarCallback';
+import CalendarPage from './pages/studyhub/Calendar';
 import StudyHome from './pages/studyhub/StudyHome';
 import Flashcards from './pages/studyhub/FlashcardsFixed';
 import AiChat from './pages/studyhub/AiChat';
@@ -134,10 +133,7 @@ const AllRouting = () => {
           path="/calendar"
           element={<CalendarPage />}
         />
-        <Route
-          path="/calendar/callback"
-          element={<CalendarCallback />}
-        />
+        
         <Route
           path="/flashcards"
           element={<Flashcards />}

@@ -5,9 +5,11 @@ import bestseller from '../images/bestseller.png'
 import Footer from '../components/Footer'
 import { useCart } from './MarketPlace/cart'
 import { SafeImage, getProxiedImageUrl, handleImageError } from '../utils/imageUtils'
+import {useNavigate} from 'react-router-dom'
 
 const Home = () => {
   const { syncCartWithServer } = useCart();
+  const navigate = useNavigate();
 
   // Check if we need to sync cart after Google login
   useEffect(() => {
@@ -27,7 +29,7 @@ const Home = () => {
         <div className='quote-container'>
           <h1 className='quote-line'>TO SUCCEED<br/>YOU MUST<br/>READ</h1>
           <h3 className='line'>NOT SURE WHAT TO READ? EXPLORE OUR CATALOG OF PUBLIC DOMAIN BOOKS WITH OUR EDITORS</h3>
-          <button className='explore'>EXPLORE MORE | <span>&#8599;</span></button>
+          <button className='explore' onClick={() => navigate('/marketplace')}>EXPLORE MORE | <span>&#8599;</span></button>
         </div>
 
         <div className='main-books'>

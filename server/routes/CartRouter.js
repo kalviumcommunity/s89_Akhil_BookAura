@@ -147,13 +147,94 @@ router.post('/add', auth, async (req, res) => {
     }
 });
 
-// Remove item from cart
+// Remove item from cart (DELETE method)
 router.delete('/remove/:bookId', auth, async (req, res) => {
     try {
         const userId = req.user.id;
         const { bookId } = req.params;
 
         console.log('Removing book from cart for user:', userId, 'Book ID:', bookId);
+
+        // Find the user
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Check if the user has a cart
+        if (!user.cartItems || user.cartItems.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Cart is empty'
+            });
+        }
+
+        // Check if the book is in the cart
+        const existingItemIndex = user.cartItems.findIndex(
+            item => item.bookId.toString() === bookId
+        );
+
+        if (existingItemIndex === -1) {
+            console.log('Book not found in cart');
+            return res.status(404).json({
+                success: false,
+                message: 'Book not found in cart'
+            });
+        }
+
+        // Remove the book from the cart
+        console.log('Removing book from cart at index:', existingItemIndex);
+        user.cartItems.splice(existingItemIndex, 1);
+
+        // Update cart timestamp
+        user.cartUpdatedAt = new Date();
+
+        await user.save();
+        console.log('User cart updated successfully, now contains items:', user.cartItems.length);
+
+        res.status(200).json({
+            success: true,
+            message: 'Book removed from cart successfully',
+            data: user.cartItems
+        });
+    } catch (error) {
+        console.error('Error removing from cart:', error);
+
+        // Check for specific error types
+        if (error.name === 'CastError') {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid book ID format',
+                error: error.message
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Error removing from cart',
+            error: error.message
+        });
+    }
+});
+
+// Alternative endpoint for removing items (POST method)
+router.post('/remove', auth, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { bookId } = req.body;
+
+        if (!bookId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Book ID is required'
+            });
+        }
+
+        console.log('Alternative remove endpoint - Removing book from cart for user:', userId, 'Book ID:', bookId);
 
         // Find the user
         const user = await User.findById(userId);
