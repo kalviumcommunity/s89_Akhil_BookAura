@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import Navbar from '../components/Navbar'
 import '../pagescss/Home.css'
 import bestseller from '../images/bestseller.png'
@@ -6,13 +6,25 @@ import Footer from '../components/Footer'
 import { useCart } from './MarketPlace/cart'
 import { SafeImage, getProxiedImageUrl, handleImageError } from '../utils/imageUtils'
 import {useNavigate} from 'react-router-dom'
+import axios from 'axios';
 
 const Home = () => {
   const { syncCartWithServer } = useCart();
   const navigate = useNavigate();
+  const [featuredBooks, setFeaturedBooks] = useState([]);
 
   // Check if we need to sync cart after Google login
   useEffect(() => {
+    const fetchBooks = async () => {
+    try {
+      const featuredResponse = await axios.get('http://localhost:5000/router/featured');
+        setFeaturedBooks(featuredResponse.data.data.slice(0, 4)); // Limit to 4 books
+    } catch (error) {
+      console.log('Failed to fetch featured books:', error);
+      console.log(error)
+    }
+  }
+  fetchBooks();
     const shouldSyncCart = localStorage.getItem('syncCartAfterLogin');
     if (shouldSyncCart === 'true') {
       // Sync cart with server
@@ -21,7 +33,7 @@ const Home = () => {
       localStorage.removeItem('syncCartAfterLogin');
     }
   }, [syncCartWithServer]);
-
+  
   return (
     <div>
       <Navbar/>
@@ -51,8 +63,6 @@ const Home = () => {
             <h2 className='bestseller-title'>Dot Com Secrets</h2>
             <p className='bestseller-author'>By Russell Brunson</p>
             <div className='bestseller-rating'>
-              <span className='stars'>★★★★★</span>
-              <span className='count'>(3,842 reviews)</span>
             </div>
             <p className='bestseller-description'>
               The Underground Playbook For Growing Your Company Online With Sales Funnels.
@@ -82,61 +92,17 @@ const Home = () => {
           <p className='section-subtitle'>Discover our most popular titles this month</p>
 
           <div className='featured-books-container'>
-            <div className='featured-book'>
-              <div className='book-cover'>
-                <SafeImage src="https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1348805097i/10534.jpg" alt="The Hobbit" />
-              </div>
-              <div className='book-info'>
-                <h3>The Hobbit</h3>
-                <p className='author'>J.R.R. Tolkien</p>
-                <div className='rating'>
-                  <span>★★★★★</span>
-                  <span className='rating-count'>(2,453)</span>
+            {featuredBooks.map((book, index) => (
+              <div key={index} className='featured-book'>
+                <div className='book-cover'>
+                  <SafeImage src={book.coverimage} alt={book.title} />
+                </div>
+                <div className='book-info'>
+                  <h3>{book.title}</h3>
+                  <p className='author'>by {book.author}</p>
                 </div>
               </div>
-            </div>
-
-            <div className='featured-book'>
-              <div className='book-cover'>
-                <SafeImage src="https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1631088473i/5907.jpg" alt="Pride and Prejudice" />
-              </div>
-              <div className='book-info'>
-                <h3>Pride and Prejudice</h3>
-                <p className='author'>Jane Austen</p>
-                <div className='rating'>
-                  <span>★★★★☆</span>
-                  <span className='rating-count'>(1,987)</span>
-                </div>
-              </div>
-            </div>
-
-            <div className='featured-book'>
-              <div className='book-cover'>
-                <SafeImage src="https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1673869741i/1885.jpg" alt="Frankenstein" />
-              </div>
-              <div className='book-info'>
-                <h3>Frankenstein</h3>
-                <p className='author'>Mary Shelley</p>
-                <div className='rating'>
-                  <span>★★★★☆</span>
-                  <span className='rating-count'>(1,245)</span>
-                </div>
-              </div>
-            </div>
-
-            <div className='featured-book'>
-              <div className='book-cover'>
-                <SafeImage src="https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1572098085i/18135.jpg" alt="Romeo and Juliet" />
-              </div>
-              <div className='book-info'>
-                <h3>Romeo and Juliet</h3>
-                <p className='author'>William Shakespeare</p>
-                <div className='rating'>
-                  <span>★★★★☆</span>
-                  <span className='rating-count'>(1,756)</span>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
 
           <button className='view-all-btn'>View All Books</button>

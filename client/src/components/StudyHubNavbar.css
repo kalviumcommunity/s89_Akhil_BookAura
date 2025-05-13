@@ -1,48 +1,94 @@
 /* Sidebar container with theme background */
 .main-div-study {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100vh;
-    width: 200px;
-    background-color: #E6D9CC;
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 200px;
+  background-color: #E6D9CC;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Mobile menu button - hidden by default on desktop */
+.mobile-menu-button {
+  display: none;
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  z-index: 1001;
+  background-color: #E6D9CC;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  color: #3B3B3B;
+  transition: background-color 0.2s;
+}
+
+.mobile-menu-button:hover {
+  background-color: #D7C6B9;
+}
+
+/* Unordered list style reset */
+.main-div-study ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Nav item base style */
+.main-div-study li {
+  padding: 16px 20px;
+  font-size: 16px;
+  color: #3B3B3B; /* dark gray for contrast */
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+  border-left: 4px solid transparent;
+}
+
+/* Hover effect with subtle shading */
+.main-div-study li:hover {
+  background-color: #D7C6B9; /* slightly darker beige */
+  color: #000000;
+}
+
+/* Active link style */
+.active-1 {
+  background-color: #CBBBAE;
+  color: #000000;
+  font-weight: bold;
+  border-left: 4px solid #5A4B41; /* earthy brown highlight */
+}
+
+/* Inactive link style */
+.notactive-1 {
+  color: #4F4F4F;
+}
+
+/* Responsive styles for tablets and mobile */
+@media (max-width: 768px) {
+  .mobile-menu-button {
+    display: flex;
   }
-  
-  /* Unordered list style reset */
-  .main-div-study ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
+
+  .main-div-study {
+    transform: translateX(-100%);
+    width: 250px;
   }
-  
-  /* Nav item base style */
-  .main-div-study li {
-    padding: 16px 20px;
-    font-size: 16px;
-    color: #3B3B3B; /* dark gray for contrast */
-    cursor: pointer;
-    transition: background-color 0.2s, color 0.2s;
-    border-left: 4px solid transparent;
+
+  .main-div-study.menu-open {
+    transform: translateX(0);
   }
-  
-  /* Hover effect with subtle shading */
-  .main-div-study li:hover {
-    background-color: #D7C6B9; /* slightly darker beige */
-    color: #000000;
+}
+
+/* Additional adjustments for very small screens */
+@media (max-width: 480px) {
+  .main-div-study {
+    width: 100%;
   }
-  
-  /* Active link style */
-  .active-1 {
-    background-color: #CBBBAE;
-    color: #000000;
-    font-weight: bold;
-    border-left: 4px solid #5A4B41; /* earthy brown highlight */
-  }
-  
-  /* Inactive link style */
-  .notactive-1 {
-    color: #4F4F4F;
-  }
-  
+}

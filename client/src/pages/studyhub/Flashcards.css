@@ -9,6 +9,7 @@
   margin-left: 200px; /* Match the width of StudyHubNavbar */
   width: calc(100% - 200px);
   padding: 30px;
+  transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
 }
 
 .flashcards-header {
@@ -574,7 +575,36 @@
     margin-left: 0;
     width: 100%;
     padding: 20px;
-    margin-top: 60px; /* Add space for mobile navbar */
+    padding-top: 60px; /* Add space for mobile navbar button */
+  }
+
+  .deck-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+
+  .flashcard-study {
+    padding: 10px;
+  }
+
+  .study-header {
+    margin-bottom: 20px;
+  }
+
+  .flashcard {
+    height: 250px;
+  }
+
+  .back-button {
+    position: relative;
+    margin-bottom: 15px;
+  }
+}
+
+/* Additional adjustments for very small screens */
+@media (max-width: 480px) {
+  .flashcards-content {
+    padding: 15px;
+    padding-top: 60px;
   }
 
   .deck-grid {
@@ -582,16 +612,11 @@
   }
 
   .flashcard {
-    height: 250px;
+    height: 200px;
   }
 
-  .study-header {
-    margin-bottom: 20px;
-  }
-
-  .back-button {
-    position: relative;
-    margin-bottom: 15px;
+  .upload-modal {
+    padding: 20px;
   }
 }
 

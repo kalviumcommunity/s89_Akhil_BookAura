@@ -1,20 +1,37 @@
-import React from "react";
+import React, { useState } from "react";
 import "./StudyHubNavbar.css";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Calendar as CalendarIcon,ArrowLeft } from "lucide-react";
+import { Calendar as CalendarIcon, ArrowLeft, Menu, X } from "lucide-react";
+
+
 const StudyHubNavbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
   return (
     <div>
-      <div className="main-div-study">
+      {/* Mobile burger menu button */}
+      <div className="mobile-menu-button" onClick={toggleMenu}>
+        {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+      </div>
+
+      {/* Main navigation */}
+      <div className={`main-div-study ${isMenuOpen ? 'menu-open' : ''}`}>
         <ul>
           <li onClick={() => navigate("/home")}><ArrowLeft size={15}/>Back to Main Home</li>
           <li
             className={
               location.pathname === "/studyhome" ? "active-1" : "notactive-1"
             }
-            onClick={() => navigate("/studyhome")}
+            onClick={() => {
+              navigate("/studyhome");
+              setIsMenuOpen(false);
+            }}
           >
             Home
           </li>
@@ -22,7 +39,10 @@ const StudyHubNavbar = () => {
             className={
               location.pathname.startsWith("/calendar") ? "active" : "notactive"
             }
-            onClick={() => navigate("/calendar")}
+            onClick={() => {
+              navigate("/calendar");
+              setIsMenuOpen(false);
+            }}
           >
             <CalendarIcon size={16} className="nav-icon" />
             Calendar
@@ -31,7 +51,10 @@ const StudyHubNavbar = () => {
             className={
               location.pathname === "/flashcards" ? "active-1" : "notactive-1"
             }
-            onClick={() => navigate("/flashcards")}
+            onClick={() => {
+              navigate("/flashcards");
+              setIsMenuOpen(false);
+            }}
           >
             Flashcards
           </li>
@@ -39,7 +62,10 @@ const StudyHubNavbar = () => {
             className={
               location.pathname === "/aichat" ? "active-1" : "notactive-1"
             }
-            onClick={() => navigate("/aichat")}
+            onClick={() => {
+              navigate("/aichat");
+              setIsMenuOpen(false);
+            }}
           >
             Ai chat
           </li>

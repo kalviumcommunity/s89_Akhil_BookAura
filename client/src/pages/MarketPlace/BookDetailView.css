@@ -95,7 +95,7 @@
 }
 .go-back-button{
   all:unset;
-  width: 10%;
+  width: auto;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -108,6 +108,7 @@
   border-radius: 8px;
   font-size: 1rem;
   cursor: pointer;
+  z-index: 100;
 }
 .go-back-button:hover{
   background-color: #8C6239;
@@ -392,6 +393,13 @@
   .book-detail-additional {
     padding: 20px;
   }
+
+  .go-back-button {
+    margin-top: 10px;
+    margin-left: 5px;
+    padding: 8px 15px;
+    font-size: 0.9rem;
+  }
 }
 
 @media screen and (max-width: 480px) {
@@ -466,6 +474,13 @@
 
   .book-detail-spec-value {
     font-size: 1rem;
+  }
+
+  .go-back-button {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    margin-top: 5px;
+    margin-left: 5px;
   }
 }
 

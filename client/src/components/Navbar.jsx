@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './Navbar.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Logo from '../images/logo.png';
-import { ShoppingCart, Calendar, User } from 'lucide-react';
+import { ShoppingCart, Home, BookOpen, GraduationCap, Menu, X } from 'lucide-react';
 import { useCart } from '../pages/MarketPlace/cart';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
@@ -11,9 +11,47 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation(); // Get the current location
   const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { cartCount } = useCart();
   const { isLoggedIn } = useAuth();
-  const [userName,setUserName] = useState('');
+  const [userName, setUserName] = useState('');
+  const menuRef = useRef(null);
+
+  // Toggle mobile menu
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+    // When opening the menu, prevent scrolling on the body
+    if (!mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+  };
+
+  // Close mobile menu when navigating
+  const handleNavigation = (path) => {
+    navigate(path);
+    setMobileMenuOpen(false);
+    document.body.style.overflow = 'auto';
+  };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (mobileMenuOpen && menuRef.current && !menuRef.current.contains(event.target) &&
+          !event.target.closest('.mobile-menu-toggle')) {
+        setMobileMenuOpen(false);
+        document.body.style.overflow = 'auto';
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      // Reset overflow when component unmounts
+      document.body.style.overflow = 'auto';
+    };
+  }, [mobileMenuOpen]);
 
   // Add scroll event listener
   useEffect(() => {
@@ -61,70 +99,86 @@ const Navbar = () => {
   }, [isLoggedIn]);
 
   return (
-    <div className={`navbar ${scrolled ? 'scrolled' : ''}`}>
-      <div className='left' onClick={() => navigate('/home')}>
+    <div className={`navbar ${scrolled ? 'scrolled' : ''} ${mobileMenuOpen ? 'menu-open' : ''}`}>
+      <div className='left' onClick={() => handleNavigation('/home')}>
         <img src={Logo} alt="logo" className='logo' />
       </div>
-      <ul className='right'>
+
+      {/* Desktop and Mobile Navigation */}
+      <ul className={`right ${mobileMenuOpen ? 'show-mobile-menu' : ''}`} ref={menuRef}>
         <li
           className={location.pathname === '/home' ? 'active' : 'notactive'} // Highlight Home
-          onClick={() => navigate('/home')}
+          onClick={() => handleNavigation('/home')}
         >
+          <Home size={18} className="nav-icon" />
           Home
         </li>
         <li
           className={location.pathname === '/marketplace' ? 'active' : 'notactive'} // Highlight Marketplace
-          onClick={() => navigate('/marketplace')}
+          onClick={() => handleNavigation('/marketplace')}
         >
+          <BookOpen size={18} className="nav-icon" />
           Marketplace
         </li>
         <li
           className={location.pathname === '/my-books' ? 'active' : 'notactive'} // Highlight My Books
-          onClick={() => navigate('/my-books')}
+          onClick={() => handleNavigation('/my-books')}
         >
+          <BookOpen size={18} className="nav-icon" />
           My Books
         </li>
         <li
-        className={location.pathname === '/studyhome' ? 'active' : 'notactive'}
-        onClick={() => navigate('/studyhome')}
+          className={location.pathname === '/studyhome' ? 'active' : 'notactive'}
+          onClick={() => handleNavigation('/studyhome')}
         >
+          <GraduationCap size={18} className="nav-icon" />
           StudyHub
         </li>
 
+        {/* Close button for mobile menu */}
+        <li className="close-mobile-menu" onClick={toggleMobileMenu}>
+          <X size={24} />
+        </li>
+      </ul>
+
+      {/* Always visible elements on the right */}
+      <div className="always-visible-items">
         {!isLoggedIn && (
-          <li
+          <div
             className='login'
-            onClick={() => navigate('/signup')}
+            onClick={() => handleNavigation('/signup')}
           >
             Create Account
-          </li>
+          </div>
         )}
         {isLoggedIn && (
-          <li className="display-flex flex-direction-column align-items-center">
+          <div
+            className="profile-item display-flex flex-direction-column align-items-center gap-2"
+            onClick={() => handleNavigation('/profile')}
+          >
             <img
               src={profileImage}
               alt="Profile"
-              className="rounded-full border border-black "
+              className="rounded-full border border-black"
               height='30px'
               width={'30px'}
-              onClick={() => navigate('/profile')}
               style={{ cursor: 'pointer' }}
             />
             <span className="username">Hi, {userName}</span>
-          </li>
+          </div>
         )}
-        
 
-        <li
-          className='cart-icon'
-          onClick={() => navigate('/cart')}
-        >
+        {/* Cart icon - always visible */}
+        <div className='cart-icon' onClick={() => handleNavigation('/cart')}>
           <ShoppingCart size={20} />
           {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
-        </li>
+        </div>
 
-        
-      </ul>
+        {/* Mobile menu toggle button */}
+        <div className="mobile-menu-toggle" onClick={toggleMobileMenu}>
+          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </div>
+      </div>
     </div>
   );
 };

@@ -24,4 +24,13 @@ const verifyToken = (req, res, next) => {
         return res.status(401).send({message: "Invalid token", error})
     }
 }
-module.exports=verifyToken;
+
+const verifyAdmin = (req, res, next) => {
+    if (req.user && req.user.userType === 'admin') {
+        next();
+    } else {
+        return res.status(403).send({message: "Access Denied. Admin access required"})
+    }
+}
+
+module.exports=verifyToken, verifyAdmin;
