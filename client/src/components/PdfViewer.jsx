@@ -1,12 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
+import { Document, Page } from 'react-pdf';
 import axios from 'axios';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, Minimize, Book, List, Grid, Download, Moon, Sun } from 'lucide-react';
 import './PdfViewer.css';
-
-// Ensure the worker is correctly set up for your version
-const pdfjsVersion = '4.8.69';
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.mjs`;
+import pdfjs from '../pdfWorker';
 
 const PdfViewer = ({ fileUrl }) => {
   const [numPages, setNumPages] = useState(null);

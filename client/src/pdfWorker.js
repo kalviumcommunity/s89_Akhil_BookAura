@@ -4,7 +4,10 @@ import { pdfjs } from 'react-pdf';
 // Using a non-module format to avoid MIME type issues
 const pdfjsVersion = '5.2.133';
 
-// Use a CDN that serves with the correct MIME type
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.js`;
+// Only set the worker source if it hasn't been set already
+if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+  // Use a CDN that serves with the correct MIME type
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.js`;
+}
 
 export default pdfjs;
