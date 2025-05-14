@@ -1,13 +1,25 @@
 // server.js
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
+const path = require('path');
+
+// Configure environment variables
 dotenv.config();
+
+// Setup Express
 const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
 const passport = require('passport');
 const cookieParser = require('cookie-parser');
-require('./passport.config'); // Import passport configuration
+
+// Set global module paths for easier imports
+global.__basedir = __dirname;
+global.__modeldir = path.join(__dirname, 'model');
+
+// Import passport configuration
+require('./passport.config');
+
 const app = express();
 const MONGODB_URI = process.env.MONGODB_URI;
 

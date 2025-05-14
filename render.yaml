@@ -3,7 +3,7 @@ services:
     name: bookaura-backend
     env: node
     buildCommand: cd server && npm install
-    startCommand: cd server && npm start
+    startCommand: cd server && NODE_ENV=production npm start
     envVars:
       - key: NODE_ENV
         value: production
@@ -20,4 +20,6 @@ services:
       - key: CLOUDINARY_API_SECRET
         sync: false
       - key: FRONTEND_URL
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
         sync: false

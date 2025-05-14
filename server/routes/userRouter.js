@@ -290,7 +290,7 @@ router.get('/auth/google/callback',
       });
 
       // Redirect to frontend with success message and user data
-      res.redirect(`http://localhost:5173/home?success=true&token=${token}`);
+      res.redirect(`http://localhost:5173/?success=true&token=${token}`);
     } catch (error) {
       console.error('Error in Google callback:', error);
       res.redirect(`http://localhost:5173/login?error=authentication_failed`);
