@@ -1,7 +1,8 @@
 import { pdfjs } from 'react-pdf';
 
 // This ensures we're using the correct worker version that matches the PDF.js version used by react-pdf
-const pdfjsVersion = '4.8.69';
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.mjs`;
+// Update to match the version in package.json (pdfjs-dist@5.2.133)
+const pdfjsVersion = '5.2.133';
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.js`;
 
 export default pdfjs;
