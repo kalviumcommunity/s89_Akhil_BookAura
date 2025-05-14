@@ -19,6 +19,11 @@ import Flashcards from './pages/studyhub/FlashcardsFixed';
 import AiChat from './pages/studyhub/AiChat';
 import Profile from './pages/Profile';
 import TestPdfViewer from './pages/TestPdfViewer';
+import TestIframePdfViewer from './pages/TestIframePdfViewer';
+import TestPdfJsViewer from './pages/TestPdfJsViewer';
+import TestSimplePdfViewer from './pages/TestSimplePdfViewer';
+import TestBasicPdfViewer from './pages/TestBasicPdfViewer';
+import TestPdfUpload from './pages/TestPdfUpload';
 
 const pageTransition = {
   initial: { opacity: 0, x: -100 },
@@ -136,6 +141,26 @@ const AllRouting = () => {
         <Route
           path="/test-pdf"
           element={<TestPdfViewer />}
+        />
+        <Route
+          path="/test-iframe-pdf"
+          element={<TestIframePdfViewer />}
+        />
+        <Route
+          path="/test-pdfjs-viewer"
+          element={<TestPdfJsViewer />}
+        />
+        <Route
+          path="/test-simple-pdf"
+          element={<TestSimplePdfViewer />}
+        />
+        <Route
+          path="/test-basic-pdf"
+          element={<TestBasicPdfViewer />}
+        />
+        <Route
+          path="/test-pdf-upload"
+          element={<TestPdfUpload />}
         />
       </Routes>
     </AnimatePresence>

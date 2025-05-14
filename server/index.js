@@ -14,8 +14,22 @@ const MONGODB_URI = process.env.MONGODB_URI;
 // Middleware
 app.use(cors({
     origin: function(origin, callback) {
-        // Allow all origins during development
-        return callback(null, true);
+        const allowedOrigins = [
+            'http://localhost:5173',  // Local development
+            'https://s89-akhil-book-aura.vercel.app', // Assuming this is your frontend URL
+            'https://s89-akhil-book-aura.netlify.app',
+            'https://bookauraba.netlify.app/',
+            process.env.FRONTEND_URL // From environment variable if set
+        ].filter(Boolean); // Remove any undefined/null values
+
+        // Allow requests with no origin (like mobile apps, curl requests)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+            return callback(null, true);
+        }
+
+        callback(null, true); // Temporarily allow all origins in production too
     },
     credentials: true
 }));
@@ -24,12 +38,13 @@ app.use(cookieParser());
 
 // Session middleware
 app.use(session({
-    secret: process.env.JWT_SECRET ,
+    secret: process.env.JWT_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: false,
-        maxAge: 24 * 60 * 60 * 1000
+        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Required for cross-site cookies
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
 
@@ -58,17 +73,18 @@ app.use('/router', userRouter);
 app.use('/router', bookRouter);
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (_, res) => {
     res.status(200).json({ status: 'ok', message: 'Server is running' });
 });
 
 // Start server
-app.listen(5000, async () => {
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, async () => {
     try {
         await mongoose.connect(MONGODB_URI);
         console.log("Connected to MongoDB");
     } catch (error) {
         console.log("MongoDB connection error:", error);
     }
-    console.log(`Running on server 5000`);
+    console.log(`Server running on port ${PORT}`);
 });

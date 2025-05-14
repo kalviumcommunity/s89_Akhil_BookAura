@@ -5,7 +5,7 @@ import bestseller from '../images/bestseller.png'
 import Footer from '../components/Footer'
 import { useCart } from './MarketPlace/cart'
 import { SafeImage, getProxiedImageUrl, handleImageError } from '../utils/imageUtils'
-import {useNavigate} from 'react-router-dom'
+import {useNavigate,useLocation} from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
 import axios from 'axios';
 
@@ -13,9 +13,14 @@ const Home = () => {
   const { syncCartWithServer } = useCart();
   const navigate = useNavigate();
   const [featuredBooks, setFeaturedBooks] = useState([]);
+  const location = useLocation();
 
   // Check if we need to sync cart after Google login
   useEffect(() => {
+    if (location.state?.reload) {
+      window.history.replaceState({}, document.title); // prevent infinite reload
+      window.location.reload(); // full reload
+    }
     const fetchBooks = async () => {
     try {
       const featuredResponse = await axios.get('http://localhost:5000/router/featured');
@@ -33,8 +38,8 @@ const Home = () => {
       // Remove the flag
       localStorage.removeItem('syncCartAfterLogin');
     }
-  }, [syncCartWithServer]);
-  
+  }, [location.state,syncCartWithServer]);
+
   return (
     <div>
       <Navbar/>
@@ -46,9 +51,9 @@ const Home = () => {
         </div>
 
         <div className='main-books'>
-          <img className='photo book1' src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRzIbGw5k2kZZMVRhAtcqYdhqH4RLsEnEjdUw&s" alt="hard things about hard things" />
-          <img className='photo book2' src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQe3Au_7qcAvUYAqjrzSHr2vpJp5GmZwu3C7A&s" alt="think and grow rich" />
-          <img className='photo book3' src="https://raajkart.com/media/catalog/product/cache/378cf9a83101843e5b8b1271b991c285/z/e/zero_to_one_peter_thiel_.png" alt="zero to one" />
+          <img className='photo book1' onClick={() => navigate('/books?id=65009709000001')} src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRzIbGw5k2kZZMVRhAtcqYdhqH4RLsEnEjdUw&s" alt="hard things about hard things" />
+          <img className='photo book2' onClick={() => navigate('/books?id=65009709000001')} src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQe3Au_7qcAvUYAqjrzSHr2vpJp5GmZwu3C7A&s" alt="think and grow rich" />
+          <img className='photo book3' onClick={() => navigate('/books?id=65009709000001')} src="https://raajkart.com/media/catalog/product/cache/378cf9a83101843e5b8b1271b991c285/z/e/zero_to_one_peter_thiel_.png" alt="zero to one" />
         </div>
       </div>
       <div className='middle-box'>
@@ -84,7 +89,7 @@ const Home = () => {
                 <span className='meta-value'>Marketing</span>
               </div>
             </div>
-            <button className='bestseller-button'>Read More</button>
+            <button className='bestseller-button' onClick={() => navigate('/books?id=65009709000001')}>Read More</button>
           </div>
         </div>
 
@@ -100,7 +105,7 @@ const Home = () => {
             ))}
           </div>
 
-          <button className='view-all-btn'>View All Books</button>
+          <button className='view-all-btn' onClick={() => navigate('/books')}>View All Books</button>
         </div>
       </div>
       <Footer/>

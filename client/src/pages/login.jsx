@@ -38,7 +38,7 @@ const Login = () => {
         setSuccess(false);
       }, 3000);
       setTimeout(() => {
-        navigate('/');
+        navigate('/',{ state: { reload: true }});
       }, 2000);
     } catch (error) {
       console.error("Error logging in:", error);

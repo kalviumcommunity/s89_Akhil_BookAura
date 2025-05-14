@@ -110,28 +110,25 @@ const Navbar = () => {
           className={location.pathname === '/' ? 'active' : 'notactive'} // Highlight Home
           onClick={() => handleNavigation('/')}
         >
-          <Home size={18} className="nav-icon" />
+          
           Home
         </li>
         <li
           className={location.pathname === '/marketplace' ? 'active' : 'notactive'} // Highlight Marketplace
           onClick={() => handleNavigation('/marketplace')}
         >
-          <BookOpen size={18} className="nav-icon" />
           Marketplace
         </li>
         <li
           className={location.pathname === '/my-books' ? 'active' : 'notactive'} // Highlight My Books
           onClick={() => handleNavigation('/my-books')}
         >
-          <BookOpen size={18} className="nav-icon" />
           My Books
         </li>
         <li
           className={location.pathname === '/studyhome' ? 'active' : 'notactive'}
           onClick={() => handleNavigation('/studyhome')}
         >
-          <GraduationCap size={18} className="nav-icon" />
           StudyHub
         </li>
 

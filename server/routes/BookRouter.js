@@ -6,6 +6,7 @@ const Book = require('../model/BookModel');
 const verifyToken = require('../middleware/auth');
 const streamifier = require('streamifier');
 const verifyAdmin = require('../middleware/auth');
+const axios = require('axios');
 
 // Memory storage for multer
 const storage = multer.memoryStorage();
@@ -30,25 +31,72 @@ const upload = multer({
 // Upload helper
 const uploadToCloudinary = (fileBuffer, folder, mimetype) => {
   const isBook = ['application/pdf', 'application/epub+zip', 'application/x-mobipocket-ebook'].includes(mimetype);
+  const isPdf = mimetype === 'application/pdf';
 
   return new Promise((resolve, reject) => {
+    // Create a timestamp-based unique ID for the file
+    const timestamp = Date.now();
+    const uniqueId = `${timestamp}_${Math.floor(Math.random() * 1000)}`;
+
     const uploadOptions = {
       folder,
       resource_type: isBook ? 'raw' : 'image',
       access_mode: 'public',
       type: 'upload',
-      use_filename: true,
+      use_filename: false, // Don't use original filename
       unique_filename: true
     };
 
+    // For PDF files, set a specific public_id without extension
+    if (isPdf) {
+      // Using timestamp as public_id ensures uniqueness
+      uploadOptions.public_id = uniqueId;
+
+      // Log the upload options for debugging
+      console.log('PDF upload options:', {
+        folder,
+        public_id: uploadOptions.public_id,
+        resource_type: uploadOptions.resource_type
+      });
+    }
+
     const stream = cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
+      if (error) {
+        console.error('Cloudinary upload error:', error);
+        reject(error);
+        return;
+      }
+
       if (result) {
+        console.log('Cloudinary upload result:', {
+          public_id: result.public_id,
+          format: result.format,
+          resource_type: result.resource_type,
+          url: result.url,
+          secure_url: result.secure_url
+        });
+
+        // For PDF files, ensure the URL doesn't end with .pdf extension
+        // This is important for compatibility with the PDF viewer
+        if (isPdf && result.secure_url.toLowerCase().endsWith('.pdf')) {
+          // Remove the .pdf extension from the URL
+          result.secure_url = result.secure_url.slice(0, -4);
+          console.log('Modified PDF URL (removed .pdf extension):', result.secure_url);
+        }
+
+        // Double-check the URL format
+        if (isPdf && !result.secure_url.includes('raw')) {
+          console.warn('WARNING: PDF URL does not contain "raw" segment, which may cause issues');
+        }
+
         resolve(result);
       } else {
-        reject(error);
+        console.error('Cloudinary upload failed with no error and no result');
+        reject(new Error('Upload failed with no result'));
       }
     });
 
+    // Create a read stream from the buffer and pipe it to the upload stream
     streamifier.createReadStream(fileBuffer).pipe(stream);
   });
 };
@@ -59,6 +107,8 @@ router.post('/uploadBook', verifyAdmin, upload.fields([
   { name: 'bookFile', maxCount: 1 }
 ]), async (req, res) => {
   try {
+    console.log('Processing book upload request');
+
     const {
       title,
       author,
@@ -71,22 +121,42 @@ router.post('/uploadBook', verifyAdmin, upload.fields([
       isNewRelease
     } = req.body;
 
+    // Validate required files
     if (!req.files?.coverImage || !req.files?.bookFile) {
       return res.status(400).json({ success: false, message: 'Both cover image and book file are required' });
     }
 
+    // Log file information
+    console.log('Cover image:', req.files.coverImage[0].originalname, req.files.coverImage[0].mimetype, req.files.coverImage[0].size);
+    console.log('Book file:', req.files.bookFile[0].originalname, req.files.bookFile[0].mimetype, req.files.bookFile[0].size);
+
+    // Check if book file is a PDF
+    const isPdf = req.files.bookFile[0].mimetype === 'application/pdf';
+    if (isPdf) {
+      console.log('Processing PDF file upload to Cloudinary');
+    } else {
+      console.log('Processing non-PDF book file upload');
+    }
+
+    // Upload cover image to Cloudinary
+    console.log('Uploading cover image to Cloudinary...');
     const coverImageResult = await uploadToCloudinary(
       req.files.coverImage[0].buffer,
       'bookstore/coverImages',
       req.files.coverImage[0].mimetype
     );
+    console.log('Cover image uploaded successfully:', coverImageResult.secure_url);
 
+    // Upload book file to Cloudinary
+    console.log('Uploading book file to Cloudinary...');
     const bookFileResult = await uploadToCloudinary(
       req.files.bookFile[0].buffer,
       'bookstore/bookFiles',
       req.files.bookFile[0].mimetype
     );
+    console.log('Book file uploaded successfully:', bookFileResult.secure_url);
 
+    // Process categories
     let parsedCategories = [];
     if (categories) {
       try {
@@ -95,7 +165,9 @@ router.post('/uploadBook', verifyAdmin, upload.fields([
         parsedCategories = typeof categories === 'string' ? categories.split(',').map(c => c.trim()) : [];
       }
     }
+    console.log('Processed categories:', parsedCategories);
 
+    // Create new book document
     const newBook = new Book({
       title,
       author,
@@ -103,14 +175,26 @@ router.post('/uploadBook', verifyAdmin, upload.fields([
       genre,
       price,
       coverimage: coverImageResult.secure_url,
-      url: bookFileResult.secure_url,
+      url: bookFileResult.secure_url, // This URL should not have .pdf extension for PDFs
       categories: parsedCategories,
       isBestSeller: isBestSeller === 'true' || isBestSeller === true,
       isFeatured: isFeatured === 'true' || isFeatured === true,
       isNewRelease: isNewRelease === 'true' || isNewRelease === true
     });
 
+    // Verify the URL format for PDF files
+    if (isPdf) {
+      // Double-check that the URL doesn't end with .pdf
+      if (newBook.url.toLowerCase().endsWith('.pdf')) {
+        console.warn('PDF URL still has .pdf extension, removing it');
+        newBook.url = newBook.url.slice(0, -4);
+      }
+      console.log('Final PDF URL (without .pdf extension):', newBook.url);
+    }
+
+    // Save the book to the database
     await newBook.save();
+    console.log('Book saved to database with ID:', newBook._id);
 
     res.status(201).json({
       success: true,
@@ -257,6 +341,103 @@ router.get('/fix-pdf-urls', verifyToken, async (req, res) => {
       success: false,
       message: 'Error fixing PDF URLs',
       error: error.message
+    });
+  }
+});
+
+// Test PDF upload route
+router.post('/test-pdf-upload', verifyAdmin, upload.single('pdfFile'), async (req, res) => {
+  try {
+    console.log('Testing PDF upload to Cloudinary');
+    console.log('Request body:', req.body);
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'PDF file is required' });
+    }
+
+    // Log file information
+    console.log('PDF file details:', {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      encoding: req.file.encoding
+    });
+
+    // Check if file is a PDF
+    if (req.file.mimetype !== 'application/pdf') {
+      return res.status(400).json({ success: false, message: 'File must be a PDF' });
+    }
+
+    // Upload PDF to Cloudinary
+    console.log('Uploading PDF to Cloudinary...');
+    const uploadResult = await uploadToCloudinary(
+      req.file.buffer,
+      'bookstore/test-pdfs',
+      req.file.mimetype
+    );
+
+    console.log('PDF uploaded successfully');
+    console.log('Original Cloudinary URL:', uploadResult.secure_url);
+
+    // Verify the URL format
+    if (uploadResult.secure_url.toLowerCase().endsWith('.pdf')) {
+      console.warn('WARNING: URL still has .pdf extension, this should have been removed');
+    } else {
+      console.log('URL format is correct (no .pdf extension)');
+    }
+
+    // Test the URL with the PDF viewer
+    console.log('Testing URL with PDF viewer...');
+
+    // Create test URLs for different formats
+    const urlWithoutExtension = uploadResult.secure_url;
+    const urlWithExtension = `${uploadResult.secure_url}.pdf`;
+
+    // Test both URLs with a HEAD request to see which one works
+    let urlWithoutExtensionWorks = false;
+    let urlWithExtensionWorks = false;
+
+    try {
+      const testWithoutExt = await axios.head(urlWithoutExtension, { timeout: 5000 });
+      urlWithoutExtensionWorks = testWithoutExt.status >= 200 && testWithoutExt.status < 300;
+      console.log(`URL without extension (${urlWithoutExtension}) test result:`, urlWithoutExtensionWorks ? 'SUCCESS' : 'FAILED');
+    } catch (err) {
+      console.log(`URL without extension (${urlWithoutExtension}) test failed:`, err.message);
+    }
+
+    try {
+      const testWithExt = await axios.head(urlWithExtension, { timeout: 5000 });
+      urlWithExtensionWorks = testWithExt.status >= 200 && testWithExt.status < 300;
+      console.log(`URL with extension (${urlWithExtension}) test result:`, urlWithExtensionWorks ? 'SUCCESS' : 'FAILED');
+    } catch (err) {
+      console.log(`URL with extension (${urlWithExtension}) test failed:`, err.message);
+    }
+
+    // Return both URLs and test results
+    res.status(200).json({
+      success: true,
+      message: 'PDF uploaded successfully',
+      url: uploadResult.secure_url,
+      urlWithPdfExtension: `${uploadResult.secure_url}.pdf`,
+      testResults: {
+        urlWithoutExtensionWorks,
+        urlWithExtensionWorks,
+        recommendedUrl: urlWithoutExtensionWorks ? uploadResult.secure_url : `${uploadResult.secure_url}.pdf`
+      },
+      cloudinaryData: {
+        publicId: uploadResult.public_id,
+        format: uploadResult.format,
+        resourceType: uploadResult.resource_type,
+        secureUrl: uploadResult.secure_url
+      }
+    });
+  } catch (error) {
+    console.error('Test PDF upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error uploading test PDF',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });

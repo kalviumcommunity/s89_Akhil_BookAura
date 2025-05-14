@@ -85,13 +85,16 @@
 .book-detail-image {
   top: 0;
   flex: 0 0 auto;
-  height: 70vh;
-  width: 300px;
+  height: auto; /* Changed from fixed height to auto */
+  max-height: 80vh;
+  max-width: 45vh; /* Reduced from 70vh to 60vh */
+  width: 100%; /* Reduced from 300px to 240px */
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
   border-radius: 8px;
   transition: transform 0.3s ease;
   position: sticky;
   top: 50px; /* Navbar + header + some padding */
+  object-fit: contain; /* Ensure the image maintains its aspect ratio */
 }
 .go-back-button{
   all:unset;
@@ -305,8 +308,9 @@
   }
 
   .book-detail-image {
-    width: 220px;
-    position: static;
+    width: 200px; /* Reduced from 220px to 200px */
+    max-height: 50vh; /* Added max-height constraint */
+    position: static; /* Remove sticky positioning on medium screens */
   }
 
   .book-detail-info .book-detail-title {
@@ -323,6 +327,11 @@
 
   .book-detail-specs {
     grid-template-columns: 1fr;
+  }
+
+  .go-back-button {
+    position: absolute; /* Changed from fixed to absolute for better scrolling */
+    margin-top: 10px;
   }
 }
 

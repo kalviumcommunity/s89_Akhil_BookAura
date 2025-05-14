@@ -1,13 +1,19 @@
 import { pdfjs } from 'react-pdf';
 
-// This ensures we're using the correct worker version that matches the PDF.js version used by react-pdf
-// Using a non-module format to avoid MIME type issues
-const pdfjsVersion = '5.2.133';
+// We're going to use the fake worker approach by not setting the worker source
+// This is more reliable when there are MIME type issues
+console.log('Using fake worker for PDF.js (worker disabled)');
 
-// Only set the worker source if it hasn't been set already
+// If you want to try with a worker later, uncomment this:
+/*
 if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-  // Use a CDN that serves with the correct MIME type
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.js`;
+  try {
+    console.log('Setting PDF worker from CDN');
+    pdfjs.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.2.133/build/pdf.worker.min.js';
+  } catch (error) {
+    console.warn('Error setting up PDF worker:', error);
+  }
 }
+*/
 
 export default pdfjs;
