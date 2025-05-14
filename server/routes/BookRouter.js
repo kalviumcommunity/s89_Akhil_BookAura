@@ -7,7 +7,7 @@ const verifyToken = require('../middleware/auth');
 const streamifier = require('streamifier');
 const verifyAdmin = require('../middleware/auth');
 
-// Use in-memory storage (no disk write)
+// Memory storage for multer
 const storage = multer.memoryStorage();
 
 const upload = multer({
@@ -27,46 +27,33 @@ const upload = multer({
   }
 });
 
-// Helper to upload a file buffer to Cloudinary
+// Upload helper
 const uploadToCloudinary = (fileBuffer, folder, mimetype) => {
   const isBook = ['application/pdf', 'application/epub+zip', 'application/x-mobipocket-ebook'].includes(mimetype);
 
   return new Promise((resolve, reject) => {
     const uploadOptions = {
       folder,
-      resource_type: isBook ? 'raw' : 'auto'
+      resource_type: isBook ? 'raw' : 'image',
+      access_mode: 'public',
+      type: 'upload',
+      use_filename: true,
+      unique_filename: true
     };
-
-    // For PDFs, set access mode to public and ensure proper format handling
-    if (mimetype === 'application/pdf') {
-      // Use public access mode for simplicity
-      uploadOptions.access_mode = 'public';
-      uploadOptions.type = 'upload';
-
-      // Generate a unique public_id with .pdf extension for better compatibility
-      const uniqueId = Date.now().toString();
-      uploadOptions.public_id = uniqueId;
-
-      // Set the file extension explicitly
-      uploadOptions.format = 'pdf';
-    }
 
     const stream = cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
       if (result) {
-        // For PDFs, ensure the URL has the correct format
-        if (mimetype === 'application/pdf' && !result.secure_url.toLowerCase().endsWith('.pdf')) {
-          // Modify the result to include the .pdf extension
-          result.secure_url = `${result.secure_url}.pdf`;
-        }
         resolve(result);
       } else {
         reject(error);
       }
     });
+
     streamifier.createReadStream(fileBuffer).pipe(stream);
   });
 };
 
+// Upload Book
 router.post('/uploadBook', verifyAdmin, upload.fields([
   { name: 'coverImage', maxCount: 1 },
   { name: 'bookFile', maxCount: 1 }
@@ -88,7 +75,6 @@ router.post('/uploadBook', verifyAdmin, upload.fields([
       return res.status(400).json({ success: false, message: 'Both cover image and book file are required' });
     }
 
-    // Upload to Cloudinary
     const coverImageResult = await uploadToCloudinary(
       req.files.coverImage[0].buffer,
       'bookstore/coverImages',
@@ -101,28 +87,15 @@ router.post('/uploadBook', verifyAdmin, upload.fields([
       req.files.bookFile[0].mimetype
     );
 
-    // Parse categories if provided as a string
     let parsedCategories = [];
     if (categories) {
       try {
         parsedCategories = typeof categories === 'string' ? JSON.parse(categories) : categories;
       } catch (e) {
-        console.error('Error parsing categories:', e);
-        // If parsing fails, try to split by comma
         parsedCategories = typeof categories === 'string' ? categories.split(',').map(c => c.trim()) : [];
       }
     }
 
-    // Process the book file URL to ensure it has the correct format
-    let bookFileUrl = bookFileResult.secure_url;
-
-    // For PDF files, ensure the URL ends with .pdf for better compatibility
-    if (req.files.bookFile[0].mimetype === 'application/pdf' && !bookFileUrl.toLowerCase().endsWith('.pdf')) {
-      console.log('Adding .pdf extension to Cloudinary URL for better compatibility');
-      bookFileUrl = `${bookFileUrl}.pdf`;
-    }
-
-    // Save book data
     const newBook = new Book({
       title,
       author,
@@ -130,7 +103,7 @@ router.post('/uploadBook', verifyAdmin, upload.fields([
       genre,
       price,
       coverimage: coverImageResult.secure_url,
-      url: bookFileUrl,
+      url: bookFileResult.secure_url,
       categories: parsedCategories,
       isBestSeller: isBestSeller === 'true' || isBestSeller === true,
       isFeatured: isFeatured === 'true' || isFeatured === true,
@@ -154,28 +127,16 @@ router.post('/uploadBook', verifyAdmin, upload.fields([
   }
 });
 
-router.get('/getBooks',async(req,res)=>{
+// Get all books (with filters)
+router.get('/getBooks', async (req, res) => {
   try {
     const { category, featured, bestseller, newrelease } = req.query;
-
-    // Build query based on parameters
     const query = {};
 
-    if (category) {
-      query.categories = category;
-    }
-
-    if (featured === 'true') {
-      query.isFeatured = true;
-    }
-
-    if (bestseller === 'true') {
-      query.isBestSeller = true;
-    }
-
-    if (newrelease === 'true') {
-      query.isNewRelease = true;
-    }
+    if (category) query.categories = category;
+    if (featured === 'true') query.isFeatured = true;
+    if (bestseller === 'true') query.isBestSeller = true;
+    if (newrelease === 'true') query.isNewRelease = true;
 
     const books = await Book.find(query);
 
@@ -199,7 +160,7 @@ router.get('/getBooks',async(req,res)=>{
       error: error.message
     });
   }
-})
+});
 
 // Get bestseller books
 router.get('/bestsellers', async (req, res) => {
@@ -261,10 +222,9 @@ router.get('/newreleases', async (req, res) => {
   }
 });
 
-// Fix PDF URLs for existing books
+// Fix PDF URLs (for older data)
 router.get('/fix-pdf-urls', verifyToken, async (req, res) => {
   try {
-    // Find all books with URLs that don't end with .pdf
     const books = await Book.find({
       url: { $exists: true, $ne: null },
       $expr: {
@@ -272,21 +232,16 @@ router.get('/fix-pdf-urls', verifyToken, async (req, res) => {
       }
     });
 
-    console.log(`Found ${books.length} books with URLs that need fixing`);
-
-    // Update each book
     const updatedBooks = [];
+
     for (const book of books) {
       if (book.url && book.url.includes('cloudinary') && book.url.includes('raw')) {
         const oldUrl = book.url;
         const newUrl = `${oldUrl}.pdf`;
 
-        console.log(`Updating book "${book.title}" URL:`);
-        console.log(`  Old: ${oldUrl}`);
-        console.log(`  New: ${newUrl}`);
-
         book.url = newUrl;
         await book.save();
+
         updatedBooks.push({ id: book._id, title: book.title });
       }
     }

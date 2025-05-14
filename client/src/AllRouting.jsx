@@ -28,22 +28,14 @@ const pageTransition = {
 
 const AllRouting = () => {
   const location = useLocation();
-
-  return (
+ return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         <Route
           path="/"
           element={
-            <motion.div
-              variants={pageTransition}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              transition={{ duration: 0.5 }}
-            >
-              <LandingPage />
-            </motion.div>
+            
+              <Home/>
           }
         />
         <Route
@@ -67,13 +59,8 @@ const AllRouting = () => {
 
           }
         />
-        <Route
-          path="/home"
-          element={
-              <Home />
-
-          }
-        />
+        
+        
         <Route
           path="/marketplace"
           element={

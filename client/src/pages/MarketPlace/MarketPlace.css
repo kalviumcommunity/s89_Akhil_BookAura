@@ -187,10 +187,10 @@
 }
 
 .book-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 20px;
-  justify-items: center;
+  justify-content: center;
 }
 
 .book-card-link {
@@ -198,8 +198,7 @@
   color: inherit;
   display: block;
   transition: transform 0.3s ease;
-  width: 100%;
-  max-width: 220px;
+  /* Remove width constraints to let the card define its own width */
 }
 
 .book-card-link:hover {

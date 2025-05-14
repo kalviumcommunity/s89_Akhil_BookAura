@@ -21,8 +21,9 @@
   overflow: hidden;
   height: 100%;
   transition: transform 0.2s ease, box-shadow 0.3s ease;
-  width: 100%;
-  max-width: 220px; /* Set a max width instead of fixed width for better responsiveness */
+  width: 220px; /* Fixed width for consistent card sizing */
+  min-width: 220px; /* Ensure minimum width */
+  max-width: 220px; /* Maximum width to maintain consistency */
 }
 
 .book-card:hover {
@@ -30,11 +31,26 @@
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
-.book-cover-image {
+/* Image container to maintain consistent height */
+.book-card .image-container {
   width: 100%;
-  height: 100%; /* Maintain consistent aspect ratio */
-  object-fit: cover;
+  height: 280px; /* Fixed height for all images */
+  overflow: hidden; /* Hide overflow */
+  position: relative; /* For absolute positioning of children if needed */
+  background-color: #f5f5f5; /* Light background for images that are loading */
+}
+
+.book-card .book-cover-image {
+  width: 100%;
+  height: 100%; /* Take full height of container */
+  object-fit: cover; /* Cover the container while maintaining aspect ratio */
+  object-position: center; /* Center the image */
   display: block;
+  transition: transform 0.3s ease; /* Smooth transition for hover effects */
+}
+
+.book-card:hover .book-cover-image {
+  transform: scale(1.05); /* Slight zoom effect on hover */
 }
 
 .book-details {
@@ -115,10 +131,14 @@
 /* Large screens (desktops) */
 @media screen and (min-width: 1200px) {
   .book-card {
+    width: 240px;
+    min-width: 240px;
     max-width: 240px;
   }
 
-  
+  .book-card .image-container {
+    height: 300px;
+  }
 
   .book-title {
     font-size: 1.125rem;
@@ -142,7 +162,13 @@
 /* Medium screens (tablets) */
 @media screen and (min-width: 768px) and (max-width: 1199px) {
   .book-card {
+    width: 200px;
+    min-width: 200px;
     max-width: 200px;
+  }
+
+  .book-card .image-container {
+    height: 260px;
   }
 
   .book-details {
@@ -158,7 +184,13 @@
 /* Small screens (large phones) */
 @media screen and (min-width: 481px) and (max-width: 767px) {
   .book-card {
+    width: 170px;
+    min-width: 170px;
     max-width: 170px;
+  }
+
+  .book-card .image-container {
+    height: 230px;
   }
 
   .book-details {
@@ -188,7 +220,13 @@
 /* Extra small screens (mobile phones) */
 @media screen and (max-width: 480px) {
   .book-card {
+    width: 150px;
+    min-width: 150px;
     max-width: 150px;
+  }
+
+  .book-card .image-container {
+    height: 200px;
   }
 
   .book-details {
@@ -220,7 +258,13 @@
 /* Very small screens */
 @media screen and (max-width: 360px) {
   .book-card {
+    width: 130px;
+    min-width: 130px;
     max-width: 130px;
+  }
+
+  .book-card .image-container {
+    height: 180px;
   }
 
   .book-details {

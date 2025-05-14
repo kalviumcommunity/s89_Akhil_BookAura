@@ -100,15 +100,15 @@ const Navbar = () => {
 
   return (
     <div className={`navbar ${scrolled ? 'scrolled' : ''} ${mobileMenuOpen ? 'menu-open' : ''}`}>
-      <div className='left' onClick={() => handleNavigation('/home')}>
+      <div className='left' onClick={() => handleNavigation('/')}>
         <img src={Logo} alt="logo" className='logo' />
       </div>
 
       {/* Desktop and Mobile Navigation */}
       <ul className={`right ${mobileMenuOpen ? 'show-mobile-menu' : ''}`} ref={menuRef}>
         <li
-          className={location.pathname === '/home' ? 'active' : 'notactive'} // Highlight Home
-          onClick={() => handleNavigation('/home')}
+          className={location.pathname === '/' ? 'active' : 'notactive'} // Highlight Home
+          onClick={() => handleNavigation('/')}
         >
           <Home size={18} className="nav-icon" />
           Home

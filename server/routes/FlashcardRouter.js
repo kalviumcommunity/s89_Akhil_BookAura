@@ -107,7 +107,7 @@ router.post('/generate', auth, upload.single('pdfFile'), async (req, res) => {
     console.log('Sending request to chatbot-api...');
 
     // Call the external AI API to generate flashcards
-    const aiResponse = await axios.post('http://localhost:5001/chatbot-file', formData, {
+    const aiResponse = await axios.post('https://s89-akhil-bookaura-1.onrender.com/chatbot-file', formData, {
       headers: {
         ...formData.getHeaders()
       },

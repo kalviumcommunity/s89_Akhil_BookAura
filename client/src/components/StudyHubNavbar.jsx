@@ -23,7 +23,7 @@ const StudyHubNavbar = () => {
       {/* Main navigation */}
       <div className={`main-div-study ${isMenuOpen ? 'menu-open' : ''}`}>
         <ul>
-          <li onClick={() => navigate("/home")}><ArrowLeft size={15}/>Back to Main Home</li>
+          <li onClick={() => navigate("/")}><ArrowLeft size={15}/>Back to Main Home</li>
           <li
             className={
               location.pathname === "/studyhome" ? "active-1" : "notactive-1"
