@@ -1,0 +1,11 @@
+/*
+  X-Frame-Options: DENY
+  X-XSS-Protection: 1; mode=block
+  X-Content-Type-Options: nosniff
+
+# Set correct MIME types for JavaScript modules
+/*.mjs
+  Content-Type: text/javascript
+
+/*.js
+  Content-Type: text/javascript
