@@ -15,6 +15,13 @@ const PdfViewer = ({ fileUrl }) => {
   const [error, setError] = useState(null);
   const [processedUrl, setProcessedUrl] = useState(null);
   const [darkMode, setDarkMode] = useState(false); // State for dark mode toggle
+  const [useWorker, setUseWorker] = useState(true); // State to control worker usage
+
+  // Always disable worker for now since we're having persistent issues
+  useEffect(() => {
+    // Force worker to be disabled for all PDFs
+    setUseWorker(false);
+  }, [fileUrl]);
 
   // Process the URL to handle Cloudinary authentication
   useEffect(() => {
@@ -34,6 +41,7 @@ const PdfViewer = ({ fileUrl }) => {
           console.log('Fetching signed URL for:', fileUrl);
 
           try {
+            // First try the signed URL approach
             const response = await axios.get(`http://localhost:5000/api/pdf/signed-url`, {
               params: { url: fileUrl },
               withCredentials: true
@@ -48,9 +56,44 @@ const PdfViewer = ({ fileUrl }) => {
           } catch (fetchError) {
             console.error('Error fetching signed URL:', fetchError);
 
-            // Fallback: Try to use the URL directly
+            // Fallback 1: Try to use the URL directly
             console.log('Trying to use URL directly as fallback');
             setProcessedUrl(fileUrl);
+
+            // Fallback 2: If the URL doesn't end with .pdf, try adding it
+            if (!fileUrl.toLowerCase().endsWith('.pdf')) {
+              console.log('Trying URL with .pdf extension');
+              const pdfUrl = `${fileUrl}.pdf`;
+
+              try {
+                // Check if the URL with .pdf extension is accessible
+                await axios.head(pdfUrl);
+                console.log('URL with .pdf extension is accessible');
+                setProcessedUrl(pdfUrl);
+              } catch (pdfError) {
+                console.error('Error accessing URL with .pdf extension:', pdfError);
+                // Keep using the original URL
+              }
+            }
+
+            // Fallback 3: Try the fetch-pdf proxy endpoint
+            try {
+              console.log('Trying fetch-pdf proxy endpoint');
+              const proxyResponse = await axios.get(`http://localhost:5000/api/pdf/fetch-pdf`, {
+                params: { url: fileUrl },
+                responseType: 'blob',
+                withCredentials: true
+              });
+
+              // Create a blob URL from the response
+              const blob = new Blob([proxyResponse.data], { type: 'application/pdf' });
+              const blobUrl = URL.createObjectURL(blob);
+              console.log('Created blob URL from proxy response');
+              setProcessedUrl(blobUrl);
+            } catch (proxyError) {
+              console.error('Error using fetch-pdf proxy:', proxyError);
+              // Keep using the original URL if all fallbacks fail
+            }
           }
         } else {
           // For other URLs, use them directly
@@ -74,7 +117,56 @@ const PdfViewer = ({ fileUrl }) => {
 
   const onLoadError = (error) => {
     console.error('Error loading PDF:', error);
-    setError('Failed to load the PDF. Please try again later.');
+
+    // Provide more specific error message based on the error
+    let errorMessage = 'Failed to load the PDF. Please try again later.';
+
+    if (error.message) {
+      if (error.message.includes('worker')) {
+        errorMessage = 'PDF viewer worker error. Please try refreshing the page.';
+      } else if (error.message.includes('network')) {
+        errorMessage = 'Network error while loading the PDF. Please check your internet connection.';
+      } else if (error.message.includes('module specifier')) {
+        errorMessage = 'PDF viewer module error. Please try refreshing the page.';
+      } else if (error.message.includes('MIME type')) {
+        errorMessage = 'PDF viewer resource error. Please try refreshing the page.';
+      } else if (error.message.includes('Failed to fetch')) {
+        // Try to use the proxy endpoint as a last resort
+        try {
+          console.log('Trying to use proxy endpoint for PDF');
+
+          // Reset error to allow retry with proxy
+          setError(null);
+          setLoading(true);
+
+          // Use the fetch-pdf proxy endpoint
+          axios.get(`http://localhost:5000/api/pdf/fetch-pdf`, {
+            params: { url: fileUrl },
+            responseType: 'blob',
+            withCredentials: true
+          }).then(response => {
+            // Create a blob URL from the response
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const blobUrl = URL.createObjectURL(blob);
+            console.log('Created blob URL from proxy response');
+            setProcessedUrl(blobUrl);
+          }).catch(proxyError => {
+            console.error('Error using fetch-pdf proxy:', proxyError);
+            setError('Failed to load the PDF. Please try again later.');
+            setLoading(false);
+          });
+
+          return;
+        } catch (proxyAttemptError) {
+          console.error('Error attempting to use proxy:', proxyAttemptError);
+          errorMessage = 'Failed to load the PDF. Please try again later.';
+        }
+      }
+    } else if (error.name === 'InvalidPDFException') {
+      errorMessage = 'The file is not a valid PDF document.';
+    }
+
+    setError(errorMessage);
     setLoading(false);
   };
 
@@ -290,7 +382,12 @@ const PdfViewer = ({ fileUrl }) => {
     return (
       <div className="pdf-loading">
         <div className="loading-spinner"></div>
-        <p>Loading PDF...</p>
+        <p>{!useWorker ? 'Trying alternative loading method...' : 'Loading PDF...'}</p>
+        {!useWorker && (
+          <p className="loading-fallback-message">
+            Worker disabled. Using fallback method.
+          </p>
+        )}
       </div>
     );
   }
@@ -298,8 +395,79 @@ const PdfViewer = ({ fileUrl }) => {
   if (error) {
     return (
       <div className="pdf-error">
+        <div className="error-icon">❌</div>
+        <h3>PDF Loading Error</h3>
         <p>{error}</p>
-        <p>Try refreshing the page or contact support if the problem persists.</p>
+        <div className="error-actions">
+          <button
+            onClick={() => {
+              setError(null);
+              setLoading(true);
+              // Re-trigger the URL processing
+              const fetchSignedUrl = async () => {
+                try {
+                  if (fileUrl.includes('cloudinary') && fileUrl.includes('raw')) {
+                    const response = await axios.get(`http://localhost:5000/api/pdf/signed-url`, {
+                      params: { url: fileUrl },
+                      withCredentials: true
+                    });
+
+                    if (response.data.success) {
+                      setProcessedUrl(response.data.signedUrl);
+                    } else {
+                      throw new Error('Failed to get signed URL');
+                    }
+                  } else {
+                    setProcessedUrl(fileUrl);
+                  }
+                } catch (err) {
+                  console.error('Error retrying PDF load:', err);
+                  setError('Failed to load the PDF after retry. Please try again later.');
+                } finally {
+                  setLoading(false);
+                }
+              };
+
+              fetchSignedUrl();
+            }}
+            className="retry-button"
+          >
+            Try Again
+          </button>
+          <button
+            onClick={() => {
+              setError(null);
+              setLoading(true);
+
+              // Try using the proxy endpoint directly
+              axios.get(`http://localhost:5000/api/pdf/fetch-pdf`, {
+                params: { url: fileUrl },
+                responseType: 'blob',
+                withCredentials: true
+              }).then(response => {
+                // Create a blob URL from the response
+                const blob = new Blob([response.data], { type: 'application/pdf' });
+                const blobUrl = URL.createObjectURL(blob);
+                console.log('Created blob URL from proxy response');
+                setProcessedUrl(blobUrl);
+              }).catch(proxyError => {
+                console.error('Error using fetch-pdf proxy:', proxyError);
+                setError('Failed to load the PDF using proxy. Please try refreshing the page.');
+                setLoading(false);
+              });
+            }}
+            className="proxy-button"
+          >
+            Try Proxy Method
+          </button>
+          <button
+            onClick={() => window.location.reload()}
+            className="refresh-button"
+          >
+            Refresh Page
+          </button>
+        </div>
+        <p className="error-help">If the problem persists, please contact support.</p>
       </div>
     );
   }
@@ -372,6 +540,15 @@ const PdfViewer = ({ fileUrl }) => {
         onLoadSuccess={onLoadSuccess}
         onLoadError={onLoadError}
         loading={<div className="loading-spinner"></div>}
+        options={{
+          cMapUrl: 'https://unpkg.com/pdfjs-dist@5.2.133/cmaps/',
+          cMapPacked: true,
+          standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@5.2.133/standard_fonts/',
+          disableWorker: true, // Always disable worker to avoid MIME type issues
+          disableRange: false,
+          disableStream: false,
+          disableAutoFetch: false
+        }}
       >
         {renderPages()}
       </Document>

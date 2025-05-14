@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import PdfViewer from '../../components/PdfViewer';
+import BasicPdfViewer from '../../components/BasicPdfViewer';
+import ErrorBoundary from '../../components/ErrorBoundary';
 import { Book, Calendar, ArrowLeft, FileText } from 'lucide-react';
 import { SafeImage } from '../../utils/imageUtils';
 import './MyBooksPage.css';
@@ -190,8 +191,10 @@ const MyBooksPage = () => {
                               onClick={() => {
                                 // Check if the URL is valid before setting it
                                 if (book.url && book.url.startsWith('http')) {
+                                  console.log(`Setting PDF URL for ${book.title}:`, book.url);
                                   setSelectedPdf(book.url);
                                 } else {
+                                  console.log(`Using placeholder PDF for ${book.title}, original URL was:`, book.url);
                                   setSelectedPdf('/assets/better-placeholder.pdf');
                                 }
                               }}
@@ -222,7 +225,13 @@ const MyBooksPage = () => {
               </div>
               <div className="pdf-viewer-content">
                 <div className="pdf-viewer-container-wrapper">
-                  <PdfViewer fileUrl={selectedPdf} />
+                  {/* Use a key to force remount when selectedPdf changes */}
+                  <ErrorBoundary showDetails={false}>
+                    <BasicPdfViewer
+                      key={selectedPdf}
+                      fileUrl={selectedPdf}
+                    />
+                  </ErrorBoundary>
                 </div>
               </div>
             </div>

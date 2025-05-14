@@ -173,9 +173,9 @@ router.delete('/remove/:bookId', auth, async (req, res) => {
             });
         }
 
-        // Check if the book is in the cart
+        // Check if the book is in the cart - handle both string and ObjectId comparisons
         const existingItemIndex = user.cartItems.findIndex(
-            item => item.bookId.toString() === bookId
+            item => item.bookId.toString() === bookId.toString()
         );
 
         if (existingItemIndex === -1) {
@@ -254,9 +254,9 @@ router.post('/remove', auth, async (req, res) => {
             });
         }
 
-        // Check if the book is in the cart
+        // Check if the book is in the cart - handle both string and ObjectId comparisons
         const existingItemIndex = user.cartItems.findIndex(
-            item => item.bookId.toString() === bookId
+            item => item.bookId.toString() === bookId.toString()
         );
 
         if (existingItemIndex === -1) {

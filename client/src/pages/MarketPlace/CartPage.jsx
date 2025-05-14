@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import './CartPage.css';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -10,7 +10,15 @@ import { SafeImage } from '../../utils/imageUtils';
 import LoadingAnimation from '../../components/LoadingAnimation';
 
 const CartPage = () => {
-  const { cartItems, removeFromCart, clearCart, totalPrice, isLoading } = useCart();
+  const { cartItems, removeFromCart, clearCart, refreshCart, totalPrice, isLoading, isLoggedIn } = useCart();
+
+  // Refresh cart when component mounts
+  useEffect(() => {
+    if (isLoggedIn) {
+      console.log('CartPage mounted, refreshing cart...');
+      refreshCart();
+    }
+  }, []);
   const navigate = useNavigate();
 
   // Calculate tax (10% of total)
@@ -94,7 +102,17 @@ const CartPage = () => {
                     </div>
                     <button
                       className="remove-item"
-                      onClick={() => removeFromCart(item._id)}
+                      onClick={async () => {
+                        const itemId = item._id || item.bookId;
+                        console.log('Removing item with ID:', itemId);
+                        await removeFromCart(itemId);
+
+                        // Refresh cart after removal to ensure UI is in sync with server
+                        if (isLoggedIn) {
+                          console.log('Refreshing cart after item removal');
+                          setTimeout(() => refreshCart(), 300); // Small delay to ensure server has time to process
+                        }
+                      }}
                       aria-label="Remove item"
                     >
                       <Trash2 size={18} />
@@ -111,16 +129,13 @@ const CartPage = () => {
                   <span>₹{totalPrice.toFixed(2)}</span>
                 </div>
 
-                <div className="summary-row">
-                  <span>Tax (10%)</span>
-                  <span>₹{tax.toFixed(2)}</span>
-                </div>
+                
 
                 <div className="summary-divider"></div>
 
                 <div className="summary-row total">
                   <span>Total</span>
-                  <span>₹{finalTotal.toFixed(2)}</span>
+                  <span>₹{totalPrice.toFixed(2)}</span>
                 </div>
 
                 <button
@@ -131,7 +146,19 @@ const CartPage = () => {
                   Proceed to Checkout
                 </button>
 
-                <button className="clear-cart" onClick={clearCart}>
+                <button
+                  className="clear-cart"
+                  onClick={async () => {
+                    console.log('Clearing cart...');
+                    await clearCart();
+
+                    // Refresh cart after clearing to ensure UI is in sync with server
+                    if (isLoggedIn) {
+                      console.log('Refreshing cart after clearing');
+                      setTimeout(() => refreshCart(), 300); // Small delay to ensure server has time to process
+                    }
+                  }}
+                >
                   Clear Cart
                 </button>
 
