@@ -5,7 +5,7 @@ import Forgotpassword from './pages/forgotpassword';
 import Login from './pages/login';
 import Signup from './pages/signup';
 import Home from './pages/Home';
-import Marketplace from './pages/MarketPlace/Marketplace';
+import Marketplace from './pages/MarketPlace/MarketPlace';
 import LandingPage from './pages/LandingPage';
 import AddProducts from './pages/AddProducts';
 import Book from './pages/MarketPlace/Book';
@@ -34,7 +34,7 @@ const AllRouting = () => {
         <Route
           path="/"
           element={
-            
+
               <Home/>
           }
         />
@@ -59,8 +59,8 @@ const AllRouting = () => {
 
           }
         />
-        
-        
+
+
         <Route
           path="/marketplace"
           element={
@@ -120,7 +120,7 @@ const AllRouting = () => {
           path="/calendar"
           element={<CalendarPage />}
         />
-        
+
         <Route
           path="/flashcards"
           element={<Flashcards />}
