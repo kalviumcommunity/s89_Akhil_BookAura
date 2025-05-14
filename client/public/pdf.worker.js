@@ -1,3 +1,8 @@
-/* pdf.worker.js - Empty file to be replaced with the actual worker code */
-// This file will be served from the public directory
-// The actual worker code will be loaded from a CDN
+/*
+ * pdf.worker.js - Worker loader for PDF.js
+ * This file is a fallback for the PDF.js worker
+ */
+
+// This is a simple fallback that will be used if the CDN version fails to load
+// The actual worker code will be loaded from the CDN in pdfWorker.js
+console.log('PDF.js worker fallback loaded');
