@@ -38,7 +38,7 @@ const Login = () => {
         setSuccess(false);
       }, 3000);
       setTimeout(() => {
-        navigate('/home');
+        navigate('/');
       }, 2000);
     } catch (error) {
       console.error("Error logging in:", error);
@@ -56,7 +56,7 @@ const Login = () => {
   return (
     <div className='boxes'>
       <div className='colourbox'>
-        <img className='logoimage' onClick={()=>navigate('/home')} src={logo} alt="logo" />
+        <img className='logoimage' onClick={()=>navigate('/')} src={logo} alt="logo" />
         <img className='authimage' src={AuthImage} alt="Login" />
         <br />
       </div>

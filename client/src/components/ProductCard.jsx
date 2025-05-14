@@ -1,6 +1,5 @@
 import React from 'react';
 import './ProductCard.css';
-import axios from 'axios';
 import {useCart} from '../pages/MarketPlace/cart'
 import { ShoppingCart } from 'lucide-react';
 import { SafeImage } from '../utils/imageUtils';
@@ -18,11 +17,13 @@ const ProductCard = ({ book }) => {
 
   return (
     <div className="book-card">
-      <SafeImage
-        className="book-cover-image"
-        src={book.coverimage}
-        alt={`Cover of ${book.title}`}
-      />
+      <div className="image-container">
+        <SafeImage
+          className="book-cover-image"
+          src={book.coverimage}
+          alt={`Cover of ${book.title}`}
+        />
+      </div>
       <div className="book-details">
         <h3 className="book-title">{book.title}</h3>
         <p className="book-author">by {book.author}</p>

@@ -18,7 +18,6 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('profile');
 
-  // Edit profile states
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState({
     username: '',
@@ -77,7 +76,7 @@ const Profile = () => {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/home');
+    navigate('/');
   };
 
   // Handle edit profile form input changes
@@ -223,7 +222,7 @@ const Profile = () => {
 
       if (response.data.success) {
         await logout();
-        navigate('/home');
+        navigate('/');
       }
     } catch (error) {
       console.error('Error deleting account:', error);

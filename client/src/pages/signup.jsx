@@ -21,7 +21,7 @@ const Signup = () => {
       const response = await axios.post("http://localhost:5000/router/signup", form, { withCredentials: true });
       console.log("Signup successful:", response.data);
       alert("Signup successful!");
-      navigate('/home'); // Redirect to home after successful signup
+      navigate('/'); // Redirect to home after successful signup
     } catch (error) {
       console.error("Error signing up:", error);
       setError(error.response?.data?.message || "Signup failed. Please try again.");
@@ -37,7 +37,7 @@ const Signup = () => {
   return (
     <div className="boxes">
       <div className="colourbox">
-        <img className='logoimage' onClick={()=>navigate('/home')} src={logo} alt="logo" />
+        <img className='logoimage' onClick={()=>navigate('/')} src={logo} alt="logo" />
         <img className='authimage' src={AuthImage} alt="Signup" />
         <br />
       </div>

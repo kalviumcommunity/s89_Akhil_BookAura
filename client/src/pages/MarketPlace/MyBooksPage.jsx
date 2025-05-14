@@ -8,7 +8,6 @@ import { Book, Calendar, ArrowLeft, FileText } from 'lucide-react';
 import { SafeImage } from '../../utils/imageUtils';
 import './MyBooksPage.css';
 import LoadingAnimation from '../../components/LoadingAnimation';
-import { pdfjs } from 'react-pdf';
 
 const MyBooksPage = () => {
   const [purchasedBooks, setPurchasedBooks] = useState([]);
@@ -237,6 +236,3 @@ const MyBooksPage = () => {
 };
 
 export default MyBooksPage;
-
-// This ensures we're using the correct worker version that matches the PDF.js version used by react-pdf
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;

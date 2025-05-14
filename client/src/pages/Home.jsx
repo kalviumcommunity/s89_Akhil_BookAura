@@ -6,6 +6,7 @@ import Footer from '../components/Footer'
 import { useCart } from './MarketPlace/cart'
 import { SafeImage, getProxiedImageUrl, handleImageError } from '../utils/imageUtils'
 import {useNavigate} from 'react-router-dom'
+import ProductCard from '../components/ProductCard'
 import axios from 'axios';
 
 const Home = () => {
@@ -94,13 +95,7 @@ const Home = () => {
           <div className='featured-books-container'>
             {featuredBooks.map((book, index) => (
               <div key={index} className='featured-book'>
-                <div className='book-cover'>
-                  <SafeImage src={book.coverimage} alt={book.title} />
-                </div>
-                <div className='book-info'>
-                  <h3>{book.title}</h3>
-                  <p className='author'>by {book.author}</p>
-                </div>
+                <ProductCard book={book} />
               </div>
             ))}
           </div>

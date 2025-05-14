@@ -18,7 +18,7 @@ const LandingPage = () => {
             <h1 className='quote' >{quotes[Math.floor(Math.random() * quotes.length)]}</h1>
             <br />
             <button className='explore' onClick={()=>
-                navigate('/home')}>Explore more →</button>
+                navigate('/')}>Explore more →</button>
         </div>
     );
 };
