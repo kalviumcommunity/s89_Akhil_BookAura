@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
+import { Document, Page } from 'react-pdf';
 import axios from 'axios';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, Minimize, Book, List, Grid, Download, Moon, Sun, FileText, ExternalLink } from 'lucide-react';
 import './PdfViewer.css';
+import '../pdfWorker'; // Import the centralized worker configuration
 
 // Set default view mode to iframe for better compatibility
 const DEFAULT_VIEW_MODE = 'iframe';
@@ -21,12 +22,9 @@ const SimplePdfViewer = ({ fileUrl }) => {
 
   // Memoize options to prevent unnecessary re-renders
   const pdfOptions = useMemo(() => ({
-    disableWorker: true,
-    disableAutoFetch: true,
-    disableStream: true,
-    disableRange: true,
-    isEvalSupported: false,
-    useSystemFonts: true
+    cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.2.133/cmaps/',
+    cMapPacked: true,
+    standardFontDataUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.2.133/standard_fonts/'
   }), []);
 
   // Process the URL to handle Cloudinary authentication

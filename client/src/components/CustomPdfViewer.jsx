@@ -1,13 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
+import { Document, Page } from 'react-pdf';
 import axios from 'axios';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, Minimize, Book, List, Grid, Download, Moon, Sun } from 'lucide-react';
 import './PdfViewer.css';
-
-// Set up the worker directly in this component
-// Using a more reliable approach to avoid CORS issues
-// This approach uses a fake worker which is more reliable in development
-pdfjs.disableWorker = true;
+import '../pdfWorker'; // Import the centralized worker configuration
 
 const CustomPdfViewer = ({ fileUrl }) => {
   const [numPages, setNumPages] = useState(null);
