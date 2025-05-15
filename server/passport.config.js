@@ -5,10 +5,17 @@ const { loadModel } = require('./utils/modelLoader');
 // Load the User model using our utility
 const User = loadModel('userModel');
 
+// Log environment variables for debugging (without exposing secrets)
+console.log('Google OAuth Configuration:');
+console.log('- GOOGLE_CLIENT_ID exists:', !!process.env.GOOGLE_CLIENT_ID);
+console.log('- GOOGLE_CLIENT_SECRET exists:', !!process.env.GOOGLE_CLIENT_SECRET);
+console.log('- GOOGLE_CALLBACK_URL:', process.env.GOOGLE_CALLBACK_URL || 'Not set');
+console.log('- SERVER_URL:', process.env.SERVER_URL || 'Not set');
+
 // Configure Google Strategy
 passport.use(new GoogleStrategy({
-    clientID: process.env.YOUR_GOOGLE_CLIENT_ID,
-    clientSecret: process.env.YOUR_GOOGLE_CLIENT_SECRET,
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: (req) => {
         // Dynamically determine the callback URL based on the request
         const host = req.headers.host;
@@ -24,7 +31,13 @@ passport.use(new GoogleStrategy({
         }
 
         // For production environments
-        return `${process.env.SERVER_URL || 'https://s89-akhil-bookaura-3.onrender.com'}/router/auth/google/callback`;
+        // Check all possible server URLs
+        const serverUrl = process.env.SERVER_URL ||
+                         'https://s89-akhil-bookaura-2.onrender.com' ||
+                         'https://s89-akhil-bookaura-3.onrender.com';
+
+        console.log('Using callback URL:', `${serverUrl}/router/auth/google/callback`);
+        return `${serverUrl}/router/auth/google/callback`;
     },
     passReqToCallback: true
 }, async (_, _accessToken, _refreshToken, profile, done) => {

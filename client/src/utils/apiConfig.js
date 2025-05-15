@@ -23,15 +23,19 @@ export const getApiBaseUrl = () => {
 
   // Map hostnames to API URLs
   if (hostname === 'bookauraba.netlify.app') {
-    return 'https://s89-akhil-bookaura-3.onrender.com';
+    console.log('Using API URL for bookauraba.netlify.app: https://s89-akhil-bookaura-2.onrender.com');
+    return 'https://s89-akhil-bookaura-2.onrender.com';
   } else if (hostname === 'bookaura.netlify.app') {
+    console.log('Using API URL for bookaura.netlify.app: https://s89-akhil-bookaura-2.onrender.com');
     return 'https://s89-akhil-bookaura-2.onrender.com';
   } else if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+    console.log('Using API URL for localhost: http://localhost:5000');
     return 'http://localhost:5000';
   }
 
   // Production default
-  return 'https://s89-akhil-bookaura-3.onrender.com';
+  console.log('Using default API URL: https://s89-akhil-bookaura-2.onrender.com');
+  return 'https://s89-akhil-bookaura-2.onrender.com';
 };
 
 // Get the frontend URL based on the current environment
@@ -61,7 +65,10 @@ export const getApiUrl = (endpoint) => {
 
 // Get the Google OAuth URL
 export const getGoogleAuthUrl = () => {
-  return `${getApiBaseUrl()}/router/auth/google`;
+  // Use the current server URL for Google auth
+  const serverUrl = getApiBaseUrl();
+  console.log('Using Google Auth URL:', `${serverUrl}/router/auth/google`);
+  return `${serverUrl}/router/auth/google`;
 };
 
 // Get the callback URL for Google OAuth

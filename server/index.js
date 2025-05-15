@@ -29,6 +29,15 @@ if (fs.existsSync(global.__modeldir)) {
   console.error('Model directory does not exist!');
 }
 
+// Log environment variables for debugging (without exposing secrets)
+console.log('Server Environment:');
+console.log('- NODE_ENV:', process.env.NODE_ENV || 'Not set');
+console.log('- FRONTEND_URL:', process.env.FRONTEND_URL || 'Not set');
+console.log('- SERVER_URL:', process.env.SERVER_URL || 'Not set');
+console.log('- GOOGLE_CALLBACK_URL:', process.env.GOOGLE_CALLBACK_URL || 'Not set');
+console.log('- GOOGLE_CLIENT_ID exists:', !!process.env.GOOGLE_CLIENT_ID);
+console.log('- GOOGLE_CLIENT_SECRET exists:', !!process.env.GOOGLE_CLIENT_SECRET);
+
 // Import passport configuration
 require('./passport.config');
 

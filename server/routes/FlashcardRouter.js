@@ -15,7 +15,7 @@ const upload = multer({
 });
 
 // Get all flashcard decks for the current user
-router.get('/decks',  async (req, res) => {
+router.get('/decks', verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -30,6 +30,17 @@ router.get('/decks',  async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching flashcard decks:', error);
+
+    // Check for authentication errors
+    if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication failed. Please log in again.',
+        error: error.message
+      });
+    }
+
+    // Handle other errors
     res.status(500).json({
       success: false,
       message: 'Error fetching flashcard decks',
@@ -39,7 +50,7 @@ router.get('/decks',  async (req, res) => {
 });
 
 // Get a specific flashcard deck by ID
-router.get('/decks/:deckId',  async (req, res) => {
+router.get('/decks/:deckId', verifyToken, async (req, res) => {
   try {
     const { deckId } = req.params;
     const userId = req.user.id;
@@ -76,7 +87,7 @@ router.get('/decks/:deckId',  async (req, res) => {
 });
 
 // Generate flashcards from PDF using the external AI API
-router.post('/generate', upload.single('pdfFile'), async (req, res) => {
+router.post('/generate', verifyToken, upload.single('pdfFile'), async (req, res) => {
   try {
     const userId = req.user.id;
     const { title, description } = req.body;
@@ -171,7 +182,7 @@ router.post('/generate', upload.single('pdfFile'), async (req, res) => {
 });
 
 // Save pre-generated flashcards (alternative approach)
-router.post('/save-generated', express.json(), async (req, res) => {
+router.post('/save-generated', verifyToken, express.json(), async (req, res) => {
   try {
     const userId = req.user.id;
     const { title, description, flashcards } = req.body;
