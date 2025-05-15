@@ -32,14 +32,30 @@ const SuccessPage = () => {
     setSaveStatus('saving');
     setErrorDetails(null);
 
+    // Get userId from localStorage if available
+    const userId = localStorage.getItem('userId');
+    console.log('User login status for recovery:', localStorage.getItem('authToken') ? 'Logged in' : 'Not logged in');
+
     try {
       // First check if the purchase already exists
       const verifyResponse = await axios.get(
-        `https://s89-akhil-bookaura-3.onrender.com/api/payment/verify-purchase?purchaseId=${purchaseId}`,
-        { withCredentials: true }
+        `https://s89-akhil-bookaura-3.onrender.com/api/payment/verify-purchase?purchaseId=${purchaseId}${userId ? `&userId=${userId}` : ''}`,
+        {
+          withCredentials: true,
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+          }
+        }
       );
 
       if (verifyResponse.data.success) {
+        console.log('Purchase found during recovery:', verifyResponse.data.purchase);
+
+        // If the purchase has a userId and we don't have it in localStorage, save it
+        if (verifyResponse.data.purchase.userId && !userId) {
+          localStorage.setItem('userId', verifyResponse.data.purchase.userId);
+        }
+
         setOrderDetails(verifyResponse.data.purchase);
         setSaveStatus('success');
         clearCart();
@@ -47,7 +63,7 @@ const SuccessPage = () => {
         return;
       }
     } catch (error) {
-      console.log('Purchase not found, will attempt to create it');
+      console.log('Purchase not found, will attempt to create it:', error.message);
     }
 
     // If we get here, the purchase doesn't exist and needs to be created
@@ -73,16 +89,24 @@ const SuccessPage = () => {
         };
       });
 
+      // Get userId from localStorage
+      const userId = localStorage.getItem('userId');
+      console.log('Saving purchase during recovery for user:', userId);
+
       const response = await axios.post(
         'https://s89-akhil-bookaura-3.onrender.com/api/payment/save-purchase',
         {
           sessionId: sessionId || 'manual-recovery',
           purchaseId,
-          books: processedCartItems
+          books: processedCartItems,
+          userId // Include userId in the request
         },
         {
           withCredentials: true,
-          timeout: 30000
+          timeout: 30000,
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+          }
         }
       );
 
@@ -119,38 +143,62 @@ const SuccessPage = () => {
       setHasProcessed(true); // ✅ Prevent re-processing
       setSaveStatus('saving');
 
+      // Get userId from localStorage if available and log status
+      console.log('User login status:', localStorage.getItem('authToken') ? 'Logged in' : 'Not logged in');
+
       try {
         // Verify Stripe session
         const sessionResponse = await axios.get(
-          `https://s89-akhil-bookaura-3.onrender.com/api/payment/verify-session?sessionId=${sessionId}`,
-          { withCredentials: true }
+          `https://s89-akhil-bookaura-3.onrender.com/api/payment/verify-session?sessionId=${sessionId}${userId ? `&userId=${userId}` : ''}`,
+          {
+            withCredentials: true,
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+            }
+          }
         );
 
         if (!sessionResponse.data.success) {
+          console.log('Session verification failed:', sessionResponse.data);
           setSaveStatus('error');
           setIsLoading(false);
           return;
         }
 
+        // Get userId from session if not available in localStorage
+        const sessionUserId = sessionResponse.data.session.userId;
+        if (sessionUserId && !userId) {
+          console.log('Using userId from session:', sessionUserId);
+          localStorage.setItem('userId', sessionUserId);
+        }
+
         // Check if purchase already exists
         try {
           const verifyResponse = await axios.get(
-            `https://s89-akhil-bookaura-3.onrender.com/api/payment/verify-purchase?purchaseId=${purchaseId}`,
-            { withCredentials: true }
+            `https://s89-akhil-bookaura-3.onrender.com/api/payment/verify-purchase?purchaseId=${purchaseId}${userId || sessionUserId ? `&userId=${userId || sessionUserId}` : ''}`,
+            {
+              withCredentials: true,
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+              }
+            }
           );
 
           if (verifyResponse.data.success) {
+            console.log('Purchase already exists:', verifyResponse.data.purchase);
             setOrderDetails(verifyResponse.data.purchase);
             setSaveStatus('success');
             clearCart(); // ✅ Clear cart only after handling
             setIsLoading(false);
             return;
           }
-        } catch {
+        } catch (error) {
+          console.log('Purchase verification failed:', error.message);
           // Continue if purchase not found
         }
 
         if (cartItems.length === 0) {
+          console.log('Cart is empty, cannot save purchase');
           setSaveStatus('error');
           setIsLoading(false);
           return;
@@ -167,16 +215,25 @@ const SuccessPage = () => {
           };
         });
 
+        // Get userId from localStorage or session
+        const userId = localStorage.getItem('userId') || sessionResponse.data.session.userId;
+
+        console.log('Saving purchase for user:', userId);
+
         const response = await axios.post(
           'https://s89-akhil-bookaura-3.onrender.com/api/payment/save-purchase',
           {
             sessionId,
             purchaseId,
-            books: processedCartItems
+            books: processedCartItems,
+            userId // Include userId in the request
           },
           {
             withCredentials: true,
-            timeout: 15000
+            timeout: 15000,
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+            }
           }
         );
 
@@ -208,6 +265,11 @@ const SuccessPage = () => {
         if (error.code === 'ECONNABORTED' || (error.response && error.response.status >= 500)) {
           console.log('Attempting retry for save-purchase...');
           try {
+            // Get userId from localStorage or session
+            const userId = localStorage.getItem('userId') || sessionResponse?.data?.session?.userId;
+
+            console.log('Retrying save purchase for user:', userId);
+
             const retryResponse = await axios.post(
               'https://s89-akhil-bookaura-3.onrender.com/api/payment/save-purchase',
               {
@@ -216,11 +278,15 @@ const SuccessPage = () => {
                 books: cartItems.map(book => ({
                   ...book,
                   url: book.url || 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1746792433/bookstore/bookFiles/zspcnbobqoimglk83yz6'
-                }))
+                })),
+                userId // Include userId in the request
               },
               {
                 withCredentials: true,
-                timeout: 20000
+                timeout: 20000,
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+                }
               }
             );
 

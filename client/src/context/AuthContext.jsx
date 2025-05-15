@@ -34,6 +34,12 @@ export const AuthProvider = ({ children }) => {
             const response = await api.get('/router/profile');
             if (response.data.success) {
               setUser(response.data.user);
+
+              // Store userId in localStorage for payment processing
+              if (response.data.user && response.data.user._id) {
+                localStorage.setItem('userId', response.data.user._id);
+                console.log("Stored user ID from profile:", response.data.user._id);
+              }
             }
           } catch (profileError) {
             console.error('Error fetching user profile:', profileError);
@@ -89,6 +95,7 @@ export const AuthProvider = ({ children }) => {
 
     // 1. Clear all authentication tokens
     localStorage.removeItem('authToken');
+    localStorage.removeItem('userId');
 
     // 2. Clear chat-related data
     localStorage.removeItem('chatUserId');

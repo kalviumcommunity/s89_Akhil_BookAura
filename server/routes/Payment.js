@@ -204,61 +204,111 @@ router.get("/my-purchases", verifyToken, async (req, res) => {
   }
 });
 
-// Verify purchase by ID
-router.get("/verify-purchase", verifyToken, async (req, res) => {
+// Verify purchase by ID - No authentication required
+router.get("/verify-purchase", async (req, res) => {
   try {
-    const { purchaseId } = req.query;
-    const userId = req.user.id;
-    if (!purchaseId) return res.status(400).json({ error: "Missing purchase ID" });
+    const { purchaseId, userId: queryUserId } = req.query;
+    console.log('Verifying purchase:', purchaseId);
 
-    const purchase = await Purchase.findOne({ _id: purchaseId, userId });
-    if (purchase) {
+    // Try to get userId from different sources
+    let userId = req.user?.id || queryUserId;
+
+    if (!purchaseId) {
+      console.log('Missing purchase ID');
+      return res.status(400).json({ error: "Missing purchase ID" });
+    }
+
+    // If we have a userId, try to find the purchase for that user
+    if (userId) {
+      console.log('Checking purchase for user:', userId);
+      const purchase = await Purchase.findOne({ _id: purchaseId, userId });
+
+      if (purchase) {
+        console.log('Purchase found for user:', userId);
+        return res.status(200).json({
+          success: true,
+          message: "Purchase verified",
+          purchase: {
+            _id: purchase._id,
+            totalAmount: purchase.totalAmount,
+            purchaseDate: purchase.purchaseDate,
+            bookCount: purchase.books.length
+          }
+        });
+      }
+
+      const user = await User.findById(userId);
+      const userBooks = user?.purchasedBooks?.filter(b => b.paymentId?.includes(purchaseId)) || [];
+
+      if (userBooks.length) {
+        console.log('Purchase found in user books for user:', userId);
+        return res.status(200).json({
+          success: true,
+          message: "Purchase verified from user books",
+          purchase: {
+            _id: purchaseId,
+            bookCount: userBooks.length,
+            purchaseDate: userBooks[0].purchaseDate
+          }
+        });
+      }
+    }
+
+    // If no userId or purchase not found for that user, try to find the purchase by ID only
+    console.log('Checking purchase by ID only:', purchaseId);
+    const purchaseByIdOnly = await Purchase.findById(purchaseId);
+
+    if (purchaseByIdOnly) {
+      console.log('Purchase found by ID only. User ID:', purchaseByIdOnly.userId);
       return res.status(200).json({
         success: true,
-        message: "Purchase verified",
+        message: "Purchase verified by ID only",
         purchase: {
-          _id: purchase._id,
-          totalAmount: purchase.totalAmount,
-          purchaseDate: purchase.purchaseDate,
-          bookCount: purchase.books.length
+          _id: purchaseByIdOnly._id,
+          userId: purchaseByIdOnly.userId, // Include userId for client to use
+          totalAmount: purchaseByIdOnly.totalAmount,
+          purchaseDate: purchaseByIdOnly.purchaseDate,
+          bookCount: purchaseByIdOnly.books.length
         }
       });
     }
 
-    const user = await User.findById(userId);
-    const userBooks = user?.purchasedBooks?.filter(b => b.paymentId?.includes(purchaseId)) || [];
-
-    if (userBooks.length) {
-      return res.status(200).json({
-        success: true,
-        message: "Purchase verified from user books",
-        purchase: {
-          _id: purchaseId,
-          bookCount: userBooks.length,
-          purchaseDate: userBooks[0].purchaseDate
-        }
-      });
-    }
-
+    console.log('Purchase not found:', purchaseId);
     res.status(404).json({ success: false, message: "Purchase not found" });
   } catch (error) {
-    res.status(500).json({ error: "Failed to verify purchase" });
+    console.error('Error verifying purchase:', error.message);
+    res.status(500).json({ error: "Failed to verify purchase", message: error.message });
   }
 });
 
-// Verify Stripe session
-router.get("/verify-session", verifyToken, async (req, res) => {
+// Verify Stripe session - No authentication required
+router.get("/verify-session", async (req, res) => {
   try {
     const { sessionId } = req.query;
-    if (!sessionId) return res.status(400).json({ error: "Missing session ID" });
+    console.log('Verifying session:', sessionId);
+
+    if (!sessionId) {
+      console.log('Missing session ID');
+      return res.status(400).json({ error: "Missing session ID" });
+    }
 
     const session = await stripe.checkout.sessions.retrieve(sessionId);
-    if (!session || session.status !== 'complete' && session.payment_status !== 'paid') {
+    console.log('Session retrieved:', session.id, 'Status:', session.status, 'Payment status:', session.payment_status);
+
+    if (!session || (session.status !== 'complete' && session.payment_status !== 'paid')) {
+      console.log('Payment not completed for session:', sessionId);
       return res.status(400).json({ success: false, message: "Payment not completed" });
     }
 
     const purchaseId = session.metadata?.purchaseId;
-    if (!purchaseId) return res.status(400).json({ success: false, message: "Missing purchase ID" });
+    const userId = session.metadata?.userId;
+
+    if (!purchaseId) {
+      console.log('Missing purchase ID in session metadata');
+      return res.status(400).json({ success: false, message: "Missing purchase ID" });
+    }
+
+    console.log('Session verified successfully. Purchase ID:', purchaseId, 'User ID:', userId);
 
     res.status(200).json({
       success: true,
@@ -266,13 +316,15 @@ router.get("/verify-session", verifyToken, async (req, res) => {
       session: {
         id: session.id,
         purchaseId,
+        userId, // Include userId from metadata
         amount: session.amount_total / 100,
         paymentStatus: session.payment_status,
         customerEmail: session.customer_details?.email
       }
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to verify session" });
+    console.error('Error verifying session:', error.message);
+    res.status(500).json({ error: "Failed to verify session", message: error.message });
   }
 });
 
