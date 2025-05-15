@@ -30,6 +30,13 @@ const Login = () => {
 
       // Store token in localStorage for the API interceptor to use
       localStorage.setItem('authToken', response.data.token);
+
+      // Store userId in localStorage for payment processing
+      if (response.data.user && response.data.user._id) {
+        localStorage.setItem('userId', response.data.user._id);
+        console.log("Stored user ID:", response.data.user._id);
+      }
+
       console.log("Login successful");
 
       // Sync cart with server after successful login
