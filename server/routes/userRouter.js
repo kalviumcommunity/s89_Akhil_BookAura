@@ -33,30 +33,30 @@ router.post('/signup', async (req, res) => {
     const savedUser = await user.save();
     const token = jwt.sign({ id: savedUser._id, email: savedUser.email }, JWT_SECRET, { expiresIn: '7d' });
 
-    // Set both cookie names for better compatibility
-    res.cookie('authToken', token, {
+    // Set secure cookie settings based on environment - same as login route
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieSettings = {
       httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-site in production
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      domain: isProduction ? '.onrender.com' : undefined // Match domain in production
+    };
+
+    // Set both cookie names for better compatibility
+    res.cookie('authToken', token, cookieSettings);
 
     // Also set as 'token' for client-side checks
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie('token', token, cookieSettings);
 
     // Add a non-httpOnly cookie for client-side detection
     res.cookie('isLoggedIn', 'true', {
-      httpOnly: false,
-      secure: false,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      ...cookieSettings,
+      httpOnly: false // This one needs to be accessible from JS
     });
-    res.status(201).json({ message: 'User registered successfully', user: savedUser });
+
+    // Return token in response for client-side storage
+    res.status(201).json({ message: 'User registered successfully', user: savedUser, token });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal server error' });
