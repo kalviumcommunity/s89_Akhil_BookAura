@@ -2,13 +2,13 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const cloudinary = require('../cloudnary');
-const auth = require('../middleware/auth');
+const { verifyToken } = require('../middleware/auth');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
 // Generate a signed URL for Cloudinary resources
-router.get('/signed-url', auth, async (req, res) => {
+router.get('/signed-url', verifyToken, async (req, res) => {
   try {
     const { url, originalUrl } = req.query;
 
@@ -497,7 +497,7 @@ router.get('/image-proxy', async (req, res) => {
 });
 
 // Upload an image to Cloudinary
-router.post('/upload-image', auth, async (req, res) => {
+router.post('/upload-image', verifyToken, async (req, res) => {
   try {
     const { imageUrl } = req.body;
 

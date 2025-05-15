@@ -51,11 +51,19 @@ const verifyToken = (req, res, next) => {
 }
 
 const verifyAdmin = (req, res, next) => {
-    if (req.user && req.user.userType === 'admin') {
-        next();
-    } else {
-        return res.status(403).send({message: "Access Denied. Admin access required"})
-    }
+    // First verify that the user is authenticated
+    verifyToken(req, res, (err) => {
+        if (err) {
+            return next(err);
+        }
+
+        // Then check if the user is an admin
+        if (req.user && req.user.userType === 'admin') {
+            next();
+        } else {
+            return res.status(403).send({message: "Access Denied. Admin access required"});
+        }
+    });
 }
 
 module.exports = { verifyToken, verifyAdmin };

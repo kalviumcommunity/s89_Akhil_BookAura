@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { loadModel } = require('../utils/modelLoader');
 const Event = loadModel('EventModel');
-const auth = require('../middleware/auth');
+const { verifyToken } = require('../middleware/auth');
 
 // Get all events for the authenticated user
-router.get('/', auth, async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
     try {
         const userId = req.user.id;
         const { start, end } = req.query;
@@ -47,7 +47,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Get a specific event by ID
-router.get('/:id', auth, async (req, res) => {
+router.get('/:id', verifyToken, async (req, res) => {
     try {
         const userId = req.user.id;
         const eventId = req.params.id;
@@ -77,7 +77,7 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // Create a new event
-router.post('/', auth, async (req, res) => {
+router.post('/', verifyToken, async (req, res) => {
     try {
         const userId = req.user.id;
         const {
@@ -157,7 +157,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 // Update an existing event
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', verifyToken, async (req, res) => {
     try {
         const userId = req.user.id;
         const eventId = req.params.id;
@@ -201,7 +201,7 @@ router.put('/:id', auth, async (req, res) => {
 });
 
 // Delete an event
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', verifyToken, async (req, res) => {
     try {
         const userId = req.user.id;
         const eventId = req.params.id;
