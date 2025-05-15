@@ -2,6 +2,7 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const path = require('path');
+const fs = require('fs');
 
 // Configure environment variables
 dotenv.config();
@@ -16,6 +17,17 @@ const cookieParser = require('cookie-parser');
 // Set global module paths for easier imports
 global.__basedir = __dirname;
 global.__modeldir = path.join(__dirname, 'model');
+
+// Check if model directory exists
+console.log('Checking model directory:', global.__modeldir);
+if (fs.existsSync(global.__modeldir)) {
+  console.log('Model directory exists');
+  // List files in the model directory
+  const files = fs.readdirSync(global.__modeldir);
+  console.log('Files in model directory:', files);
+} else {
+  console.error('Model directory does not exist!');
+}
 
 // Import passport configuration
 require('./passport.config');
