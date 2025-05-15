@@ -37,8 +37,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         // For production environments
         // Check all possible server URLs
         const serverUrl = process.env.SERVER_URL ||
-                         'https://s89-akhil-bookaura-2.onrender.com' ||
-                         'https://s89-akhil-bookaura-3.onrender.com';
+                         'https://s89-akhil-bookaura-1.onrender.com';
 
         console.log('Using callback URL:', `${serverUrl}/router/auth/google/callback`);
         return `${serverUrl}/router/auth/google/callback`;

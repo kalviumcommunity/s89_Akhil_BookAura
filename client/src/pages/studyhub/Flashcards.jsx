@@ -32,7 +32,7 @@ const Flashcards = () => {
       const authToken = localStorage.getItem('authToken');
 
       // Include auth token in the request
-      const response = await axios.get('https://s89-akhil-bookaura-2.onrender.com/api/flashcards/decks', {
+      const response = await axios.get('https://s89-akhil-bookaura-1.onrender.com/api/flashcards/decks', {
         withCredentials: true,
         headers: {
           'Authorization': `Bearer ${authToken || ''}`
@@ -63,7 +63,7 @@ const Flashcards = () => {
       const authToken = localStorage.getItem('authToken');
 
       // Include auth token in the request
-      const response = await axios.get(`https://s89-akhil-bookaura-2.onrender.com/api/flashcards/decks/${deckId}`, {
+      const response = await axios.get(`https://s89-akhil-bookaura-1.onrender.com/api/flashcards/decks/${deckId}`, {
         withCredentials: true,
         headers: {
           'Authorization': `Bearer ${authToken || ''}`
@@ -152,7 +152,7 @@ const Flashcards = () => {
       const authToken = localStorage.getItem('authToken');
 
       // First phase: Upload the file
-      const response = await axios.post('https://s89-akhil-bookaura-2.onrender.com/api/flashcards/generate', formData, {
+      const response = await axios.post('https://s89-akhil-bookaura-1.onrender.com/api/flashcards/generate', formData, {
         withCredentials: true,
         headers: {
           'Content-Type': 'multipart/form-data',

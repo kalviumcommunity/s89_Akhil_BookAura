@@ -23,19 +23,19 @@ export const getApiBaseUrl = () => {
 
   // Map hostnames to API URLs
   if (hostname === 'bookauraba.netlify.app') {
-    console.log('Using API URL for bookauraba.netlify.app: https://s89-akhil-bookaura-2.onrender.com');
-    return 'https://s89-akhil-bookaura-2.onrender.com';
+    console.log('Using API URL for bookauraba.netlify.app: https://s89-akhil-bookaura-1.onrender.com');
+    return 'https://s89-akhil-bookaura-1.onrender.com';
   } else if (hostname === 'bookaura.netlify.app') {
-    console.log('Using API URL for bookaura.netlify.app: https://s89-akhil-bookaura-2.onrender.com');
-    return 'https://s89-akhil-bookaura-2.onrender.com';
+    console.log('Using API URL for bookaura.netlify.app: https://s89-akhil-bookaura-1.onrender.com');
+    return 'https://s89-akhil-bookaura-1.onrender.com';
   } else if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
     console.log('Using API URL for localhost: http://localhost:5000');
     return 'http://localhost:5000';
   }
 
   // Production default
-  console.log('Using default API URL: https://s89-akhil-bookaura-2.onrender.com');
-  return 'https://s89-akhil-bookaura-2.onrender.com';
+  console.log('Using default API URL: https://s89-akhil-bookaura-1.onrender.com');
+  return 'https://s89-akhil-bookaura-1.onrender.com';
 };
 
 // Get the frontend URL based on the current environment
