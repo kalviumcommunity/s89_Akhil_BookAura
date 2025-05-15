@@ -38,6 +38,16 @@ router.get('/', verifyToken, async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching events:', error);
+
+        // Check for authentication errors
+        if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication failed. Please log in again.',
+                error: error.message
+            });
+        }
+
         res.status(500).json({
             success: false,
             message: 'Error fetching events',

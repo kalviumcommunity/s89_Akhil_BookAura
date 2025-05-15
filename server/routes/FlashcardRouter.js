@@ -236,7 +236,7 @@ router.post('/save-generated', verifyToken, express.json(), async (req, res) => 
 });
 
 // Delete a flashcard deck
-router.delete('/decks/:deckId', async (req, res) => {
+router.delete('/decks/:deckId', verifyToken, async (req, res) => {
   try {
     const { deckId } = req.params;
     const userId = req.user.id;
