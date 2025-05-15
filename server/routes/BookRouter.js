@@ -4,9 +4,8 @@ const multer = require('multer');
 const cloudinary = require('../cloudnary');
 const { loadModel } = require('../utils/modelLoader');
 const Book = loadModel('BookModel');
-const verifyToken = require('../middleware/auth');
+const { verifyToken, verifyAdmin } = require('../middleware/auth');
 const streamifier = require('streamifier');
-const verifyAdmin = require('../middleware/auth');
 const axios = require('axios');
 
 // Memory storage for multer

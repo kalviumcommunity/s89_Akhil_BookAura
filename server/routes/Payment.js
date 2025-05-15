@@ -3,14 +3,14 @@ const router = express.Router();
 const dotenv = require("dotenv");
 dotenv.config();
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-const auth = require("../middleware/auth");
+const { verifyToken } = require("../middleware/auth");
 const { loadModel } = require("../utils/modelLoader");
 const Purchase = loadModel("PurchaseModel");
 const User = loadModel("userModel");
 const mongoose = require("mongoose");
 
 // Create Stripe Checkout session
-router.post("/create-checkout-session", auth, async (req, res) => {
+router.post("/create-checkout-session", verifyToken, async (req, res) => {
   try {
     const { book, books } = req.body;
     let lineItems = [];
@@ -78,7 +78,7 @@ router.post("/create-checkout-session", auth, async (req, res) => {
 });
 
 // Save purchase after payment success
-router.post("/save-purchase", auth, async (req, res) => {
+router.post("/save-purchase", verifyToken, async (req, res) => {
   try {
     const { sessionId, purchaseId, books } = req.body;
     if (!req.user?.id || !purchaseId || !Array.isArray(books) || books.length === 0) {
@@ -142,7 +142,7 @@ router.post("/save-purchase", auth, async (req, res) => {
 });
 
 // Fetch user purchases
-router.get("/my-purchases", auth, async (req, res) => {
+router.get("/my-purchases", verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -174,7 +174,7 @@ router.get("/my-purchases", auth, async (req, res) => {
 });
 
 // Verify purchase by ID
-router.get("/verify-purchase", auth, async (req, res) => {
+router.get("/verify-purchase", verifyToken, async (req, res) => {
   try {
     const { purchaseId } = req.query;
     const userId = req.user.id;
@@ -216,7 +216,7 @@ router.get("/verify-purchase", auth, async (req, res) => {
 });
 
 // Verify Stripe session
-router.get("/verify-session", auth, async (req, res) => {
+router.get("/verify-session", verifyToken, async (req, res) => {
   try {
     const { sessionId } = req.query;
     if (!sessionId) return res.status(400).json({ error: "Missing session ID" });
