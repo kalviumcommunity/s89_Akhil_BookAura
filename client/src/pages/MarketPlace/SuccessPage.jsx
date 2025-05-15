@@ -89,9 +89,17 @@ const SuccessPage = () => {
         };
       });
 
-      // Get userId from localStorage
-      const userId = localStorage.getItem('userId');
-      console.log('Saving purchase during recovery for user:', userId);
+      // Get userId from localStorage or other sources
+      let recoveryUserId = localStorage.getItem('userId');
+
+      // If we don't have a userId, try to get it from the purchase
+      if (!recoveryUserId && verifyResponse?.data?.purchase?.userId) {
+        recoveryUserId = verifyResponse.data.purchase.userId;
+        localStorage.setItem('userId', recoveryUserId);
+        console.log('Using userId from purchase:', recoveryUserId);
+      }
+
+      console.log('Saving purchase during recovery for user:', recoveryUserId);
 
       const response = await axios.post(
         'https://s89-akhil-bookaura-3.onrender.com/api/payment/save-purchase',
@@ -99,7 +107,7 @@ const SuccessPage = () => {
           sessionId: sessionId || 'manual-recovery',
           purchaseId,
           books: processedCartItems,
-          userId // Include userId in the request
+          userId: recoveryUserId // Include userId in the request
         },
         {
           withCredentials: true,
@@ -143,13 +151,17 @@ const SuccessPage = () => {
       setHasProcessed(true); // ✅ Prevent re-processing
       setSaveStatus('saving');
 
-      // Get userId from localStorage if available and log status
+      // Get userId from localStorage if available
+      const userId = localStorage.getItem('userId');
       console.log('User login status:', localStorage.getItem('authToken') ? 'Logged in' : 'Not logged in');
 
       try {
         // Verify Stripe session
+        // Ensure userId is defined before adding it to the URL
+        const userIdParam = userId ? `&userId=${userId}` : '';
+
         const sessionResponse = await axios.get(
-          `https://s89-akhil-bookaura-3.onrender.com/api/payment/verify-session?sessionId=${sessionId}${userId ? `&userId=${userId}` : ''}`,
+          `https://s89-akhil-bookaura-3.onrender.com/api/payment/verify-session?sessionId=${sessionId}${userIdParam}`,
           {
             withCredentials: true,
             headers: {
@@ -174,8 +186,19 @@ const SuccessPage = () => {
 
         // Check if purchase already exists
         try {
+          // Safely construct the userId parameter
+          let verifyUserIdParam = '';
+          try {
+            const verifyUserId = userId || sessionResponse?.data?.session?.userId;
+            if (verifyUserId) {
+              verifyUserIdParam = `&userId=${verifyUserId}`;
+            }
+          } catch (err) {
+            console.log('Error constructing userId param:', err.message);
+          }
+
           const verifyResponse = await axios.get(
-            `https://s89-akhil-bookaura-3.onrender.com/api/payment/verify-purchase?purchaseId=${purchaseId}${userId || sessionUserId ? `&userId=${userId || sessionUserId}` : ''}`,
+            `https://s89-akhil-bookaura-3.onrender.com/api/payment/verify-purchase?purchaseId=${purchaseId}${verifyUserIdParam}`,
             {
               withCredentials: true,
               headers: {
@@ -215,10 +238,38 @@ const SuccessPage = () => {
           };
         });
 
-        // Get userId from localStorage or session
-        const userId = localStorage.getItem('userId') || sessionResponse.data.session.userId;
+        // Update userId with session data if available
+        let updatedUserId = userId;
 
-        console.log('Saving purchase for user:', userId);
+        try {
+          // Safely access session userId
+          if (sessionResponse?.data?.session?.userId) {
+            updatedUserId = updatedUserId || sessionResponse.data.session.userId;
+
+            // Store userId in localStorage if we got it from the session
+            if (!userId && updatedUserId) {
+              localStorage.setItem('userId', updatedUserId);
+              console.log('Stored userId from session:', updatedUserId);
+            }
+          }
+        } catch (err) {
+          console.log('Error accessing session userId:', err.message);
+        }
+
+        // Fallback if we still don't have a userId
+        if (!updatedUserId) {
+          console.log('No userId available, using fallback');
+          // Try to extract from URL if present in query params
+          const urlParams = new URLSearchParams(window.location.search);
+          const urlUserId = urlParams.get('user_id');
+          if (urlUserId) {
+            updatedUserId = urlUserId;
+            localStorage.setItem('userId', urlUserId);
+            console.log('Using userId from URL:', urlUserId);
+          }
+        }
+
+        console.log('Saving purchase for user:', updatedUserId);
 
         const response = await axios.post(
           'https://s89-akhil-bookaura-3.onrender.com/api/payment/save-purchase',
@@ -226,7 +277,7 @@ const SuccessPage = () => {
             sessionId,
             purchaseId,
             books: processedCartItems,
-            userId // Include userId in the request
+            userId: updatedUserId // Include userId in the request
           },
           {
             withCredentials: true,
@@ -265,10 +316,25 @@ const SuccessPage = () => {
         if (error.code === 'ECONNABORTED' || (error.response && error.response.status >= 500)) {
           console.log('Attempting retry for save-purchase...');
           try {
-            // Get userId from localStorage or session
-            const userId = localStorage.getItem('userId') || sessionResponse?.data?.session?.userId;
+            // Use the same userId or get it again if needed
+            let retryUserId = userId;
 
-            console.log('Retrying save purchase for user:', userId);
+            try {
+              // Safely access session userId
+              if (sessionResponse?.data?.session?.userId) {
+                retryUserId = retryUserId || sessionResponse.data.session.userId;
+              }
+            } catch (err) {
+              console.log('Error accessing session userId during retry:', err.message);
+            }
+
+            // If we still don't have a userId, try to get it from localStorage again
+            if (!retryUserId) {
+              retryUserId = localStorage.getItem('userId');
+              console.log('Retry using userId from localStorage:', retryUserId);
+            }
+
+            console.log('Retrying save purchase for user:', retryUserId);
 
             const retryResponse = await axios.post(
               'https://s89-akhil-bookaura-3.onrender.com/api/payment/save-purchase',
@@ -279,7 +345,7 @@ const SuccessPage = () => {
                   ...book,
                   url: book.url || 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1746792433/bookstore/bookFiles/zspcnbobqoimglk83yz6'
                 })),
-                userId // Include userId in the request
+                userId: retryUserId // Include userId in the request
               },
               {
                 withCredentials: true,
