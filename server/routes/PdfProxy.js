@@ -119,7 +119,7 @@ router.get('/signed-url', verifyToken, async (req, res) => {
 // Simple endpoint to serve a PDF directly - no auth required
 router.get('/serve-pdf', async (req, res) => {
   // Set CORS headers to allow any origin
-  const origin = req.headers.origin || 'http://localhost:5173';
+  const origin = req.headers.origin ||'https://bookauraba.netlify.app/';
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -188,7 +188,7 @@ router.get('/serve-pdf', async (req, res) => {
 // Proxy endpoint to fetch PDF content - no auth required for better compatibility
 router.get('/fetch-pdf', async (req, res) => {
   // Set CORS headers to allow specific origin with credentials
-  const origin = req.headers.origin || 'http://localhost:5173';
+  const origin = req.headers.origin || 'https://bookauraba.netlify.app/';
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');

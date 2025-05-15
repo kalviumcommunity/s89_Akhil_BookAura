@@ -289,14 +289,14 @@ router.get('/auth/google/callback',
       });
 
       // Get frontend URL from environment variable or use default
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const frontendUrl = process.env.FRONTEND_URL || 'https://bookauraba.netlify.app/';
 
       // Redirect to frontend with success message and user data
       res.redirect(`${frontendUrl}/?success=true&token=${token}`);
     } catch (error) {
       console.error('Error in Google callback:', error);
       // Get frontend URL from environment variable or use default
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const frontendUrl = process.env.FRONTEND_URL || 'https://bookauraba.netlify.app/';
       res.redirect(`${frontendUrl}/login?error=authentication_failed`);
     }
   }

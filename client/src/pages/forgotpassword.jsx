@@ -13,7 +13,7 @@ const Forgotpassword = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('https://s89-akhil-bookaura-2.onrender.com/router/forgotpassword', form, {
+      await axios.post('https://s89-akhil-bookaura-3.onrender.com/router/forgotpassword', form, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -34,7 +34,7 @@ const Forgotpassword = () => {
     e.preventDefault();
     try {
       await axios.post(
-        'https://s89-akhil-bookaura-2.onrender.com/router/resetpassword',
+        'https://s89-akhil-bookaura-3.onrender.com/router/resetpassword',
         { email: form.email, code, newpassword: newPassword }
       );
       await setSuccess(true);

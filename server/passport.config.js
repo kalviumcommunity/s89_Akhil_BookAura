@@ -10,7 +10,7 @@ passport.use(new GoogleStrategy({
     clientID: process.env.YOUR_GOOGLE_CLIENT_ID,
     clientSecret: process.env.YOUR_GOOGLE_CLIENT_SECRET,
     callbackURL: process.env.GOOGLE_CALLBACK_URL ||
-        `${process.env.SERVER_URL || 'http://localhost:5000'}/router/auth/google/callback`,
+        `${process.env.SERVER_URL || 'https://bookauraba.netlify.app/'}/router/auth/google/callback`,
     passReqToCallback: true
 }, async (req, accessToken, refreshToken, profile, done) => {
     try {
