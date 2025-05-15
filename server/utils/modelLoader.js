@@ -268,6 +268,77 @@ const loadModel = (modelName) => {
     return mongoose.model('Book', bookSchema);
   }
 
+  // For Purchase model, create a placeholder
+  if (modelName.toLowerCase() === 'purchasemodel') {
+    console.log('Creating placeholder Purchase model');
+
+    if (mongoose.models.Purchase) {
+      return mongoose.models.Purchase;
+    }
+
+    // Try to require the model directly using require
+    try {
+      console.log('Trying to require PurchaseModel.js directly');
+      const PurchaseModel = require('../model/PurchaseModel');
+      console.log('Successfully required PurchaseModel.js directly');
+      return PurchaseModel;
+    } catch (err) {
+      console.error('Failed to require PurchaseModel.js directly:', err.message);
+    }
+
+    const purchaseSchema = new mongoose.Schema({
+      userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+      },
+      books: [{
+        bookId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Book',
+          required: true
+        },
+        title: {
+          type: String,
+          required: true
+        },
+        author: {
+          type: String,
+          required: true
+        },
+        coverimage: {
+          type: String,
+          required: true
+        },
+        price: {
+          type: Number,
+          required: true
+        },
+        url: {
+          type: String,
+          required: true
+        },
+        purchaseDate: {
+          type: Date,
+          default: Date.now
+        }
+      }],
+      totalAmount: {
+        type: Number,
+        required: true
+      },
+      paymentId: {
+        type: String
+      },
+      purchaseDate: {
+        type: Date,
+        default: Date.now
+      }
+    });
+
+    return mongoose.model('Purchase', purchaseSchema);
+  }
+
   // For other models, throw an error
   throw new Error(`Could not find model: ${modelName}`);
 };

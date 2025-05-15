@@ -36,15 +36,40 @@ const app = express();
 const MONGODB_URI = process.env.MONGODB_URI;
 
 // Middleware
+// First, handle preflight requests with a simple CORS handler
+app.use((req, res, next) => {
+    // Only handle preflight OPTIONS requests
+    if (req.method === 'OPTIONS') {
+        console.log('Handling preflight request from:', req.headers.origin);
+
+        // Set CORS headers for preflight requests
+        res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Cache-Control, Pragma, X-Auth-Token, X-User-ID, X-HTTP-Method-Override');
+        res.header('Access-Control-Allow-Credentials', 'true');
+        res.header('Access-Control-Max-Age', '86400'); // 24 hours
+
+        // Respond with 204 No Content for preflight requests
+        return res.status(204).end();
+    }
+
+    // Continue to the next middleware for non-preflight requests
+    next();
+});
+
+// Then use the regular CORS middleware for actual requests
 app.use(cors({
     origin: function(origin, callback) {
         // Define allowed origins
         const allowedOrigins = [
             'http://localhost:5173',  // Local development
             'http://localhost:5174',  // Alternative local port
+            'http://localhost:3000',  // Another common local port
+            'http://127.0.0.1:5173',  // Local IP address
+            'http://127.0.0.1:5174',  // Local IP address alternative port
+            'http://127.0.0.1:3000',  // Local IP address common port
             'https://s89-akhil-book-aura.vercel.app',
             'https://s89-akhil-book-aura.netlify.app',
-            'https://bookauraba.netlify.app',
             'https://bookauraba.netlify.app',
             'https://bookaura.netlify.app',
             'https://bookaura.vercel.app',
@@ -86,7 +111,12 @@ app.use(cors({
         'Accept',
         'Origin',
         'Access-Control-Request-Method',
-        'Access-Control-Request-Headers'
+        'Access-Control-Request-Headers',
+        'Cache-Control',
+        'Pragma',
+        'X-Auth-Token',
+        'X-User-ID',
+        'X-HTTP-Method-Override'
     ],
     exposedHeaders: ['Content-Length', 'Content-Type', 'Set-Cookie'],
     maxAge: 86400 // 24 hours in seconds - how long the browser should cache CORS response
@@ -104,12 +134,12 @@ app.use(session({
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Required for cross-site cookies in modern browsers
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         httpOnly: true,
-        
+
     proxy: process.env.NODE_ENV === 'production', // Trust the reverse proxy in production
-    
+
     store: process.env.NODE_ENV === 'production'
-        ? undefined 
-        : undefined  
+        ? undefined
+        : undefined
 }}));
 
 

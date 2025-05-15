@@ -19,6 +19,14 @@ export const CartProvider = ({ children }) => {
     const localToken = localStorage.getItem('authToken');
     const isAuthenticated = hasToken || !!localToken;
 
+    // Log detailed authentication state for debugging
+    console.log('Cart auth check details:', {
+      cookieExists: hasToken,
+      tokenExists: !!localToken,
+      cookieContent: document.cookie,
+      userId: localStorage.getItem('userId')
+    });
+
     setIsLoggedIn(isAuthenticated);
     console.log('User login status:', isAuthenticated ? 'Logged in' : 'Not logged in');
   }, []);
@@ -288,10 +296,21 @@ export const CartProvider = ({ children }) => {
     const localToken = localStorage.getItem('authToken');
     const isAuthenticated = hasToken || !!localToken;
 
+    // Log detailed authentication state for debugging
+    console.log('Cart sync auth check details:', {
+      cookieExists: hasToken,
+      tokenExists: !!localToken,
+      cookieContent: document.cookie,
+      userId: localStorage.getItem('userId')
+    });
+
     if (!isAuthenticated) {
       console.log('Cannot sync cart: User not logged in');
       return;
     }
+
+    // Update the isLoggedIn state to reflect current status
+    setIsLoggedIn(true);
 
     console.log('Starting cart sync with server...');
 
