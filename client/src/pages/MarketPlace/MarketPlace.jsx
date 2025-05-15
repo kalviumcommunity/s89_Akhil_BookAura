@@ -21,15 +21,15 @@ const Marketplace = () => {
         setLoading(true);
 
         // Fetch featured books
-        const featuredResponse = await axios.get('http://localhost:5000/router/featured');
+        const featuredResponse = await axios.get('https://s89-akhil-bookaura-2.onrender.com/router/featured');
         setFeaturedBooks(featuredResponse.data.data.slice(0, 4)); // Limit to 4 books
 
         // Fetch bestseller books
-        const bestsellerResponse = await axios.get('http://localhost:5000/router/bestsellers');
+        const bestsellerResponse = await axios.get('https://s89-akhil-bookaura-2.onrender.com/router/bestsellers');
         setBestsellerBooks(bestsellerResponse.data.data.slice(0, 4)); // Limit to 4 books
 
         // Fetch new release books
-        const newReleaseResponse = await axios.get('http://localhost:5000/router/newreleases');
+        const newReleaseResponse = await axios.get('https://s89-akhil-bookaura-2.onrender.com/router/newreleases');
         setNewReleaseBooks(newReleaseResponse.data.data.slice(0, 4)); // Limit to 4 books
 
         setLoading(false);

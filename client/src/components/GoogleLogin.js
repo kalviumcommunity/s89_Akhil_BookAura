@@ -9,11 +9,11 @@ const GoogleLogin = () => {
     useEffect(() => {
         const handleGoogleCallback = async () => {
             try {
-                const response = await fetch('http://localhost:5000/router/auth/google/callback', {
+                const response = await fetch('https://s89-akhil-bookaura-2.onrender.com/router/auth/google/callback', {
                     method: 'GET',
                     credentials: 'include'
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     login(data.user);
@@ -40,4 +40,4 @@ const GoogleLogin = () => {
     );
 };
 
-export default GoogleLogin; 
+export default GoogleLogin;

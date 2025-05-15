@@ -40,22 +40,39 @@ app.use(cors({
     origin: function(origin, callback) {
         const allowedOrigins = [
             'http://localhost:5173',  // Local development
-            'https://s89-akhil-book-aura.vercel.app', // Assuming this is your frontend URL
+            'http://localhost:5174',  // Alternative local port
+            'https://s89-akhil-book-aura.vercel.app',
             'https://s89-akhil-book-aura.netlify.app',
+            'https://bookauraba.netlify.app',
             'https://bookauraba.netlify.app/',
             process.env.FRONTEND_URL // From environment variable if set
         ].filter(Boolean); // Remove any undefined/null values
 
-        // Allow requests with no origin (like mobile apps, curl requests)
-        if (!origin) return callback(null, true);
+        console.log('Request origin:', origin);
+        console.log('Allowed origins:', allowedOrigins);
 
-        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+        // Allow requests with no origin (like mobile apps, curl requests)
+        if (!origin) {
+            console.log('No origin, allowing request');
             return callback(null, true);
         }
 
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            console.log('Origin allowed:', origin);
+            return callback(null, true);
+        }
+
+        if (process.env.NODE_ENV !== 'production') {
+            console.log('Development mode, allowing all origins');
+            return callback(null, true);
+        }
+
+        console.log('Origin not in allowed list, but allowing anyway for compatibility');
         callback(null, true); // Temporarily allow all origins in production too
     },
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 app.use(express.json());
 app.use(cookieParser());
@@ -67,9 +84,12 @@ app.use(session({
     saveUninitialized: false,
     cookie: {
         secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Required for cross-site cookies
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
+        sameSite: 'none', // Required for cross-site cookies in modern browsers
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        httpOnly: true,
+        domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined // Match domain in production
+    },
+    proxy: process.env.NODE_ENV === 'production' // Trust the reverse proxy in production
 }));
 
 // Initialize Passport
@@ -99,6 +119,21 @@ app.use('/router', bookRouter);
 // Health check endpoint
 app.get('/health', (_, res) => {
     res.status(200).json({ status: 'ok', message: 'Server is running' });
+});
+
+// Debug endpoint to check authentication status
+app.get('/auth-status', (req, res) => {
+    res.status(200).json({
+        isAuthenticated: req.isAuthenticated(),
+        user: req.user ? { id: req.user.id, email: req.user.email } : null,
+        cookies: req.cookies,
+        session: req.session,
+        headers: {
+            origin: req.headers.origin,
+            referer: req.headers.referer,
+            host: req.headers.host
+        }
+    });
 });
 
 // Start server

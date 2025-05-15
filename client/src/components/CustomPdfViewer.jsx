@@ -56,7 +56,7 @@ const CustomPdfViewer = ({ fileUrl }) => {
             // Fallback: Try to get a signed URL
             try {
               console.log('Fetching signed URL as fallback');
-              const response = await axios.get(`http://localhost:5000/api/pdf/signed-url`, {
+              const response = await axios.get(`https://s89-akhil-bookaura-2.onrender.com/api/pdf/signed-url`, {
                 params: { url: cleanUrl },
                 withCredentials: true
               });
@@ -176,7 +176,7 @@ const CustomPdfViewer = ({ fileUrl }) => {
 
       try {
         // Use the proxy endpoint to get the PDF data
-        const response = await axios.get(`http://localhost:5000/api/pdf/fetch-pdf`, {
+        const response = await axios.get(`https://s89-akhil-bookaura-2.onrender.com/api/pdf/fetch-pdf`, {
           params: { url: urlToDownload },
           responseType: 'blob',
           withCredentials: true

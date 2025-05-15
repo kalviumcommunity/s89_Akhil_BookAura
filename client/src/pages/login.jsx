@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import '../pagescss/Auth.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AuthImage from '../images/Auth.png';
 import Google from '../images/google.png';
 import logo from'../images/logo.png';
 import { useCart } from './MarketPlace/cart';
+import api from '../services/api';
 
 const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -26,14 +26,16 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post("http://localhost:5000/router/login", form, { withCredentials: true });
+      const response = await api.post("/router/login", form);
+
+      // Store token in localStorage for the API interceptor to use
       localStorage.setItem('authToken', response.data.token);
       console.log("Login successful");
 
       // Sync cart with server after successful login
       await syncCartWithServer();
 
-      await setSuccess(true);
+      setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
       }, 3000);
@@ -50,7 +52,7 @@ const Login = () => {
     setError('');
     // Store a flag to sync cart after Google login
     localStorage.setItem('syncCartAfterLogin', 'true');
-    window.location.href = "http://localhost:5000/router/auth/google";
+    window.location.href = api.defaults.baseURL + "/router/auth/google";
   }
 
   return (

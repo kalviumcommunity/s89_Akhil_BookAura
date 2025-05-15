@@ -23,7 +23,7 @@ const Home = () => {
     }
     const fetchBooks = async () => {
     try {
-      const featuredResponse = await axios.get('http://localhost:5000/router/featured');
+      const featuredResponse = await axios.get('https://s89-akhil-bookaura-2.onrender.com/router/featured');
         setFeaturedBooks(featuredResponse.data.data.slice(0, 4)); // Limit to 4 books
     } catch (error) {
       console.log('Failed to fetch featured books:', error);

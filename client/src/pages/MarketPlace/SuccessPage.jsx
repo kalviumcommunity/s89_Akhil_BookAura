@@ -35,7 +35,7 @@ const SuccessPage = () => {
     try {
       // First check if the purchase already exists
       const verifyResponse = await axios.get(
-        `http://localhost:5000/api/payment/verify-purchase?purchaseId=${purchaseId}`,
+        `https://s89-akhil-bookaura-2.onrender.com/api/payment/verify-purchase?purchaseId=${purchaseId}`,
         { withCredentials: true }
       );
 
@@ -74,7 +74,7 @@ const SuccessPage = () => {
       });
 
       const response = await axios.post(
-        'http://localhost:5000/api/payment/save-purchase',
+        'https://s89-akhil-bookaura-2.onrender.com/api/payment/save-purchase',
         {
           sessionId: sessionId || 'manual-recovery',
           purchaseId,
@@ -122,7 +122,7 @@ const SuccessPage = () => {
       try {
         // Verify Stripe session
         const sessionResponse = await axios.get(
-          `http://localhost:5000/api/payment/verify-session?sessionId=${sessionId}`,
+          `https://s89-akhil-bookaura-2.onrender.com/api/payment/verify-session?sessionId=${sessionId}`,
           { withCredentials: true }
         );
 
@@ -135,7 +135,7 @@ const SuccessPage = () => {
         // Check if purchase already exists
         try {
           const verifyResponse = await axios.get(
-            `http://localhost:5000/api/payment/verify-purchase?purchaseId=${purchaseId}`,
+            `https://s89-akhil-bookaura-2.onrender.com/api/payment/verify-purchase?purchaseId=${purchaseId}`,
             { withCredentials: true }
           );
 
@@ -168,7 +168,7 @@ const SuccessPage = () => {
         });
 
         const response = await axios.post(
-          'http://localhost:5000/api/payment/save-purchase',
+          'https://s89-akhil-bookaura-2.onrender.com/api/payment/save-purchase',
           {
             sessionId,
             purchaseId,
@@ -209,7 +209,7 @@ const SuccessPage = () => {
           console.log('Attempting retry for save-purchase...');
           try {
             const retryResponse = await axios.post(
-              'http://localhost:5000/api/payment/save-purchase',
+              'https://s89-akhil-bookaura-2.onrender.com/api/payment/save-purchase',
               {
                 sessionId,
                 purchaseId,

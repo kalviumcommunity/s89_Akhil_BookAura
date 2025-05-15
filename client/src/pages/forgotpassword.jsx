@@ -13,7 +13,7 @@ const Forgotpassword = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/router/forgotpassword', form, {
+      await axios.post('https://s89-akhil-bookaura-2.onrender.com/router/forgotpassword', form, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -34,13 +34,13 @@ const Forgotpassword = () => {
     e.preventDefault();
     try {
       await axios.post(
-        'http://localhost:5000/router/resetpassword',
+        'https://s89-akhil-bookaura-2.onrender.com/router/resetpassword',
         { email: form.email, code, newpassword: newPassword }
       );
       await setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
-      }, 3000); 
+      }, 3000);
       setTimeout(() => {
         navigate('/login');
       }, 2000);
@@ -59,31 +59,31 @@ const Forgotpassword = () => {
       <div className='loginbox'>
         <div className='login-form'>
         <h1>Forgot Password</h1>
-        
+
         <form onSubmit={handleSubmit}>
           <label>Email</label>
-          <input 
-            type="email" 
-            placeholder="Enter your email..." 
-            value={form.email} 
-            onChange={(e) => setForm({ ...form, email: e.target.value })} 
+          <input
+            type="email"
+            placeholder="Enter your email..."
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
           <input type="submit" value="Submit" />
           {hidden && (
             <>
               <label>Code</label>
-              <input 
-                type="text" 
-                placeholder="Enter the code..." 
-                value={code} 
-                onChange={(e) => setCode(e.target.value)} 
+              <input
+                type="text"
+                placeholder="Enter the code..."
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
               />
               <label>New Password</label>
-              <input 
-                type="password" 
-                placeholder="Enter new password..." 
-                value={newPassword} 
-                onChange={(e) => setNewPassword(e.target.value)} 
+              <input
+                type="password"
+                placeholder="Enter new password..."
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
               />
               <input type="submit" value="Reset Password" onClick={handleCode} />
             </>
@@ -91,7 +91,7 @@ const Forgotpassword = () => {
         </form>
         </div>
       </div>
-      {success && 
+      {success &&
           <div className="success-message">Password changed successfully!</div>
           }
     </div>

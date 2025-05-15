@@ -3,10 +3,10 @@ const router = express.Router();
 const { loadModel } = require('../utils/modelLoader');
 const User = loadModel('userModel');
 const Book = loadModel('BookModel');
-const auth = require('../middleware/auth');
+const { verifyToken } = require('../middleware/auth');
 
 // Get user's cart
-router.get('/', auth, async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
     try {
         const userId = req.user.id;
         console.log('Fetching cart for user:', userId);
@@ -40,7 +40,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Add item to cart
-router.post('/add', auth, async (req, res) => {
+router.post('/add', verifyToken, async (req, res) => {
     try {
         const userId = req.user.id;
         const { bookId } = req.body;
@@ -149,7 +149,7 @@ router.post('/add', auth, async (req, res) => {
 });
 
 // Remove item from cart (DELETE method)
-router.delete('/remove/:bookId', auth, async (req, res) => {
+router.delete('/remove/:bookId', verifyToken, async (req, res) => {
     try {
         const userId = req.user.id;
         const { bookId } = req.params;
@@ -223,7 +223,7 @@ router.delete('/remove/:bookId', auth, async (req, res) => {
 });
 
 // Alternative endpoint for removing items (POST method)
-router.post('/remove', auth, async (req, res) => {
+router.post('/remove', verifyToken, async (req, res) => {
     try {
         const userId = req.user.id;
         const { bookId } = req.body;
@@ -304,7 +304,7 @@ router.post('/remove', auth, async (req, res) => {
 });
 
 // Clear cart
-router.delete('/clear', auth, async (req, res) => {
+router.delete('/clear', verifyToken, async (req, res) => {
     try {
         const userId = req.user.id;
         console.log('Clearing cart for user:', userId);

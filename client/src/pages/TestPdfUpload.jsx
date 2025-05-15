@@ -45,7 +45,7 @@ const TestPdfUpload = () => {
         return;
       }
 
-      const response = await axios.post('http://localhost:5000/router/test-pdf-upload', formData, {
+      const response = await axios.post('https://s89-akhil-bookaura-2.onrender.com/router/test-pdf-upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${token}`

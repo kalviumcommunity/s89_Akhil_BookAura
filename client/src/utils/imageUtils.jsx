@@ -11,7 +11,7 @@ export const getProxiedImageUrl = (url) => {
     url.includes('ssl-images-amazon.com')
   )) {
     // Return the proxied URL
-    return `http://localhost:5000/api/pdf/image-proxy?url=${encodeURIComponent(url)}`;
+    return `https://s89-akhil-bookaura-2.onrender.com/api/pdf/image-proxy?url=${encodeURIComponent(url)}`;
   }
 
   // Return the original URL for other sources

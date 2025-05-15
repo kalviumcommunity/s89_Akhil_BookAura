@@ -170,7 +170,7 @@ const AiChat = () => {
   const loadChatHistory = async () => {
     try {
       setIsChatHistoryLoading(true);
-      const response = await axios.get('http://localhost:5000/api/chat-history', { withCredentials: true });
+      const response = await axios.get('https://s89-akhil-bookaura-2.onrender.com/api/chat-history', { withCredentials: true });
 
       if (response.data.success) {
         setMessages(response.data.data);
@@ -186,7 +186,7 @@ const AiChat = () => {
     if (!isLoggedIn) return;
 
     try {
-      await axios.post('http://localhost:5000/api/chat-history', { text, sender }, { withCredentials: true });
+      await axios.post('https://s89-akhil-bookaura-2.onrender.com/api/chat-history', { text, sender }, { withCredentials: true });
     } catch (error) {
       console.error('Error saving message to chat history:', error);
     }
@@ -196,7 +196,7 @@ const AiChat = () => {
     if (!isLoggedIn) return;
 
     try {
-      const response = await axios.delete('http://localhost:5000/api/chat-history', { withCredentials: true });
+      const response = await axios.delete('https://s89-akhil-bookaura-2.onrender.com/api/chat-history', { withCredentials: true });
       if (response.data.success) setMessages([]);
     } catch (error) {
       console.error('Error clearing chat history:', error);

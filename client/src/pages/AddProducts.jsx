@@ -81,7 +81,7 @@ const AddProducts = () => {
         return;
       }
 
-      const res = await axios.post('http://localhost:5000/router/uploadBook', uploadData, {
+      const res = await axios.post('https://s89-akhil-bookaura-2.onrender.com/router/uploadBook', uploadData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${token}`

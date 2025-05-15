@@ -33,7 +33,7 @@ const PdfJsViewer = ({ fileUrl }) => {
 
           try {
             // First try the signed URL approach
-            const response = await axios.get(`http://localhost:5000/api/pdf/signed-url`, {
+            const response = await axios.get(`https://s89-akhil-bookaura-2.onrender.com/api/pdf/signed-url`, {
               params: { url: fileUrl },
               withCredentials: true
             });
@@ -50,7 +50,7 @@ const PdfJsViewer = ({ fileUrl }) => {
             // Try using the proxy endpoint directly
             try {
               console.log('Trying fetch-pdf proxy endpoint');
-              const proxyResponse = await axios.get(`http://localhost:5000/api/pdf/fetch-pdf`, {
+              const proxyResponse = await axios.get(`https://s89-akhil-bookaura-2.onrender.com/api/pdf/fetch-pdf`, {
                 params: { url: fileUrl },
                 responseType: 'blob',
                 withCredentials: true
@@ -158,7 +158,7 @@ const PdfJsViewer = ({ fileUrl }) => {
 
       // Use the proxy endpoint to get the PDF data
       console.log('Downloading PDF via proxy for:', fileUrl);
-      const response = await axios.get(`http://localhost:5000/api/pdf/fetch-pdf`, {
+      const response = await axios.get(`https://s89-akhil-bookaura-2.onrender.com/api/pdf/fetch-pdf`, {
         params: { url: fileUrl },
         responseType: 'blob',
         withCredentials: true
@@ -202,7 +202,7 @@ const PdfJsViewer = ({ fileUrl }) => {
               setLoading(true);
 
               // Try using the proxy endpoint directly
-              axios.get(`http://localhost:5000/api/pdf/fetch-pdf`, {
+              axios.get(`https://s89-akhil-bookaura-2.onrender.com/api/pdf/fetch-pdf`, {
                 params: { url: fileUrl },
                 responseType: 'blob',
                 withCredentials: true
