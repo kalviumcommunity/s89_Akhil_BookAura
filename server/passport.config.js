@@ -12,8 +12,12 @@ console.log('- GOOGLE_CLIENT_SECRET exists:', !!process.env.GOOGLE_CLIENT_SECRET
 console.log('- GOOGLE_CALLBACK_URL:', process.env.GOOGLE_CALLBACK_URL || 'Not set');
 console.log('- SERVER_URL:', process.env.SERVER_URL || 'Not set');
 
-// Configure Google Strategy
-passport.use(new GoogleStrategy({
+// Only configure Google Strategy if credentials are available
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  console.log('Configuring Google OAuth Strategy with provided credentials');
+
+  // Configure Google Strategy
+  passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: (req) => {
@@ -67,7 +71,10 @@ passport.use(new GoogleStrategy({
         console.error('Error in Google Strategy:', err);
         return done(err, null);
     }
-}));
+  }));
+} else {
+  console.log('Google OAuth Strategy not configured - missing credentials');
+}
 
 // Serialize user
 passport.serializeUser((user, done) => {

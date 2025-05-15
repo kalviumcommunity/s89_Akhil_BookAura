@@ -25,7 +25,13 @@ const Login = () => {
     const params = new URLSearchParams(location.search);
     const errorParam = params.get('error');
     if (errorParam) {
-      setError('Authentication failed. Please try again.');
+      if (errorParam === 'authentication_failed') {
+        setError('Google authentication failed. Please try again or use email login.');
+      } else if (errorParam === 'google_auth_not_configured') {
+        setError('Google authentication is not available at this time. Please use email login instead.');
+      } else {
+        setError('Authentication failed. Please try again.');
+      }
     }
   }, [location]);
 
