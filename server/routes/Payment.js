@@ -49,7 +49,7 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
     const purchaseId = new mongoose.Types.ObjectId();
 
     // Get frontend URL from environment variable or use default
-    const frontendUrl = process.env.FRONTEND_URL || 'https://bookauraba.netlify.app/';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://bookauraba.netlify.app';
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -78,14 +78,45 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
 });
 
 // Save purchase after payment success
-router.post("/save-purchase", verifyToken, async (req, res) => {
+router.post("/save-purchase", async (req, res) => {
   try {
-    const { sessionId, purchaseId, books } = req.body;
-    if (!req.user?.id || !purchaseId || !Array.isArray(books) || books.length === 0) {
-      return res.status(400).json({ error: "Invalid request" });
+    const { sessionId, purchaseId, books, userId: bodyUserId } = req.body;
+
+    // First try to get userId from the authenticated user
+    let userId = req.user?.id;
+
+    // If no authenticated user, try to get userId from request body
+    if (!userId && bodyUserId) {
+      userId = bodyUserId;
+      console.log('Using userId from request body:', userId);
     }
 
-    const userId = req.user.id;
+    // If still no userId, try to get it from the session metadata via Stripe
+    if (!userId && sessionId) {
+      try {
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        if (session && session.metadata && session.metadata.userId) {
+          userId = session.metadata.userId;
+          console.log('Retrieved userId from Stripe session metadata:', userId);
+        }
+      } catch (stripeError) {
+        console.error('Error retrieving session from Stripe:', stripeError);
+      }
+    }
+
+    // Final validation check
+    if (!userId || !purchaseId || !Array.isArray(books) || books.length === 0) {
+      return res.status(400).json({
+        error: "Invalid request",
+        details: {
+          hasUserId: !!userId,
+          hasPurchaseId: !!purchaseId,
+          booksValid: Array.isArray(books) && books.length > 0
+        }
+      });
+    }
+
+    console.log('Processing purchase for userId:', userId, 'purchaseId:', purchaseId);
     const requiredFields = ['_id', 'title', 'author', 'coverimage', 'price'];
 
     const processedBooks = books.map(book => {

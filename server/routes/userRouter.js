@@ -136,11 +136,17 @@ router.post('/forgotpassword', async (req, res) => {
     });
 
     await transporter.sendMail({
-      from: "bookaura.ba@gmail.com",
+      from: '"BookAura Support" <bookaura.ba@gmail.com>',
       to: user.email,
-      subject: "Your Password Reset Code",
-      text: `Your code is: ${code}`
+      subject: "Password Reset Code",
+      text: `Hello ${user.name || ""},
+      We received a request to reset your password. Please use the following code to proceed:
+      🔒 Reset Code: ${code}
+      If you did not request a password reset, please ignore this email.
+      Best regards,
+      BookAura Team`,
     });
+
 
     return res.status(200).send({ msg: "Verification code sent successfully, check spam mails" });
   } catch (error) {
@@ -302,7 +308,8 @@ router.get('/auth/google/callback',
   }
 );
 
-// Logout Route
+// Logout Route - Only clears authentication cookies and session
+// Does NOT delete any user data from the database
 router.get('/logout', (req, res) => {
   try {
     // Set secure cookie settings based on environment
@@ -542,10 +549,22 @@ router.delete('/delete-account', verifyToken, async (req, res) => {
     // Delete user
     await User.findByIdAndDelete(userId);
 
-    // Clear cookies
-    res.clearCookie('authToken');
-    res.clearCookie('token');
-    res.clearCookie('isLoggedIn');
+    // Set secure cookie settings based on environment
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieSettings = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      domain: isProduction ? '.onrender.com' : undefined
+    };
+
+    // Clear all auth cookies with proper settings
+    res.clearCookie('authToken', cookieSettings);
+    res.clearCookie('token', cookieSettings);
+    res.clearCookie('isLoggedIn', {
+      ...cookieSettings,
+      httpOnly: false
+    });
 
     res.status(200).json({
       success: true,
