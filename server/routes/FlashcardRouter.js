@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const axios = require('axios');
 const { verifyToken } = require('../middleware/auth');
 const { loadModel } = require('../utils/modelLoader');
 const FlashcardDeck = loadModel('FlashcardModel');
 const mongoose = require('mongoose');
+const { generateFlashcardsFromPDF } = require('../services/flashcardGenerator');
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -95,29 +95,17 @@ router.post('/generate', verifyToken, upload.single('pdfFile'), async (req, res)
       });
     }
 
-    console.log('Preparing to send file to chatbot-api:', req.file.originalname, 'Size:', req.file.size);
+    console.log('Preparing to generate flashcards from PDF:', req.file.originalname, 'Size:', req.file.size);
 
-    // Create form data to send to the AI API
-    const FormData = require('form-data');
-    const formData = new FormData();
-    formData.append('file', req.file.buffer, {
-      filename: req.file.originalname,
-      contentType: req.file.mimetype
-    });
+    // Use our local flashcard generator service
+    console.log('Calling flashcard generator service...');
+    const flashcards = await generateFlashcardsFromPDF(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype
+    );
 
-    console.log('Sending request to chatbot-api...');
-
-    // Call the external AI API to generate flashcards
-    const aiResponse = await axios.post('https://s89-akhil-bookaura-1.onrender.com/chatbot-file', formData, {
-      headers: {
-        ...formData.getHeaders()
-      },
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity,
-      timeout: 300000 // 5 minutes
-    });
-
-    console.log('Response received from chatbot-api with', aiResponse.data.length, 'flashcards');
+    console.log('Generated', flashcards.length, 'flashcards');
 
     // Create a new flashcard deck with the generated flashcards
     const newDeck = new FlashcardDeck({
@@ -125,7 +113,7 @@ router.post('/generate', verifyToken, upload.single('pdfFile'), async (req, res)
       title,
       description: description || '',
       sourceDocumentName: req.file.originalname,
-      flashcards: aiResponse.data.map(card => ({
+      flashcards: flashcards.map(card => ({
         question: card.question,
         answer: card.answer
       }))
@@ -145,27 +133,25 @@ router.post('/generate', verifyToken, upload.single('pdfFile'), async (req, res)
   } catch (error) {
     console.error('Error generating flashcards:', error);
 
-    // Detailed error logging
-    if (error.response) {
-      console.error('Error response data:', error.response.data);
-      console.error('Error response status:', error.response.status);
-    } else if (error.request) {
-      console.error('No response received from API');
-    }
-
     let errorMessage = 'Error generating flashcards';
+    let statusCode = 500;
 
-    // Extract more detailed error information if available
-    if (error.response && error.response.data) {
-      console.error('API error response:', error.response.data);
-      errorMessage = error.response.data.message || errorMessage;
+    // Check for specific error types
+    if (error.message.includes('PDF file could not be processed')) {
+      statusCode = 400;
+      errorMessage = error.message;
+    } else if (error.message.includes('API key error')) {
+      statusCode = 403;
+      errorMessage = error.message;
+    } else if (error.message.includes('Only PDF files are supported')) {
+      statusCode = 400;
+      errorMessage = error.message;
     }
 
-    res.status(500).json({
+    res.status(statusCode).json({
       success: false,
       message: errorMessage,
-      error: error.message,
-      details: error.response?.data || 'No additional details'
+      error: error.message
     });
   }
 });
@@ -219,6 +205,27 @@ router.post('/save-generated', verifyToken, express.json(), async (req, res) => 
     res.status(500).json({
       success: false,
       message: 'Error saving flashcards',
+      error: error.message
+    });
+  }
+});
+
+// Test Gemini API connection
+router.get('/test-gemini', verifyToken, async (req, res) => {
+  try {
+    const { testGeminiConnection } = require('../services/flashcardGenerator');
+    const response = await testGeminiConnection();
+
+    res.status(200).json({
+      success: true,
+      message: 'Gemini API connection successful',
+      response
+    });
+  } catch (error) {
+    console.error('Error testing Gemini API:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Gemini API connection failed',
       error: error.message
     });
   }
