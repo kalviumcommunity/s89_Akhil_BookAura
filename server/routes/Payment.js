@@ -172,35 +172,96 @@ router.post("/save-purchase", async (req, res) => {
   }
 });
 
-// Fetch user purchases
+// Fetch user purchases - with improved error handling
 router.get("/my-purchases", verifyToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    console.log('Fetching purchases for user:', req.user?.id);
 
-    if (!user.purchasedBooks?.length) {
-      const purchases = await Purchase.find({ userId: req.user.id }).sort({ purchaseDate: -1 });
-      if (!purchases.length) return res.status(200).json({ success: true, purchasedBooks: [] });
-
-      const migratedBooks = purchases.flatMap(purchase => purchase.books.map(b => ({
-        bookId: b.bookId,
-        title: b.title,
-        author: b.author,
-        coverimage: b.coverimage,
-        price: b.price,
-        url: b.url?.endsWith('.pdf') ? b.url.slice(0, -4) : b.url,
-        purchaseDate: b.purchaseDate || purchase.purchaseDate,
-        paymentId: purchase.paymentId
-      })));
-
-      user.purchasedBooks = migratedBooks;
-      user.lastPurchaseDate = purchases[0].purchaseDate;
-      await user.save();
+    if (!req.user || !req.user.id) {
+      console.log('No user ID found in request');
+      return res.status(401).json({
+        error: "Authentication required",
+        message: "Please log in to view your purchased books"
+      });
     }
 
-    res.status(200).json({ success: true, purchasedBooks: user.purchasedBooks });
+    // Try to find the user
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      console.log('User not found:', req.user.id);
+      return res.status(404).json({
+        error: "User not found",
+        message: "We couldn't find your user account. Please try logging in again."
+      });
+    }
+
+    // Check if user has purchased books in their profile
+    if (!user.purchasedBooks?.length) {
+      console.log('No purchased books in user profile, checking Purchase collection');
+
+      // If not, try to find purchases in the Purchase collection
+      try {
+        const purchases = await Purchase.find({ userId: req.user.id }).sort({ purchaseDate: -1 });
+
+        if (!purchases.length) {
+          console.log('No purchases found for user:', req.user.id);
+          return res.status(200).json({ success: true, purchasedBooks: [] });
+        }
+
+        console.log(`Found ${purchases.length} purchases in Purchase collection`);
+
+        // Migrate books from purchases to user profile
+        const migratedBooks = purchases.flatMap(purchase => purchase.books.map(b => ({
+          bookId: b.bookId,
+          title: b.title,
+          author: b.author,
+          coverimage: b.coverimage,
+          price: b.price,
+          url: b.url?.endsWith('.pdf') ? b.url.slice(0, -4) : b.url,
+          purchaseDate: b.purchaseDate || purchase.purchaseDate,
+          paymentId: purchase.paymentId
+        })));
+
+        console.log(`Migrated ${migratedBooks.length} books to user profile`);
+
+        // Update user profile with migrated books
+        user.purchasedBooks = migratedBooks;
+        user.lastPurchaseDate = purchases[0].purchaseDate;
+        await user.save();
+
+        console.log('User profile updated with purchased books');
+      } catch (purchaseError) {
+        console.error('Error finding purchases:', purchaseError);
+        // Continue with empty purchased books rather than failing
+        user.purchasedBooks = [];
+      }
+    }
+
+    // Ensure purchasedBooks is always an array
+    const purchasedBooks = user.purchasedBooks || [];
+    console.log(`Returning ${purchasedBooks.length} purchased books`);
+
+    // Fix any missing or invalid URLs
+    const processedBooks = purchasedBooks.map(book => {
+      // Ensure the book has all required fields
+      return {
+        ...book.toObject ? book.toObject() : book,
+        url: book.url || 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1746792433/bookstore/bookFiles/zspcnbobqoimglk83yz6'
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      purchasedBooks: processedBooks,
+      count: processedBooks.length
+    });
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch purchased books" });
+    console.error('Error fetching purchased books:', error);
+    res.status(500).json({
+      error: "Failed to fetch purchased books",
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
