@@ -138,7 +138,7 @@ const AiChat = () => {
       // Get auth token from localStorage
       const authToken = localStorage.getItem('authToken');
 
-      const response = await axios.get('https://s89-akhil-bookaura-2.onrender.com/api/chat-history', {
+      const response = await axios.get('https://s89-akhil-3.onrender.com/api/chat-history', {
         withCredentials: true,
         headers: {
           'Authorization': `Bearer ${authToken || ''}`
@@ -162,7 +162,7 @@ const AiChat = () => {
       // Get auth token from localStorage
       const authToken = localStorage.getItem('authToken');
 
-      await axios.post('https://s89-akhil-bookaura-2.onrender.com/api/chat-history',
+      await axios.post('https://s89-akhil-bookaura-3.onrender.com/api/chat-history',
         { text, sender },
         {
           withCredentials: true,
@@ -183,7 +183,7 @@ const AiChat = () => {
       // Get auth token from localStorage
       const authToken = localStorage.getItem('authToken');
 
-      const response = await axios.delete('https://s89-akhil-bookaura-2.onrender.com/api/chat-history', {
+      const response = await axios.delete('https://s89-akhil-bookaura-3.onrender.com/api/chat-history', {
         withCredentials: true,
         headers: {
           'Authorization': `Bearer ${authToken || ''}`

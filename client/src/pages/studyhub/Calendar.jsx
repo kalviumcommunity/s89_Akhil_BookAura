@@ -42,7 +42,7 @@ const Calendar = () => {
       // Get auth token from localStorage
       const authToken = localStorage.getItem('authToken');
 
-      const response = await axios.get('https://s89-akhil-bookaura-2.onrender.com/api/events', {
+      const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/events', {
         params: { start, end },
         withCredentials: true,
         headers: {
@@ -171,7 +171,7 @@ const Calendar = () => {
         const authToken = localStorage.getItem('authToken');
 
         // Create new event
-        response = await axios.post('https://s89-akhil-bookaura-2.onrender.com/api/events', eventData, {
+        response = await axios.post('https://s89-akhil-bookaura-3.onrender.com/api/events', eventData, {
           withCredentials: true,
           headers: {
             'Authorization': `Bearer ${authToken || ''}`
@@ -198,7 +198,7 @@ const Calendar = () => {
         const authToken = localStorage.getItem('authToken');
 
         // Update existing event
-        response = await axios.put(`https://s89-akhil-bookaura-2.onrender.com/api/events/${selectedEvent.id}`, eventData, {
+        response = await axios.put(`https://s89-akhil-bookaura-3.onrender.com/api/events/${selectedEvent.id}`, eventData, {
           withCredentials: true,
           headers: {
             'Authorization': `Bearer ${authToken || ''}`
@@ -247,7 +247,7 @@ const Calendar = () => {
       // Get auth token from localStorage
       const authToken = localStorage.getItem('authToken');
 
-      const response = await axios.delete(`https://s89-akhil-bookaura-2.onrender.com/api/events/${selectedEvent.id}`, {
+      const response = await axios.delete(`https://s89-akhil-bookaura-3.onrender.com/api/events/${selectedEvent.id}`, {
         withCredentials: true,
         headers: {
           'Authorization': `Bearer ${authToken || ''}`
