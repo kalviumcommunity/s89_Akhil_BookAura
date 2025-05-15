@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const Event = require('../model/EventModel');
+const { loadModel } = require('../utils/modelLoader');
+const Event = loadModel('EventModel');
 const auth = require('../middleware/auth');
 
 // Get all events for the authenticated user

@@ -3,7 +3,8 @@ const router = express.Router();
 const multer = require('multer');
 const axios = require('axios');
 const auth = require('../middleware/auth');
-const FlashcardDeck = require('../model/FlashcardModel');
+const { loadModel } = require('../utils/modelLoader');
+const FlashcardDeck = loadModel('FlashcardModel');
 const mongoose = require('mongoose');
 
 // Configure multer for file uploads

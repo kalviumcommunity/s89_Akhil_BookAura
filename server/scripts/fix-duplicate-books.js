@@ -2,7 +2,11 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const path = require('path');
-const User = require('../model/userModel');
+const { loadModel } = require('./modelHelper');
+const User = loadModel('userModel');
+const Book = loadModel('BookModel');
+const Purchase = loadModel('PurchaseModel');
+
 
 // Load environment variables
 dotenv.config({ path: path.resolve(__dirname, '../.env') });

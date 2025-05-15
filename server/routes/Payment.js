@@ -4,8 +4,9 @@ const dotenv = require("dotenv");
 dotenv.config();
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const auth = require("../middleware/auth");
-const Purchase = require("../model/PurchaseModel");
-const User = require("../model/userModel");
+const { loadModel } = require("../utils/modelLoader");
+const Purchase = loadModel("PurchaseModel");
+const User = loadModel("userModel");
 const mongoose = require("mongoose");
 
 // Create Stripe Checkout session
@@ -47,11 +48,14 @@ router.post("/create-checkout-session", auth, async (req, res) => {
     const totalAmount = (books || [book]).reduce((sum, b) => sum + b.price, 0);
     const purchaseId = new mongoose.Types.ObjectId();
 
+    // Get frontend URL from environment variable or use default
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: lineItems,
-      success_url: `http://localhost:5173/success?session_id={CHECKOUT_SESSION_ID}&purchase_id=${purchaseId}`,
-      cancel_url: "http://localhost:5173/cancel",
+      success_url: `${frontendUrl}/success?session_id={CHECKOUT_SESSION_ID}&purchase_id=${purchaseId}`,
+      cancel_url: `${frontendUrl}/cancel`,
       metadata: {
         purchaseId: purchaseId.toString(),
         userId: req.user.id,

@@ -292,11 +292,16 @@ router.get('/auth/google/callback',
         maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
       });
 
+      // Get frontend URL from environment variable or use default
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
       // Redirect to frontend with success message and user data
-      res.redirect(`http://localhost:5173/?success=true&token=${token}`);
+      res.redirect(`${frontendUrl}/?success=true&token=${token}`);
     } catch (error) {
       console.error('Error in Google callback:', error);
-      res.redirect(`http://localhost:5173/login?error=authentication_failed`);
+      // Get frontend URL from environment variable or use default
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      res.redirect(`${frontendUrl}/login?error=authentication_failed`);
     }
   }
 );
