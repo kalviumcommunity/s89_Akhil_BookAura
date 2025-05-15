@@ -10,6 +10,7 @@ import ProductCard from '../components/ProductCard'
 import axios from 'axios';
 import { getFeaturedBooksUrl } from '../utils/apiConfig';
 import { useAuth } from '../context/AuthContext';
+import { storeUserDataInCookies } from '../utils/cookieUtils';
 
 const Home = () => {
   const { syncCartWithServer } = useCart();
@@ -52,35 +53,45 @@ const Home = () => {
         // Store the token in localStorage
         localStorage.setItem('authToken', token);
 
-        // Set isLoggedIn cookie for client-side detection
-        document.cookie = `isLoggedIn=true; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
-        console.log('Set isLoggedIn cookie for Google login');
+        // Extract user data from token or URL parameters
+        let userData = { _id: userId };
 
-        // Store user ID from URL parameter if available
-        if (userId) {
-          console.log('Using user ID from URL parameter:', userId);
-          localStorage.setItem('userId', userId);
-        } else {
-          // Fallback: Decode the JWT token to get user ID
-          try {
-            // JWT tokens are in format: header.payload.signature
-            // We need the payload part which is the second part
-            const payload = token.split('.')[1];
-            // The payload is base64 encoded, so we need to decode it
-            const decodedPayload = JSON.parse(atob(payload));
+        // Try to extract more user data from token
+        try {
+          // JWT tokens are in format: header.payload.signature
+          // We need the payload part which is the second part
+          const payload = token.split('.')[1];
+          // The payload is base64 encoded, so we need to decode it
+          const decodedPayload = JSON.parse(atob(payload));
 
-            if (decodedPayload.id) {
-              console.log('Extracted user ID from token:', decodedPayload.id);
-              localStorage.setItem('userId', decodedPayload.id);
-            }
-          } catch (error) {
-            console.error('Error decoding JWT token:', error);
+          if (decodedPayload.id) {
+            console.log('Extracted user ID from token:', decodedPayload.id);
+            userData._id = decodedPayload.id;
+            localStorage.setItem('userId', decodedPayload.id);
           }
+
+          // Extract other user data if available
+          if (decodedPayload.email) {
+            userData.email = decodedPayload.email;
+          }
+
+          if (decodedPayload.name) {
+            userData.username = decodedPayload.name;
+          }
+        } catch (error) {
+          console.error('Error decoding JWT token:', error);
         }
+
+        // Store user data in cookies
+        storeUserDataInCookies(userData, token);
+
+        console.log('Stored Google user data in cookies:', userData);
 
         // Log the login status after setting everything
         console.log('Updated login status:',
           document.cookie.includes('isLoggedIn=true') ? 'Cookie set' : 'Cookie not set',
+          document.cookie.includes('userLoggedIn=true') ? 'userLoggedIn set' : 'userLoggedIn not set',
+          document.cookie.includes('googleAuth=true') ? 'googleAuth set' : 'googleAuth not set',
           localStorage.getItem('authToken') ? 'Token set' : 'Token not set',
           localStorage.getItem('userId') ? 'UserID set' : 'UserID not set'
         );

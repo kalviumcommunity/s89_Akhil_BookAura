@@ -1,6 +1,6 @@
 /**
  * API Configuration Utility
- * 
+ *
  * This utility provides centralized management of API URLs and endpoints
  * to ensure consistent behavior across different environments (localhost, production).
  */
@@ -20,7 +20,7 @@ export const getApiBaseUrl = () => {
 
   // Check if we're running on a specific domain
   const hostname = window.location.hostname;
-  
+
   // Map hostnames to API URLs
   if (hostname === 'bookauraba.netlify.app') {
     return 'https://s89-akhil-bookaura-3.onrender.com';
@@ -108,6 +108,21 @@ export const getNewReleaseBooksUrl = () => {
   return `${getApiBaseUrl()}/router/newreleases`;
 };
 
+// Get the URL for PDF signed URL
+export const getPdfSignedUrl = () => {
+  return `${getApiBaseUrl()}/api/pdf/signed-url`;
+};
+
+// Get the URL for fetching PDF content
+export const getPdfFetchUrl = () => {
+  return `${getApiBaseUrl()}/api/pdf/fetch-pdf`;
+};
+
+// Get the URL for placeholder PDF
+export const getPlaceholderPdfUrl = () => {
+  return `${getApiBaseUrl()}/api/pdf/placeholder-pdf`;
+};
+
 // Export a default configuration object
 export default {
   getApiBaseUrl,
@@ -121,5 +136,8 @@ export default {
   getBooksUrl,
   getFeaturedBooksUrl,
   getBestsellerBooksUrl,
-  getNewReleaseBooksUrl
+  getNewReleaseBooksUrl,
+  getPdfSignedUrl,
+  getPdfFetchUrl,
+  getPlaceholderPdfUrl
 };

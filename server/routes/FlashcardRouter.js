@@ -15,7 +15,7 @@ const upload = multer({
 });
 
 // Get all flashcard decks for the current user
-router.get('/decks', verifyToken, async (req, res) => {
+router.get('/decks',  async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -39,7 +39,7 @@ router.get('/decks', verifyToken, async (req, res) => {
 });
 
 // Get a specific flashcard deck by ID
-router.get('/decks/:deckId', verifyToken, async (req, res) => {
+router.get('/decks/:deckId',  async (req, res) => {
   try {
     const { deckId } = req.params;
     const userId = req.user.id;
@@ -76,7 +76,7 @@ router.get('/decks/:deckId', verifyToken, async (req, res) => {
 });
 
 // Generate flashcards from PDF using the external AI API
-router.post('/generate', verifyToken, upload.single('pdfFile'), async (req, res) => {
+router.post('/generate', upload.single('pdfFile'), async (req, res) => {
   try {
     const userId = req.user.id;
     const { title, description } = req.body;
@@ -171,7 +171,7 @@ router.post('/generate', verifyToken, upload.single('pdfFile'), async (req, res)
 });
 
 // Save pre-generated flashcards (alternative approach)
-router.post('/save-generated', verifyToken, express.json(), async (req, res) => {
+router.post('/save-generated', express.json(), async (req, res) => {
   try {
     const userId = req.user.id;
     const { title, description, flashcards } = req.body;
@@ -225,7 +225,7 @@ router.post('/save-generated', verifyToken, express.json(), async (req, res) => 
 });
 
 // Delete a flashcard deck
-router.delete('/decks/:deckId', verifyToken, async (req, res) => {
+router.delete('/decks/:deckId', async (req, res) => {
   try {
     const { deckId } = req.params;
     const userId = req.user.id;

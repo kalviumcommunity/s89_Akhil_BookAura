@@ -7,14 +7,19 @@ import logo from'../images/logo.png';
 import { useCart } from './MarketPlace/cart';
 import api from '../services/api';
 import { getGoogleAuthUrl } from '../utils/apiConfig';
+import { storeUserDataInCookies } from '../utils/cookieUtils';
+import { useAuth } from '../context/AuthContext';
+import LoadingAnimation from '../components/LoadingAnimation';
 
 const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { syncCartWithServer } = useCart();
+  const { login } = useAuth();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -26,19 +31,28 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
     try {
       const response = await api.post("/router/login", form);
 
-      // Store token in localStorage for the API interceptor to use
+      // Store token in localStorage for the API interceptor to use (legacy support)
       localStorage.setItem('authToken', response.data.token);
 
-      // Store userId in localStorage for payment processing
+      // Store userId in localStorage for payment processing (legacy support)
       if (response.data.user && response.data.user._id) {
         localStorage.setItem('userId', response.data.user._id);
         console.log("Stored user ID:", response.data.user._id);
       }
 
-      console.log("Login successful");
+      // Store user data in cookies
+      storeUserDataInCookies(response.data.user, response.data.token);
+
+      // Update auth context
+      login(response.data.user, response.data.token);
+
+      console.log("Login successful, user data stored in cookies");
 
       // Sync cart with server after successful login
       await syncCartWithServer();
@@ -53,11 +67,14 @@ const Login = () => {
     } catch (error) {
       console.error("Error logging in:", error);
       setError(error.response?.data?.message || 'Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   }
 
   const handleGoogleSignIn = () => {
     setError('');
+    setIsLoading(true);
     // Store a flag to sync cart after Google login
     localStorage.setItem('syncCartAfterLogin', 'true');
     // Use the utility function to get the Google auth URL
@@ -82,7 +99,17 @@ const Login = () => {
             <input type="password" placeholder='Password' value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
             <a href="/signup">Don't have account</a>
             <a href="/forgotpassword">Forgot Password?</a>
-            <input type="submit" value="Login" />
+            {isLoading ? (
+              <div className="loading-animation-container">
+                <LoadingAnimation text="Logging in..." />
+              </div>
+            ) : (
+              <input
+                type="submit"
+                value="Login"
+                disabled={isLoading}
+              />
+            )}
             <div className="solid-line-with-text">
               <div className="line"></div>
               <span>or sign in with</span>
@@ -90,8 +117,20 @@ const Login = () => {
             </div>
           </form>
           <div className='google-signin'>
-            <button onClick={handleGoogleSignIn}><img src={Google} alt="Google" className='google-icon' />Sign in with Google</button>
-            </div>
+            {isLoading ? (
+              <div className="loading-animation-container">
+                <LoadingAnimation text="Connecting to Google..." />
+              </div>
+            ) : (
+              <button
+                onClick={handleGoogleSignIn}
+                disabled={isLoading}
+              >
+                <img src={Google} alt="Google" className='google-icon' />
+                Sign in with Google
+              </button>
+            )}
+          </div>
 
         </div>
 

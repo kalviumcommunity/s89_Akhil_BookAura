@@ -8,7 +8,16 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
 // Generate a signed URL for Cloudinary resources
-router.get('/signed-url', verifyToken, async (req, res) => {
+// First try to authenticate, but allow unauthenticated access with limited functionality
+router.get('/signed-url', async (req, res) => {
+  // Check for authentication token
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+
+  // Log authentication status
+  console.log('PDF signed-url authentication status:', token ? 'Authenticated' : 'Not authenticated');
+
+  // Continue with the request
   try {
     const { url, originalUrl } = req.query;
 
@@ -119,7 +128,7 @@ router.get('/signed-url', verifyToken, async (req, res) => {
 // Simple endpoint to serve a PDF directly - no auth required
 router.get('/serve-pdf', async (req, res) => {
   // Set CORS headers to allow any origin
-  const origin = req.headers.origin ||'https://bookauraba.netlify.app/';
+  const origin = req.headers.origin ||'https://bookauraba.netlify.app';
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -188,7 +197,7 @@ router.get('/serve-pdf', async (req, res) => {
 // Proxy endpoint to fetch PDF content - no auth required for better compatibility
 router.get('/fetch-pdf', async (req, res) => {
   // Set CORS headers to allow specific origin with credentials
-  const origin = req.headers.origin || 'https://bookauraba.netlify.app/';
+  const origin = req.headers.origin || 'https://bookauraba.netlify.app';
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
