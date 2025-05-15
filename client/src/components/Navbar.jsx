@@ -5,7 +5,7 @@ import Logo from '../images/logo.png';
 import { ShoppingCart, Home, BookOpen, GraduationCap, Menu, X } from 'lucide-react';
 import { useCart } from '../pages/MarketPlace/cart';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import api from '../services/api';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -79,9 +79,7 @@ const Navbar = () => {
     const fetchProfileImage = async () => {
       if (isLoggedIn) {
         try {
-          const response = await axios.get('http://localhost:5000/router/profile-image', {
-            withCredentials: true
-          });
+          const response = await api.get('/router/profile-image');
           if (response.data.success) {
             setProfileImage(response.data.profileImage);
             setUserName(response.data.username);
@@ -110,7 +108,7 @@ const Navbar = () => {
           className={location.pathname === '/' ? 'active' : 'notactive'} // Highlight Home
           onClick={() => handleNavigation('/')}
         >
-          
+
           Home
         </li>
         <li

@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import api from '../../services/api';
 
 const CartContext = createContext();
 
@@ -14,10 +14,13 @@ export const CartProvider = ({ children }) => {
 
   // Check if user is logged in
   useEffect(() => {
-    // Check for the non-httpOnly isLoggedIn cookie
+    // Check for the non-httpOnly isLoggedIn cookie or localStorage token
     const hasToken = document.cookie.includes('isLoggedIn=true');
-    setIsLoggedIn(hasToken);
-    console.log('User login status:', hasToken ? 'Logged in' : 'Not logged in');
+    const localToken = localStorage.getItem('authToken');
+    const isAuthenticated = hasToken || !!localToken;
+
+    setIsLoggedIn(isAuthenticated);
+    console.log('User login status:', isAuthenticated ? 'Logged in' : 'Not logged in');
   }, []);
 
   // Fetch cart from server if logged in, otherwise from localStorage
@@ -27,10 +30,8 @@ export const CartProvider = ({ children }) => {
       try {
         if (isLoggedIn) {
           console.log('Fetching cart from server...');
-          // Fetch cart from server
-          const response = await axios.get('http://localhost:5000/api/cart', {
-            withCredentials: true
-          });
+          // Fetch cart from server using our API service
+          const response = await api.get('/api/cart');
 
           if (response.data.success) {
             console.log('Server cart fetched successfully:', response.data.data);
@@ -97,11 +98,9 @@ export const CartProvider = ({ children }) => {
 
     try {
       if (isLoggedIn) {
-        // Add to server cart
-        const response = await axios.post('http://localhost:5000/api/cart/add', {
+        // Add to server cart using our API service
+        const response = await api.post('/api/cart/add', {
           bookId: book._id
-        }, {
-          withCredentials: true
         });
 
         if (response.data.success) {
@@ -156,9 +155,7 @@ export const CartProvider = ({ children }) => {
         // Try the direct remove endpoint first
         try {
           console.log('Calling DELETE endpoint with bookId:', serverBookId);
-          const response = await axios.delete(`http://localhost:5000/api/cart/remove/${serverBookId}`, {
-            withCredentials: true
-          });
+          const response = await api.delete(`/api/cart/remove/${serverBookId}`);
 
           if (response.data.success) {
             console.log('Book removed from server cart successfully');
@@ -189,10 +186,8 @@ export const CartProvider = ({ children }) => {
           // If DELETE fails, try the POST endpoint as fallback
           try {
             console.log('Calling POST endpoint with bookId:', serverBookId);
-            const postResponse = await axios.post('http://localhost:5000/api/cart/remove', {
+            const postResponse = await api.post('/api/cart/remove', {
               bookId: serverBookId
-            }, {
-              withCredentials: true
             });
 
             if (postResponse.data.success) {
@@ -258,9 +253,7 @@ export const CartProvider = ({ children }) => {
     try {
       if (isLoggedIn) {
         // Clear server cart
-        const response = await axios.delete('http://localhost:5000/api/cart/clear', {
-          withCredentials: true
-        });
+        const response = await api.delete('/api/cart/clear');
 
         if (response.data.success) {
           console.log('Cart cleared successfully on server');
@@ -292,8 +285,10 @@ export const CartProvider = ({ children }) => {
   const syncCartWithServer = async () => {
     // Check login status again to ensure it's current
     const hasToken = document.cookie.includes('isLoggedIn=true');
+    const localToken = localStorage.getItem('authToken');
+    const isAuthenticated = hasToken || !!localToken;
 
-    if (!hasToken) {
+    if (!isAuthenticated) {
       console.log('Cannot sync cart: User not logged in');
       return;
     }
@@ -322,10 +317,8 @@ export const CartProvider = ({ children }) => {
           }
 
           console.log('Adding item to cart:', bookId);
-          await axios.post('http://localhost:5000/api/cart/add', {
+          await api.post('/api/cart/add', {
             bookId: bookId
-          }, {
-            withCredentials: true
           });
         } catch (itemError) {
           console.error('Error adding item to server cart:', itemError);
@@ -335,9 +328,7 @@ export const CartProvider = ({ children }) => {
 
       // Fetch updated cart from server
       console.log('Fetching updated cart from server...');
-      const response = await axios.get('http://localhost:5000/api/cart', {
-        withCredentials: true
-      });
+      const response = await api.get('/api/cart');
 
       if (response.data.success) {
         console.log('Server cart updated successfully:', response.data.data);
@@ -370,9 +361,7 @@ export const CartProvider = ({ children }) => {
     setIsLoading(true);
 
     try {
-      const response = await axios.get('http://localhost:5000/api/cart', {
-        withCredentials: true
-      });
+      const response = await api.get('/api/cart');
 
       if (response.data.success) {
         console.log('Cart refreshed successfully from server');

@@ -34,7 +34,7 @@ export const ScheduleProvider = ({ children }) => {
       description: "Modern Literature Discussion Group"
     }
   ]);
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -43,20 +43,20 @@ export const ScheduleProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Check if user is logged in
       const token = document.cookie.includes('token=');
-      
+
       if (token) {
         // Get the start and end of the current month for filtering
         const start = moment().startOf('month').format();
         const end = moment().endOf('month').format();
-        
-        const response = await axios.get('http://localhost:5000/api/events', {
+
+        const response = await axios.get('https://s89-akhil-bookaura-2.onrender.com/api/events', {
           params: { start, end },
           withCredentials: true
         });
-        
+
         if (response.data.success) {
           // Transform the events to the format expected by our app
           const formattedEvents = response.data.data.map(event => ({
@@ -66,11 +66,11 @@ export const ScheduleProvider = ({ children }) => {
             time: `${moment(event.start).format('h:mm A')} - ${moment(event.end).format('h:mm A')}`,
             description: event.description || 'No description provided'
           }));
-          
+
           setSchedules(formattedEvents);
         }
       }
-      
+
       setLoading(false);
     } catch (err) {
       console.error('Error fetching schedules:', err);
@@ -83,15 +83,15 @@ export const ScheduleProvider = ({ children }) => {
   const addSchedule = async (newSchedule) => {
     try {
       setLoading(true);
-      
+
       // Check if user is logged in
       const token = document.cookie.includes('token=');
-      
+
       if (token) {
         // Format the schedule for the API
         const startTime = moment(`${moment(newSchedule.date).format('YYYY-MM-DD')} ${newSchedule.time.split(' - ')[0]}`, 'YYYY-MM-DD h:mm A');
         const endTime = moment(`${moment(newSchedule.date).format('YYYY-MM-DD')} ${newSchedule.time.split(' - ')[1]}`, 'YYYY-MM-DD h:mm A');
-        
+
         const scheduleData = {
           title: newSchedule.title,
           description: newSchedule.description,
@@ -100,11 +100,11 @@ export const ScheduleProvider = ({ children }) => {
           calendarId: 'mongodb_calendar',
           color: '#A67C52'
         };
-        
-        const response = await axios.post('http://localhost:5000/api/events', scheduleData, {
+
+        const response = await axios.post('https://s89-akhil-bookaura-2.onrender.com/api/events', scheduleData, {
           withCredentials: true
         });
-        
+
         if (response.data.success) {
           // Add the new schedule to the state
           const savedSchedule = response.data.data;
@@ -115,7 +115,7 @@ export const ScheduleProvider = ({ children }) => {
             time: `${moment(savedSchedule.start).format('h:mm A')} - ${moment(savedSchedule.end).format('h:mm A')}`,
             description: savedSchedule.description || 'No description provided'
           };
-          
+
           setSchedules([...schedules, formattedSchedule]);
         }
       } else {
@@ -125,10 +125,10 @@ export const ScheduleProvider = ({ children }) => {
           ...newSchedule,
           id: newId
         };
-        
+
         setSchedules([...schedules, scheduleToAdd]);
       }
-      
+
       setLoading(false);
     } catch (err) {
       console.error('Error adding schedule:', err);
@@ -141,15 +141,15 @@ export const ScheduleProvider = ({ children }) => {
   const deleteSchedule = async (id) => {
     try {
       setLoading(true);
-      
+
       // Check if user is logged in
       const token = document.cookie.includes('token=');
-      
+
       if (token) {
-        const response = await axios.delete(`http://localhost:5000/api/events/${id}`, {
+        const response = await axios.delete(`https://s89-akhil-bookaura-2.onrender.com/api/events/${id}`, {
           withCredentials: true
         });
-        
+
         if (response.data.success) {
           // Remove the schedule from the state
           setSchedules(schedules.filter(schedule => schedule.id !== id));
@@ -158,7 +158,7 @@ export const ScheduleProvider = ({ children }) => {
         // For demo mode, just remove from local state
         setSchedules(schedules.filter(schedule => schedule.id !== id));
       }
-      
+
       setLoading(false);
     } catch (err) {
       console.error('Error deleting schedule:', err);

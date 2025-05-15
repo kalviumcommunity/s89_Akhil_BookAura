@@ -5,7 +5,7 @@ const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const cookiePraser = require('cookie-parser');
-const verifyToken = require('../middleware/auth');
+const { verifyToken } = require('../middleware/auth');
 const { loadModel } = require('../utils/modelLoader');
 require('dotenv').config();
 
@@ -82,28 +82,26 @@ router.post('/login', async (req, res) => {
     }
     const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
-    // Set both cookie names for better compatibility
-    res.cookie('authToken', token, {
+    // Set secure cookie settings based on environment
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieSettings = {
       httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-site in production
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      domain: isProduction ? '.onrender.com' : undefined // Match domain in production
+    };
+
+    // Set both cookie names for better compatibility
+    res.cookie('authToken', token, cookieSettings);
 
     // Also set as 'token' for client-side checks
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
+    res.cookie('token', token, cookieSettings);
 
     // Add a non-httpOnly cookie for client-side detection
     res.cookie('isLoggedIn', 'true', {
-      httpOnly: false,
-      secure: false,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000
+      ...cookieSettings,
+      httpOnly: false // This one needs to be accessible from JS
     });
     res.status(200).json({ message: 'Login successful', token });
   } catch (error) {
@@ -268,28 +266,26 @@ router.get('/auth/google/callback',
         username: req.user.username
       }, JWT_SECRET, { expiresIn: '7d' });
 
-      // Set both cookie names for better compatibility
-      res.cookie('authToken', token, {
+      // Set secure cookie settings based on environment
+      const isProduction = process.env.NODE_ENV === 'production';
+      const cookieSettings = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-      });
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-site in production
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        domain: isProduction ? '.onrender.com' : undefined // Match domain in production
+      };
+
+      // Set both cookie names for better compatibility
+      res.cookie('authToken', token, cookieSettings);
 
       // Also set as 'token' for client-side checks
-      res.cookie('token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-      });
+      res.cookie('token', token, cookieSettings);
 
       // Add a non-httpOnly cookie for client-side detection
       res.cookie('isLoggedIn', 'true', {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        ...cookieSettings,
+        httpOnly: false // This one needs to be accessible from JS
       });
 
       // Get frontend URL from environment variable or use default
@@ -309,15 +305,41 @@ router.get('/auth/google/callback',
 // Logout Route
 router.get('/logout', (req, res) => {
   try {
-    // Clear all auth cookies
-    res.clearCookie('authToken');
-    res.clearCookie('token');
-    res.clearCookie('isLoggedIn');
+    // Set secure cookie settings based on environment
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieSettings = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      domain: isProduction ? '.onrender.com' : undefined
+    };
+
+    // Clear all auth cookies with proper settings
+    res.clearCookie('authToken', cookieSettings);
+    res.clearCookie('token', cookieSettings);
+    res.clearCookie('isLoggedIn', {
+      ...cookieSettings,
+      httpOnly: false
+    });
 
     // If using passport session
     if (req.logout) {
-      req.logout();
+      // Handle different passport versions
+      if (req.logout.length) {
+        // Passport > 0.6.0
+        req.logout(function(err) {
+          if (err) {
+            console.error('Error during passport logout:', err);
+          }
+        });
+      } else {
+        // Passport <= 0.5.0
+        req.logout();
+      }
     }
+
+    // Clear session
+    req.session.destroy();
 
     res.status(200).json({ message: 'Logged out successfully' });
   } catch (error) {
@@ -389,20 +411,19 @@ router.put('/update-profile', verifyToken, async (req, res) => {
         username: updatedUser.username
       }, JWT_SECRET, { expiresIn: '7d' });
 
-      // Update cookies
-      res.cookie('authToken', newToken, {
+      // Set secure cookie settings based on environment
+      const isProduction = process.env.NODE_ENV === 'production';
+      const cookieSettings = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000
-      });
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-site in production
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        domain: isProduction ? '.onrender.com' : undefined // Match domain in production
+      };
 
-      res.cookie('token', newToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000
-      });
+      // Update cookies
+      res.cookie('authToken', newToken, cookieSettings);
+      res.cookie('token', newToken, cookieSettings);
     }
 
     res.status(200).json({

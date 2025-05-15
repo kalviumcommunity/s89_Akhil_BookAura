@@ -3,7 +3,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import '../pagescss/Profile.css';
 import { User, Lock, Edit2, Trash2, X, Check, Upload, Camera } from 'lucide-react';
 
@@ -51,9 +51,7 @@ const Profile = () => {
     // Fetch user data
     const fetchUserData = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/router/profile', {
-          withCredentials: true
-        });
+        const response = await api.get('/router/profile');
 
         if (response.data.success) {
           setUserData(response.data.user);
@@ -127,9 +125,7 @@ const Profile = () => {
         return;
       }
 
-      const response = await axios.put('http://localhost:5000/router/update-profile', editData, {
-        withCredentials: true
-      });
+      const response = await api.put('/router/update-profile', editData);
 
       if (response.data.success) {
         setUserData(response.data.user);
@@ -184,11 +180,9 @@ const Profile = () => {
         return;
       }
 
-      const response = await axios.put('http://localhost:5000/router/update-password', {
+      const response = await api.put('/router/update-password', {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword
-      }, {
-        withCredentials: true
       });
 
       if (response.data.success) {
@@ -215,9 +209,8 @@ const Profile = () => {
     try {
       setDeleteError('');
 
-      const response = await axios.delete('http://localhost:5000/router/delete-account', {
-        data: { password: deletePassword },
-        withCredentials: true
+      const response = await api.delete('/router/delete-account', {
+        data: { password: deletePassword }
       });
 
       if (response.data.success) {

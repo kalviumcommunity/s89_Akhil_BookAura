@@ -28,7 +28,7 @@ const Flashcards = () => {
   const fetchDecks = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:5000/api/flashcards/decks', {
+      const response = await axios.get('https://s89-akhil-bookaura-2.onrender.com/api/flashcards/decks', {
         withCredentials: true
       });
       setDecks(response.data.data);
@@ -44,7 +44,7 @@ const Flashcards = () => {
   const fetchDeckDetails = async (deckId) => {
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:5000/api/flashcards/decks/${deckId}`, {
+      const response = await axios.get(`https://s89-akhil-bookaura-2.onrender.com/api/flashcards/decks/${deckId}`, {
         withCredentials: true
       });
       setSelectedDeck(response.data.data);
@@ -69,7 +69,7 @@ const Flashcards = () => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       setUploadFile(e.dataTransfer.files[0]);
     }
@@ -77,19 +77,19 @@ const Flashcards = () => {
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    
+
     if (!uploadFile || !deckTitle) return;
-    
+
     try {
       setIsUploading(true);
-      
+
       const formData = new FormData();
       formData.append('pdfFile', uploadFile);
       formData.append('title', deckTitle);
       formData.append('description', deckDescription);
-      
+
       const response = await axios.post(
-        'http://localhost:5000/api/flashcards/generate',
+        'https://s89-akhil-bookaura-2.onrender.com/api/flashcards/generate',
         formData,
         {
           withCredentials: true,
@@ -104,19 +104,19 @@ const Flashcards = () => {
           }
         }
       );
-      
+
       // Reset form and close modal
       setUploadFile(null);
       setDeckTitle('');
       setDeckDescription('');
       setUploadModalOpen(false);
-      
+
       // Refresh the decks list
       await fetchDecks();
-      
+
       // Show success message or notification
       alert('Flashcards generated successfully!');
-      
+
     } catch (err) {
       console.error('Error generating flashcards:', err);
       alert('Failed to generate flashcards. Please try again later.');
@@ -150,15 +150,15 @@ const Flashcards = () => {
 
   const handleDeleteDeck = async () => {
     if (!deckToDelete) return;
-  
+
     try {
-      await axios.delete(`http://localhost:5000/api/flashcards/decks/${deckToDelete._id}`, {
+      await axios.delete(`https://s89-akhil-bookaura-2.onrender.com/api/flashcards/decks/${deckToDelete._id}`, {
         withCredentials: true
       });
-  
+
       // Refresh the decks list
       await fetchDecks();
-  
+
       // Close the delete modal
       setDeleteModalOpen(false);
       setDeckToDelete(null);
@@ -195,15 +195,15 @@ const Flashcards = () => {
           <h2>Delete Flashcard Deck</h2>
           <p>Are you sure you want to delete "{deckToDelete?.title}"?</p>
           <p className="delete-warning">This action cannot be undone.</p>
-          
+
           <div className="modal-actions">
-            <button 
+            <button
               className="cancel-button"
               onClick={() => setDeleteModalOpen(false)}
             >
               Cancel
             </button>
-            <button 
+            <button
               className="delete-confirm-button"
               onClick={handleDeleteDeck}
             >
@@ -391,7 +391,7 @@ const Flashcards = () => {
       <div className="deck-list">
         <div className="deck-list-header">
           <h2>Your Flashcard Decks</h2>
-          
+
           <button
             onClick={() => setUploadModalOpen(true)}
             className="create-deck-button"

@@ -18,7 +18,7 @@ const Signup = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post("http://localhost:5000/router/signup", form, { withCredentials: true });
+      const response = await axios.post("https://s89-akhil-bookaura-2.onrender.com/router/signup", form, { withCredentials: true });
       console.log("Signup successful:", response.data);
       alert("Signup successful!");
       navigate('/'); // Redirect to home after successful signup
@@ -30,7 +30,7 @@ const Signup = () => {
 
   const handleGoogleSignIn = () => {
     setError('');
-    window.location.href = "http://localhost:5000/router/auth/google";
+    window.location.href = "https://s89-akhil-bookaura-2.onrender.com/router/auth/google";
     // Let backend handle redirect after Google login
   };
 

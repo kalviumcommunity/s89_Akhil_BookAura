@@ -5,7 +5,7 @@ import Footer from '../../components/Footer';
 import { useCart } from './cart';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
-import axios from 'axios';
+import api from '../../services/api';
 import { SafeImage } from '../../utils/imageUtils';
 import LoadingAnimation from '../../components/LoadingAnimation';
 
@@ -35,13 +35,10 @@ const CartPage = () => {
             return;
         }
 
-        // Send all books in the cart to the checkout
-        const response = await axios.post(
-            'http://localhost:5000/api/payment/create-checkout-session',
-            { books: cartItems },
-            {
-                withCredentials: true // This will send cookies with the request
-            }
+        // Send all books in the cart to the checkout using our API service
+        const response = await api.post(
+            '/api/payment/create-checkout-session',
+            { books: cartItems }
         );
 
         const { url } = response.data;
@@ -129,7 +126,7 @@ const CartPage = () => {
                   <span>₹{totalPrice.toFixed(2)}</span>
                 </div>
 
-                
+
 
                 <div className="summary-divider"></div>
 

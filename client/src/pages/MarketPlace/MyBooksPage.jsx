@@ -23,7 +23,7 @@ const MyBooksPage = () => {
         setLoading(true);
         console.log('Fetching purchased books...');
 
-        const response = await axios.get('http://localhost:5000/api/payment/my-purchases', {
+        const response = await axios.get('https://s89-akhil-bookaura-2.onrender.com/api/payment/my-purchases', {
           withCredentials: true
         });
 
