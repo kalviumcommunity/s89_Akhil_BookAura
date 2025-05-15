@@ -38,59 +38,87 @@ const MONGODB_URI = process.env.MONGODB_URI;
 // Middleware
 app.use(cors({
     origin: function(origin, callback) {
+        // Define allowed origins
         const allowedOrigins = [
             'http://localhost:5173',  // Local development
             'http://localhost:5174',  // Alternative local port
             'https://s89-akhil-book-aura.vercel.app',
             'https://s89-akhil-book-aura.netlify.app',
             'https://bookauraba.netlify.app',
-            'https://bookauraba.netlify.app/',
+            'https://bookauraba.netlify.app',
+            'https://bookaura.netlify.app',
+            'https://bookaura.vercel.app',
             process.env.FRONTEND_URL // From environment variable if set
         ].filter(Boolean); // Remove any undefined/null values
 
-        console.log('Request origin:', origin);
-        console.log('Allowed origins:', allowedOrigins);
+        // Log request details for debugging
+        console.log('CORS - Request origin:', origin);
 
-        // Allow requests with no origin (like mobile apps, curl requests)
+        // Allow requests with no origin (like mobile apps, curl requests, or same-origin)
         if (!origin) {
-            console.log('No origin, allowing request');
+            console.log('CORS - No origin, allowing request');
             return callback(null, true);
         }
 
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            console.log('Origin allowed:', origin);
+        // Check if origin is in our allowed list
+        if (allowedOrigins.includes(origin)) {
+            console.log('CORS - Origin explicitly allowed:', origin);
             return callback(null, true);
         }
 
+        // In development, allow all origins
         if (process.env.NODE_ENV !== 'production') {
-            console.log('Development mode, allowing all origins');
+            console.log('CORS - Development mode, allowing all origins');
             return callback(null, true);
         }
 
-        console.log('Origin not in allowed list, but allowing anyway for compatibility');
-        callback(null, true); // Temporarily allow all origins in production too
+        // In production, we'll still allow all origins for now to prevent issues
+        // but log it for monitoring
+        console.log('CORS - Origin not in allowed list:', origin);
+        return callback(null, true);
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'Accept',
+        'Origin',
+        'Access-Control-Request-Method',
+        'Access-Control-Request-Headers'
+    ],
+    exposedHeaders: ['Content-Length', 'Content-Type', 'Set-Cookie'],
+    maxAge: 86400 // 24 hours in seconds - how long the browser should cache CORS response
 }));
 app.use(express.json());
 app.use(cookieParser());
 
 // Session middleware
 app.use(session({
-    secret: process.env.JWT_SECRET,
+    secret: process.env.JWT_SECRET || 'fallback-secret-key-for-development',
     resave: false,
     saveUninitialized: false,
     cookie: {
         secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-        sameSite: 'none', // Required for cross-site cookies in modern browsers
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Required for cross-site cookies in modern browsers
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         httpOnly: true,
-        domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined // Match domain in production
+        // Don't set domain in production to allow cookies to work across different domains
+        // domain: process.env.NODE_ENV === 'production' ? undefined : undefined
     },
-    proxy: process.env.NODE_ENV === 'production' // Trust the reverse proxy in production
+    proxy: process.env.NODE_ENV === 'production', // Trust the reverse proxy in production
+    // Use a more reliable session store in production
+    store: process.env.NODE_ENV === 'production'
+        ? undefined // In production, you might want to use a proper session store like MongoDB or Redis
+        : undefined  // In development, use the default MemoryStore (with warning)
 }));
+
+// Add warning about MemoryStore in production
+if (process.env.NODE_ENV === 'production' && !app.get('trust proxy')) {
+    console.warn('Warning: You should set "trust proxy" when behind a reverse proxy like Nginx or when deployed to cloud platforms');
+    app.set('trust proxy', 1); // Trust first proxy
+}
 
 // Initialize Passport
 app.use(passport.initialize());

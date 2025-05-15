@@ -4,7 +4,7 @@ const passport = require('passport');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
-const cookiePraser = require('cookie-parser');
+// Cookie-parser is already used at the app level
 const { verifyToken } = require('../middleware/auth');
 const { loadModel } = require('../utils/modelLoader');
 require('dotenv').config();
