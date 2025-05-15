@@ -250,21 +250,32 @@ router.get('/profile-image', verifyToken, async (req, res) => {
 });
 
 // Google OAuth Login Route
-router.get('/auth/google',
+router.get('/auth/google', (req, res, next) => {
+  console.log('Google OAuth login route accessed');
+  console.log('- Request headers:', req.headers);
+  console.log('- Request URL:', req.originalUrl);
+
   passport.authenticate('google', {
     scope: ['profile', 'email'],
     prompt: 'select_account' // Force account selection
-  })
-);
+  })(req, res, next);
+});
 
 // Google OAuth Callback Route
-router.get('/auth/google/callback',
+router.get('/auth/google/callback', (req, res, next) => {
+  console.log('Google OAuth callback route accessed');
+  console.log('- Request headers:', req.headers);
+  console.log('- Request URL:', req.originalUrl);
+  console.log('- Query parameters:', req.query);
+
   passport.authenticate('google', {
     failureRedirect: '/login',
     failureMessage: true
-  }),
-  (req, res) => {
+  })(req, res, next);
+}, (req, res) => {
     try {
+      console.log('Google OAuth authentication successful');
+      console.log('- User:', req.user ? req.user._id : 'No user');
       // Generate JWT Token for Google OAuth
       const token = jwt.sign({
         id: req.user._id,

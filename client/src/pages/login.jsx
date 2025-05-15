@@ -75,10 +75,31 @@ const Login = () => {
   const handleGoogleSignIn = () => {
     setError('');
     setIsLoading(true);
-    // Store a flag to sync cart after Google login
-    localStorage.setItem('syncCartAfterLogin', 'true');
-    // Use the utility function to get the Google auth URL
-    window.location.href = getGoogleAuthUrl();
+
+    try {
+      // Store a flag to sync cart after Google login
+      localStorage.setItem('syncCartAfterLogin', 'true');
+
+      // Get the Google auth URL
+      const googleAuthUrl = getGoogleAuthUrl();
+      console.log('Redirecting to Google auth URL:', googleAuthUrl);
+
+      // Add error handling with a timeout
+      const redirectTimeout = setTimeout(() => {
+        setError('Google authentication request timed out. Please try again later.');
+        setIsLoading(false);
+      }, 10000); // 10 second timeout
+
+      // Store the timeout ID so we can clear it if navigation happens
+      localStorage.setItem('googleAuthTimeout', redirectTimeout);
+
+      // Redirect to Google auth
+      window.location.href = googleAuthUrl;
+    } catch (error) {
+      console.error('Error initiating Google sign-in:', error);
+      setError('Failed to connect to Google authentication. Please try again later.');
+      setIsLoading(false);
+    }
   }
 
   return (

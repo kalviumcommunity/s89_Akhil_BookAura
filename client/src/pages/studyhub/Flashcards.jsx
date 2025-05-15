@@ -27,14 +27,30 @@ const Flashcards = () => {
   const fetchDecks = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/flashcards/decks', {
-        withCredentials: true
+
+      // Get auth token from localStorage
+      const authToken = localStorage.getItem('authToken');
+
+      // Include auth token in the request
+      const response = await axios.get('https://s89-akhil-bookaura-2.onrender.com/api/flashcards/decks', {
+        withCredentials: true,
+        headers: {
+          'Authorization': `Bearer ${authToken || ''}`
+        }
       });
+
       setDecks(response.data.data);
-      setLoading(false);
+      setError(null);
     } catch (err) {
       console.error('Error fetching flashcard decks:', err);
-      setError('Failed to load flashcard decks. Please try again later.');
+
+      // Check if this is an authentication error
+      if (err.response && err.response.status === 401) {
+        setError('You need to be logged in to view your flashcard decks. Please log in and try again.');
+      } else {
+        setError('Failed to load flashcard decks. Please try again later.');
+      }
+    } finally {
       setLoading(false);
     }
   };
@@ -42,16 +58,32 @@ const Flashcards = () => {
   const fetchDeckDetails = async (deckId) => {
     try {
       setLoading(true);
-      const response = await axios.get(`https://s89-akhil-bookaura-3.onrender.com/api/flashcards/decks/${deckId}`, {
-        withCredentials: true
+
+      // Get auth token from localStorage
+      const authToken = localStorage.getItem('authToken');
+
+      // Include auth token in the request
+      const response = await axios.get(`https://s89-akhil-bookaura-2.onrender.com/api/flashcards/decks/${deckId}`, {
+        withCredentials: true,
+        headers: {
+          'Authorization': `Bearer ${authToken || ''}`
+        }
       });
+
       setSelectedDeck(response.data.data);
       setCurrentCardIndex(0);
       setIsFlipped(false);
-      setLoading(false);
+      setError(null);
     } catch (err) {
       console.error('Error fetching deck details:', err);
-      setError('Failed to load flashcard deck. Please try again later.');
+
+      // Check if this is an authentication error
+      if (err.response && err.response.status === 401) {
+        setError('You need to be logged in to view this flashcard deck. Please log in and try again.');
+      } else {
+        setError('Failed to load flashcard deck. Please try again later.');
+      }
+    } finally {
       setLoading(false);
     }
   };
@@ -116,11 +148,15 @@ const Flashcards = () => {
       // Show initial progress for file upload
       setUploadProgress(10);
 
+      // Get auth token from localStorage
+      const authToken = localStorage.getItem('authToken');
+
       // First phase: Upload the file
-      const response = await axios.post('https://s89-akhil-bookaura-3.onrender.com/api/flashcards/generate', formData, {
+      const response = await axios.post('https://s89-akhil-bookaura-2.onrender.com/api/flashcards/generate', formData, {
         withCredentials: true,
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${authToken || ''}`
         },
         onUploadProgress: (progressEvent) => {
           // Calculate upload progress (up to 50%)
@@ -166,12 +202,19 @@ const Flashcards = () => {
       console.error('Error uploading PDF:', err);
       setIsUploading(false);
 
-      // Extract error message from response if available
-      const errorMessage = err.response && err.response.data && err.response.data.message
-        ? err.response.data.message
-        : 'Failed to generate flashcards. Please try again.';
+      // Check if this is an authentication error
+      if (err.response && err.response.status === 401) {
+        const errorMessage = 'You need to be logged in to create flashcards. Please log in and try again.';
+        alert(errorMessage);
+        setError(errorMessage);
+      } else {
+        // Extract error message from response if available
+        const errorMessage = err.response && err.response.data && err.response.data.message
+          ? err.response.data.message
+          : 'Failed to generate flashcards. Please try again.';
 
-      alert(errorMessage);
+        alert(errorMessage);
+      }
     } finally {
       // Ensure progress is reset if there was an error
       if (isUploading) {
@@ -360,6 +403,17 @@ const Flashcards = () => {
     }
 
     if (error) {
+      // Check if the error is related to authentication
+      if (error.includes('logged in')) {
+        return (
+          <div className="error auth-error">
+            <p>{error}</p>
+            <a href="/login?redirect=/studyhub/flashcards" className="login-button">
+              Log In
+            </a>
+          </div>
+        );
+      }
       return <div className="error">{error}</div>;
     }
 
