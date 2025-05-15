@@ -46,6 +46,33 @@ const loadModel = (modelName) => {
   console.log('Current directory:', process.cwd());
   console.log('__dirname:', __dirname);
 
+  // Check for case-insensitive matches in the model directory
+  const modelDir = path.join(process.cwd(), 'server', 'model');
+  if (fs.existsSync(modelDir)) {
+    try {
+      const files = fs.readdirSync(modelDir);
+      console.log('Files in model directory:', files);
+
+      // Look for case-insensitive matches
+      const lowerModelName = modelName.toLowerCase();
+      for (const file of files) {
+        if (file.toLowerCase() === `${lowerModelName}.js`) {
+          const exactPath = path.join(modelDir, file);
+          console.log(`Found case-insensitive match: ${exactPath}`);
+          try {
+            const model = require(exactPath);
+            console.log(`Successfully loaded model from case-insensitive match: ${exactPath}`);
+            return model;
+          } catch (err) {
+            console.error(`Error loading from case-insensitive match: ${exactPath}`, err);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error reading model directory:', err);
+    }
+  }
+
   // Try each path
   for (const pathToTry of possiblePaths) {
     try {
@@ -71,13 +98,15 @@ const loadModel = (modelName) => {
   possiblePaths.forEach(p => console.error(`- ${p}`));
 
   // For User model, create a placeholder to prevent crashes
-  if (modelName === 'userModel') {
+  if (modelName.toLowerCase() === 'usermodel') {
     console.log('Creating placeholder User model');
     const userSchema = new mongoose.Schema({
       username: String,
       email: String,
       password: String,
-      googleId: String
+      googleId: String,
+      cartItems: Array,
+      purchasedBooks: Array
     });
     return mongoose.models.User || mongoose.model('User', userSchema);
   }
