@@ -11,6 +11,51 @@ const mongoose = require('mongoose');
 
 // Define all possible paths where models could be located
 const getPossibleModelPaths = (modelName) => {
+  // Special case for userModel - directly return the path to usermodel.js
+  if (modelName.toLowerCase() === 'usermodel') {
+    console.log('Special case for userModel - using usermodel.js');
+
+    // Try to find usermodel.js directly
+    const baseDirectories = [
+      // Current working directory paths
+      path.join(process.cwd(), 'model'),
+      path.join(process.cwd(), 'server', 'model'),
+
+      // Relative paths from different starting points
+      path.join(__dirname, '..', 'model'),
+      path.join(__dirname, '..', '..', 'model'),
+
+      // Absolute paths for Render
+      '/opt/render/project/src/model',
+      '/opt/render/project/src/server/model'
+    ];
+
+    // Check each directory for usermodel.js (lowercase)
+    for (const dir of baseDirectories) {
+      const usermodelPath = path.join(dir, 'usermodel.js');
+      if (fs.existsSync(usermodelPath)) {
+        console.log(`Found usermodel.js at ${usermodelPath}`);
+        return [usermodelPath];
+      }
+    }
+
+    // If lowercase version not found, try uppercase first letter
+    for (const dir of baseDirectories) {
+      const userModelPath = path.join(dir, 'userModel.js');
+      if (fs.existsSync(userModelPath)) {
+        console.log(`Found userModel.js at ${userModelPath}`);
+        return [userModelPath];
+      }
+    }
+
+    // If still not found, print the directory contents for debugging
+    for (const dir of baseDirectories) {
+      if (fs.existsSync(dir)) {
+        console.log(`Files in ${dir}:`, fs.readdirSync(dir));
+      }
+    }
+  }
+
   // Define model name variations to handle case sensitivity
   const modelNameVariations = [
     modelName,                                                    // Original
@@ -134,6 +179,25 @@ const loadModel = (modelName) => {
       return mongoose.models.User;
     }
 
+    // Try to require the model directly using require
+    try {
+      console.log('Trying to require usermodel.js directly');
+      const UserModel = require('../model/usermodel');
+      console.log('Successfully required usermodel.js directly');
+      return UserModel;
+    } catch (err) {
+      console.error('Failed to require usermodel.js directly:', err.message);
+
+      try {
+        console.log('Trying to require userModel.js directly');
+        const UserModel = require('../model/userModel');
+        console.log('Successfully required userModel.js directly');
+        return UserModel;
+      } catch (err) {
+        console.error('Failed to require userModel.js directly:', err.message);
+      }
+    }
+
     // Create a comprehensive user schema as a fallback
     const userSchema = new mongoose.Schema({
       username: { type: String, required: true },
@@ -174,6 +238,16 @@ const loadModel = (modelName) => {
 
     if (mongoose.models.Book) {
       return mongoose.models.Book;
+    }
+
+    // Try to require the model directly using require
+    try {
+      console.log('Trying to require BookModel.js directly');
+      const BookModel = require('../model/BookModel');
+      console.log('Successfully required BookModel.js directly');
+      return BookModel;
+    } catch (err) {
+      console.error('Failed to require BookModel.js directly:', err.message);
     }
 
     const bookSchema = new mongoose.Schema({

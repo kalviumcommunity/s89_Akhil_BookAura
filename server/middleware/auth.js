@@ -50,18 +50,19 @@ const verifyToken = (req, res, next) => {
     }
 }
 
+// Middleware to verify admin privileges
 const verifyAdmin = (req, res, next) => {
     // First verify that the user is authenticated
     verifyToken(req, res, (err) => {
         if (err) {
-            return next(err);
+            return res.status(401).json({ message: "Authentication failed", error: err.message });
         }
 
         // Then check if the user is an admin
         if (req.user && req.user.userType === 'admin') {
-            next();
+            return next();
         } else {
-            return res.status(403).send({message: "Access Denied. Admin access required"});
+            return res.status(403).json({ message: "Access Denied. Admin access required" });
         }
     });
 }
