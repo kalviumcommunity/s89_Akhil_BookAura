@@ -136,11 +136,17 @@ router.post('/forgotpassword', async (req, res) => {
     });
 
     await transporter.sendMail({
-      from: "bookaura.ba@gmail.com",
+      from: '"BookAura Support" <bookaura.ba@gmail.com>',
       to: user.email,
-      subject: "Your Password Reset Code",
-      text: `Your code is: ${code}`
+      subject: "Password Reset Code",
+      text: `Hello ${user.name || ""},
+      We received a request to reset your password. Please use the following code to proceed:
+      🔒 Reset Code: ${code}
+      If you did not request a password reset, please ignore this email.
+      Best regards,  
+      BookAura Team`,
     });
+
 
     return res.status(200).send({ msg: "Verification code sent successfully, check spam mails" });
   } catch (error) {

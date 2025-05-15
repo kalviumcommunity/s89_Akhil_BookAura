@@ -49,7 +49,7 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
     const purchaseId = new mongoose.Types.ObjectId();
 
     // Get frontend URL from environment variable or use default
-    const frontendUrl = process.env.FRONTEND_URL || 'https://bookauraba.netlify.app/';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://bookauraba.netlify.app';
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
