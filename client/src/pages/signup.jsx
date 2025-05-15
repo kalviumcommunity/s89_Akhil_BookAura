@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import AuthImage from '../images/Auth.png'; // Same login image
 import Google from '../images/google.png'; // Google icon
 import '../pagescss/Auth.css'; // CSS for signup page
@@ -15,7 +15,22 @@ const Signup = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const errorParam = params.get('error');
+    if (errorParam) {
+      if (errorParam === 'authentication_failed') {
+        setError('Google authentication failed. Please try again or use email signup.');
+      } else if (errorParam === 'google_auth_not_configured') {
+        setError('Google authentication is not available at this time. Please use email signup instead.');
+      } else {
+        setError('Authentication failed. Please try again.');
+      }
+    }
+  }, [location]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });

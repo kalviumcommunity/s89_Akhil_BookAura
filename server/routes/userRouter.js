@@ -255,6 +255,17 @@ router.get('/auth/google', (req, res, next) => {
   console.log('- Request headers:', req.headers);
   console.log('- Request URL:', req.originalUrl);
 
+  // Check if Google OAuth is configured
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    console.log('Google OAuth not configured - redirecting to error page');
+
+    // Get frontend URL from environment variable or use default
+    const frontendUrl = process.env.FRONTEND_URL || 'https://bookauraba.netlify.app';
+
+    // Redirect to login page with error message
+    return res.redirect(`${frontendUrl}/login?error=google_auth_not_configured`);
+  }
+
   passport.authenticate('google', {
     scope: ['profile', 'email'],
     prompt: 'select_account' // Force account selection
@@ -267,6 +278,17 @@ router.get('/auth/google/callback', (req, res, next) => {
   console.log('- Request headers:', req.headers);
   console.log('- Request URL:', req.originalUrl);
   console.log('- Query parameters:', req.query);
+
+  // Check if Google OAuth is configured
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    console.log('Google OAuth not configured - redirecting to error page');
+
+    // Get frontend URL from environment variable or use default
+    const frontendUrl = process.env.FRONTEND_URL || 'https://bookauraba.netlify.app';
+
+    // Redirect to login page with error message
+    return res.redirect(`${frontendUrl}/login?error=google_auth_not_configured`);
+  }
 
   passport.authenticate('google', {
     failureRedirect: '/login',
