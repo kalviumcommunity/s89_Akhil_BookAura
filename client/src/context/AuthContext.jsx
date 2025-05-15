@@ -23,6 +23,14 @@ export const AuthProvider = ({ children }) => {
         // Also check if we have a token in localStorage
         const localToken = localStorage.getItem('authToken');
 
+        // Log detailed authentication state for debugging
+        console.log('Auth check details:', {
+          cookieExists: hasToken,
+          tokenExists: !!localToken,
+          cookieContent: document.cookie,
+          userId: localStorage.getItem('userId')
+        });
+
         // If either is true, consider the user logged in
         const isAuthenticated = hasToken || !!localToken;
 
@@ -145,13 +153,57 @@ export const AuthProvider = ({ children }) => {
     console.log('All user data cleared');
   };
 
+  // Function to force refresh the auth state
+  const refreshAuthState = async () => {
+    try {
+      setLoading(true);
+
+      // Check for the non-httpOnly isLoggedIn cookie
+      const hasToken = document.cookie.includes('isLoggedIn=true');
+
+      // Also check if we have a token in localStorage
+      const localToken = localStorage.getItem('authToken');
+
+      // Log detailed authentication state for debugging
+      console.log('Auth refresh details:', {
+        cookieExists: hasToken,
+        tokenExists: !!localToken,
+        cookieContent: document.cookie,
+        userId: localStorage.getItem('userId')
+      });
+
+      // If either is true, consider the user logged in
+      const isAuthenticated = hasToken || !!localToken;
+
+      setIsLoggedIn(isAuthenticated);
+      console.log('Refreshed login status:', isAuthenticated ? 'Logged in' : 'Not logged in');
+
+      // If authenticated, try to fetch user data
+      if (isAuthenticated) {
+        try {
+          const response = await api.get('/router/profile');
+          if (response.data.success) {
+            setUser(response.data.user);
+          }
+        } catch (error) {
+          console.error('Error fetching user data during refresh:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing auth state:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Value to be provided to consumers
   const value = {
     isLoggedIn,
     user,
     loading,
     login,
-    logout
+    logout,
+    refreshAuthState
   };
 
   return (

@@ -197,26 +197,37 @@ const SuccessPage = () => {
             console.log('Error constructing userId param:', err.message);
           }
 
-          const verifyResponse = await axios.get(
-            `https://s89-akhil-bookaura-3.onrender.com/api/payment/verify-purchase?purchaseId=${purchaseId}${verifyUserIdParam}`,
-            {
-              withCredentials: true,
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+          try {
+            const verifyResponse = await axios.get(
+              `https://s89-akhil-bookaura-3.onrender.com/api/payment/verify-purchase?purchaseId=${purchaseId}${verifyUserIdParam}`,
+              {
+                withCredentials: true,
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+                }
               }
-            }
-          );
+            );
 
-          if (verifyResponse.data.success) {
-            console.log('Purchase already exists:', verifyResponse.data.purchase);
-            setOrderDetails(verifyResponse.data.purchase);
-            setSaveStatus('success');
-            clearCart(); // ✅ Clear cart only after handling
-            setIsLoading(false);
-            return;
+            if (verifyResponse.data.success) {
+              console.log('Purchase already exists:', verifyResponse.data.purchase);
+              setOrderDetails(verifyResponse.data.purchase);
+              setSaveStatus('success');
+              clearCart(); // ✅ Clear cart only after handling
+              setIsLoading(false);
+              return;
+            }
+          } catch (verifyError) {
+            // If we get a 404, it means the purchase doesn't exist yet, which is expected
+            // We'll continue with creating it
+            if (verifyError.response?.status === 404) {
+              console.log('Purchase not found (404), will create a new one');
+            } else {
+              // For other errors, log but continue
+              console.error('Purchase verification error:', verifyError.message, verifyError.response?.status);
+            }
           }
         } catch (error) {
-          console.log('Purchase verification failed:', error.message);
+          console.log('Purchase verification outer error:', error.message);
           // Continue if purchase not found
         }
 

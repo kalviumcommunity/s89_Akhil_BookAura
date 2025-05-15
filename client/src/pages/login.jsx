@@ -6,6 +6,7 @@ import Google from '../images/google.png';
 import logo from'../images/logo.png';
 import { useCart } from './MarketPlace/cart';
 import api from '../services/api';
+import { getGoogleAuthUrl } from '../utils/apiConfig';
 
 const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -59,7 +60,8 @@ const Login = () => {
     setError('');
     // Store a flag to sync cart after Google login
     localStorage.setItem('syncCartAfterLogin', 'true');
-    window.location.href = api.defaults.baseURL + "/router/auth/google";
+    // Use the utility function to get the Google auth URL
+    window.location.href = getGoogleAuthUrl();
   }
 
   return (

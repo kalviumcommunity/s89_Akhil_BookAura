@@ -294,11 +294,39 @@ router.get('/auth/google/callback',
         httpOnly: false // This one needs to be accessible from JS
       });
 
-      // Get frontend URL from environment variable or use default
-      const frontendUrl = process.env.FRONTEND_URL || 'https://bookauraba.netlify.app/';
+      // Determine the frontend URL based on the request origin
+      let frontendUrl = process.env.FRONTEND_URL || 'https://bookauraba.netlify.app/';
 
-      // Redirect to frontend with success message and user data
-      res.redirect(`${frontendUrl}/?success=true&token=${token}`);
+      // Try to get the origin from the request headers
+      const origin = req.get('origin') || req.headers.referer;
+
+      if (origin) {
+        // Extract the origin from the referer if available
+        try {
+          const url = new URL(origin);
+          frontendUrl = `${url.protocol}//${url.host}`;
+          console.log('Using origin from request:', frontendUrl);
+        } catch (err) {
+          console.log('Error parsing origin:', err.message);
+        }
+      } else if (req.headers.host) {
+        // If no origin/referer, try to determine from host
+        const host = req.headers.host;
+
+        // For localhost development
+        if (host.includes('localhost') || host.includes('127.0.0.1')) {
+          frontendUrl = `http://${host.includes(':') ? host : host + ':5173'}`;
+          console.log('Using localhost frontend URL:', frontendUrl);
+        }
+      }
+
+      // Include user ID in the URL for client-side processing
+      const userId = req.user._id;
+
+      console.log('Redirecting to frontend URL:', frontendUrl);
+
+      // Redirect to frontend with success message, token, and user ID
+      res.redirect(`${frontendUrl}/?success=true&token=${token}&user_id=${userId}`);
     } catch (error) {
       console.error('Error in Google callback:', error);
       // Get frontend URL from environment variable or use default

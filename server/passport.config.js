@@ -9,10 +9,26 @@ const User = loadModel('userModel');
 passport.use(new GoogleStrategy({
     clientID: process.env.YOUR_GOOGLE_CLIENT_ID,
     clientSecret: process.env.YOUR_GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL ||
-        `${process.env.SERVER_URL || 'https://s89-akhil-bookaura-3.onrender.com'}/router/auth/google/callback`,
+    callbackURL: (req) => {
+        // Dynamically determine the callback URL based on the request
+        const host = req.headers.host;
+
+        // If we have an explicit callback URL in env, use that
+        if (process.env.GOOGLE_CALLBACK_URL) {
+            return process.env.GOOGLE_CALLBACK_URL;
+        }
+
+        // For localhost development
+        if (host.includes('localhost') || host.includes('127.0.0.1')) {
+            return `http://${host}/router/auth/google/callback`;
+        }
+
+        // For production environments
+        return `${process.env.SERVER_URL || 'https://s89-akhil-bookaura-3.onrender.com'}/router/auth/google/callback`;
+    },
     passReqToCallback: true
-}, async (req, accessToken, refreshToken, profile, done) => {
+}, async (_, _accessToken, _refreshToken, profile, done) => {
+    // Note: req, accessToken, and refreshToken are not used but are required by the interface
     try {
         console.log('Google Profile:', profile);
 
