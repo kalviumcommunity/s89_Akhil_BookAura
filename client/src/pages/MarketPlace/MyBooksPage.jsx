@@ -14,52 +14,75 @@ const MyBooksPage = () => {
   const [purchasedBooks, setPurchasedBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [errorDetails, setErrorDetails] = useState(null);
   const [selectedPdf, setSelectedPdf] = useState(null);
   const [groupedBooks, setGroupedBooks] = useState([]);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 2; // Maximum number of automatic retries
 
   useEffect(() => {
     const fetchPurchasedBooks = async () => {
       try {
         setLoading(true);
-        console.log('Fetching purchased books...');
+        setError(null);
+        setErrorDetails(null);
+        console.log('Fetching purchased books... (Attempt', retryCount + 1, 'of', maxRetries + 1, ')');
+
+        // Check if auth token exists
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+          console.log('No auth token found, user may not be logged in');
+        }
 
         const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/payment/my-purchases', {
-          withCredentials: true
+          withCredentials: true,
+          headers: {
+            'Authorization': `Bearer ${authToken || ''}`,
+            'Cache-Control': 'no-cache' // Prevent caching
+          },
+          timeout: 15000 // 15 second timeout
         });
 
         if (response.data.success) {
           console.log('Purchased books fetched successfully:', response.data);
-          console.log(response.data.purchasedBooks)
+          console.log(`Received ${response.data.count || 0} purchased books from server`);
+
           // Process books to ensure URLs are valid and remove duplicates
           const bookMap = new Map();
           const processedBooks = [];
 
           // Process each book
           (response.data.purchasedBooks || []).forEach(book => {
-            const bookId = book.bookId.toString();
+            try {
+              // Safely access bookId with fallback
+              const bookId = (book.bookId?.toString() || book._id?.toString() || Math.random().toString());
 
-            // Process the book URL
-            let processedBook = book;
+              // Process the book URL
+              let processedBook = book;
 
-            // Ensure book has a valid URL
-            if (!book.url || book.url === 'placeholder' || book.url.includes('placeholder.url')) {
-              console.log(`Book ${book.title} has invalid URL: ${book.url}, using default PDF`);
-              processedBook = {
-                ...book,
-                url: '/assets/better-placeholder.pdf'
-              };
-            } else {
-              // Keep the original URL - we'll add .pdf extension only when needed for display/download
-              processedBook = { ...book };
-            }
+              // Ensure book has a valid URL
+              if (!book.url || book.url === 'placeholder' || book.url.includes('placeholder.url')) {
+                console.log(`Book ${book.title} has invalid URL: ${book.url}, using default PDF`);
+                processedBook = {
+                  ...book,
+                  url: '/assets/better-placeholder.pdf'
+                };
+              } else {
+                // Keep the original URL - we'll add .pdf extension only when needed for display/download
+                processedBook = { ...book };
+              }
 
-            // Check if this is a duplicate book
-            if (!bookMap.has(bookId)) {
-              // First time seeing this book, add it
-              bookMap.set(bookId, processedBook);
-              processedBooks.push(processedBook);
-            } else {
-              console.log(`Skipping duplicate book: ${book.title} (${bookId})`);
+              // Check if this is a duplicate book
+              if (!bookMap.has(bookId)) {
+                // First time seeing this book, add it
+                bookMap.set(bookId, processedBook);
+                processedBooks.push(processedBook);
+              } else {
+                console.log(`Skipping duplicate book: ${book.title} (${bookId})`);
+              }
+            } catch (err) {
+              console.error('Error processing book:', err, book);
+              // Continue with next book
             }
           });
 
@@ -75,41 +98,88 @@ const MyBooksPage = () => {
           const groupedByPaymentId = {};
 
           books.forEach(book => {
-            const paymentId = book.paymentId || 'unknown';
-            const purchaseDate = book.purchaseDate;
+            try {
+              const paymentId = book.paymentId || 'unknown';
+              const purchaseDate = book.purchaseDate || new Date();
 
-            if (!groupedByPaymentId[paymentId]) {
-              groupedByPaymentId[paymentId] = {
-                _id: paymentId,
-                purchaseDate: purchaseDate,
-                books: [],
-                totalAmount: 0
-              };
+              if (!groupedByPaymentId[paymentId]) {
+                groupedByPaymentId[paymentId] = {
+                  _id: paymentId,
+                  purchaseDate: purchaseDate,
+                  books: [],
+                  totalAmount: 0
+                };
+              }
+
+              groupedByPaymentId[paymentId].books.push(book);
+              groupedByPaymentId[paymentId].totalAmount += (book.price || 0);
+            } catch (err) {
+              console.error('Error grouping book:', err, book);
+              // Continue with next book
             }
-
-            groupedByPaymentId[paymentId].books.push(book);
-            groupedByPaymentId[paymentId].totalAmount += book.price;
           });
 
           // Convert to array and sort by date (newest first)
           const groupedArray = Object.values(groupedByPaymentId).sort((a, b) =>
-            new Date(b.purchaseDate) - new Date(a.purchaseDate)
+            new Date(b.purchaseDate || 0) - new Date(a.purchaseDate || 0)
           );
 
           setGroupedBooks(groupedArray);
+
+          // Reset retry count on success
+          setRetryCount(0);
         } else {
-          setError('Failed to fetch your purchased books');
+          console.error('Server returned error:', response.data);
+          setError(response.data.message || 'Failed to fetch your purchased books');
+          setErrorDetails(response.data);
+
+          // Retry if we haven't reached max retries
+          if (retryCount < maxRetries) {
+            console.log(`Retrying in 2 seconds... (${retryCount + 1}/${maxRetries})`);
+            setTimeout(() => {
+              setRetryCount(prev => prev + 1);
+            }, 2000);
+          }
         }
       } catch (error) {
         console.error('Error fetching purchased books:', error);
-        setError('An error occurred while fetching your purchased books');
+
+        // Handle authentication errors
+        if (error.response?.status === 401) {
+          setError('Authentication required. Please log in to view your purchased books.');
+          setErrorDetails({
+            status: 401,
+            message: 'You need to be logged in to view your purchased books',
+            solution: 'Please log in and try again'
+          });
+
+          // Redirect to login page after a delay
+          setTimeout(() => {
+            window.location.href = '/login?redirect=/my-books';
+          }, 3000);
+        } else {
+          setError('An error occurred while fetching your purchased books');
+          setErrorDetails({
+            message: error.message,
+            status: error.response?.status,
+            data: error.response?.data
+          });
+
+          // Retry if we haven't reached max retries and it's not an auth error
+          if (retryCount < maxRetries && error.response?.status !== 401) {
+            console.log(`Retrying in 2 seconds... (${retryCount + 1}/${maxRetries})`);
+            setTimeout(() => {
+              setRetryCount(prev => prev + 1);
+            }, 2000);
+          }
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchPurchasedBooks();
-  }, []);
+  }, [retryCount, maxRetries]);
 
   // Function to format date
   const formatDate = (dateString) => {
@@ -144,6 +214,22 @@ const MyBooksPage = () => {
             <div className="error-container">
               <p className="error-message">{error}</p>
               <p>Please try again later or contact support if the problem persists.</p>
+
+              {errorDetails?.status === 401 ? (
+                <div className="auth-error">
+                  <p>You need to be logged in to view your purchased books.</p>
+                  <Link to="/login?redirect=/my-books" className="login-button">
+                    Log In
+                  </Link>
+                </div>
+              ) : (
+                <button
+                  className="retry-button"
+                  onClick={() => setRetryCount(prev => prev + 1)}
+                >
+                  Retry Now
+                </button>
+              )}
             </div>
           ) : groupedBooks.length === 0 ? (
             <div className="empty-books">
