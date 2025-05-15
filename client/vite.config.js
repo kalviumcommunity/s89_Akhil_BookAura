@@ -32,10 +32,23 @@ export default defineConfig(({ command, mode }) => {
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: false,
-      minify: 'terser',
+      // Use terser if available, otherwise fall back to esbuild
+      minify: env.VITE_TERSER_INSTALLED ? 'terser' : 'esbuild',
+      // Terser options (only used if terser is available)
       terserOptions: {
         compress: {
-          drop_console: true,
+          drop_console: false, // Keep console logs for debugging
+          passes: 1,
+        },
+        format: {
+          comments: false,
+        },
+      },
+      // esbuild options (used as fallback)
+      esbuildOptions: {
+        target: 'es2020',
+        supported: {
+          'top-level-await': true,
         },
       },
       rollupOptions: {

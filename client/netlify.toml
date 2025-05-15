@@ -1,6 +1,12 @@
 [build]
-  command = "npm run build"
+  command = "npm install --save-dev terser && npm run build || npm run build:fallback"
   publish = "dist"
+
+# Define environment variables
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_VERSION = "9"
+  VITE_TERSER_INSTALLED = "true"
 
 [[redirects]]
   from = "/*"
