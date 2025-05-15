@@ -38,7 +38,7 @@ const Calendar = () => {
   const fetchEvents = useCallback(async (start, end) => {
     try {
       setLoading(true);
-      const response = await axios.get('https://s89-akhil-bookaura-2.onrender.com/api/events', {
+      const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/events', {
         params: { start, end },
         withCredentials: true
       });
@@ -155,7 +155,7 @@ const Calendar = () => {
 
       if (modalMode === 'add') {
         // Create new event
-        response = await axios.post('https://s89-akhil-bookaura-2.onrender.com/api/events', eventData, {
+        response = await axios.post('https://s89-akhil-bookaura-3.onrender.com/api/events', eventData, {
           withCredentials: true
         });
 
@@ -176,7 +176,7 @@ const Calendar = () => {
         }
       } else {
         // Update existing event
-        response = await axios.put(`https://s89-akhil-bookaura-2.onrender.com/api/events/${selectedEvent.id}`, eventData, {
+        response = await axios.put(`https://s89-akhil-bookaura-3.onrender.com/api/events/${selectedEvent.id}`, eventData, {
           withCredentials: true
         });
 
@@ -219,7 +219,7 @@ const Calendar = () => {
     if (!selectedEvent) return;
 
     try {
-      const response = await axios.delete(`https://s89-akhil-bookaura-2.onrender.com/api/events/${selectedEvent.id}`, {
+      const response = await axios.delete(`https://s89-akhil-bookaura-3.onrender.com/api/events/${selectedEvent.id}`, {
         withCredentials: true
       });
 

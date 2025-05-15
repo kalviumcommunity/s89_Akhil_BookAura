@@ -104,17 +104,15 @@ app.use(session({
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Required for cross-site cookies in modern browsers
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         httpOnly: true,
-        // Don't set domain in production to allow cookies to work across different domains
-        // domain: process.env.NODE_ENV === 'production' ? undefined : undefined
-    },
+        
     proxy: process.env.NODE_ENV === 'production', // Trust the reverse proxy in production
-    // Use a more reliable session store in production
+    
     store: process.env.NODE_ENV === 'production'
-        ? undefined // In production, you might want to use a proper session store like MongoDB or Redis
-        : undefined  // In development, use the default MemoryStore (with warning)
-}));
+        ? undefined 
+        : undefined  
+}}));
 
-// Add warning about MemoryStore in production
+
 if (process.env.NODE_ENV === 'production' && !app.get('trust proxy')) {
     console.warn('Warning: You should set "trust proxy" when behind a reverse proxy like Nginx or when deployed to cloud platforms');
     app.set('trust proxy', 1); // Trust first proxy
