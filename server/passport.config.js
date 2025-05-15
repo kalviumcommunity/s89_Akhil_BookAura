@@ -1,43 +1,9 @@
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const path = require('path');
+const { loadModel } = require('./utils/modelLoader');
 
-// Use the global model directory path set in index.js
-let User;
-try {
-  // If global.__modeldir is defined, use it
-  if (global.__modeldir) {
-    User = require(path.join(global.__modeldir, 'userModel'));
-    console.log('Loaded User model from global.__modeldir');
-  } else {
-    // Try different paths as fallbacks
-    try {
-      User = require('./model/userModel');
-      console.log('Loaded User model from ./model/userModel');
-    } catch (error) {
-      try {
-        User = require('../model/userModel');
-        console.log('Loaded User model from ../model/userModel');
-      } catch (error2) {
-        try {
-          // Absolute path as a last resort
-          const absolutePath = path.join(__dirname, 'model', 'userModel');
-          User = require(absolutePath);
-          console.log('Loaded User model from absolute path:', absolutePath);
-        } catch (error3) {
-          console.error('Failed to load User model:', error3);
-          // Create a placeholder User model to prevent crashes
-          const mongoose = require('mongoose');
-          const userSchema = new mongoose.Schema({});
-          User = mongoose.model('User', userSchema);
-          console.log('Created placeholder User model');
-        }
-      }
-    }
-  }
-} catch (error) {
-  console.error('Error loading User model:', error);
-}
+// Load the User model using our utility
+const User = loadModel('userModel');
 
 // Configure Google Strategy
 passport.use(new GoogleStrategy({

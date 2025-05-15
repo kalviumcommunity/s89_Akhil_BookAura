@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../model/userModel');
-const Book = require('../model/BookModel');
+const { loadModel } = require('../utils/modelLoader');
+const User = loadModel('userModel');
+const Book = loadModel('BookModel');
 const auth = require('../middleware/auth');
 
 // Get user's cart

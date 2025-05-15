@@ -1,13 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const passport = require('passport'); // <-- Added import for passport
-const User = require('../model/userModel');
+const passport = require('passport');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const cookiePraser = require('cookie-parser');
 const verifyToken = require('../middleware/auth');
+const { loadModel } = require('../utils/modelLoader');
 require('dotenv').config();
+
+// Load User model using our utility
+const User = loadModel('userModel');
 
 const JWT_SECRET = process.env.JWT_SECRET; // Ensure JWT_SECRET is defined
 
