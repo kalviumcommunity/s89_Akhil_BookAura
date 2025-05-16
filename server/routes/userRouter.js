@@ -246,22 +246,59 @@ router.get('/profile-image', verifyToken, async (req, res) => {
 });
 
 // Google OAuth Login Route
-router.get('/auth/google',
+router.get('/auth/google', (req, res, next) => {
+  // Log the request parameters
+  console.log('Google OAuth request received with params:', req.query);
+
+  // Store the signup parameter in the session if present
+  if (req.query.signup === 'true') {
+    req.session.googleSignup = true;
+    console.log('Setting googleSignup flag in session');
+  }
+
+  // Store the timestamp for debugging
+  if (req.query.t) {
+    req.session.googleAuthTimestamp = req.query.t;
+    console.log('Setting googleAuthTimestamp in session:', req.query.t);
+  }
+
+  // Continue with Google authentication
   passport.authenticate('google', {
     scope: ['profile', 'email'],
     prompt: 'select_account' // Force account selection
-  })
-);
+  })(req, res, next);
+});
 
 // Google OAuth Callback Route
 router.get('/auth/google/callback',
-  passport.authenticate('google', {
-    failureRedirect: 'https://bookauraba.netlify.app/login?error=authentication_failed',
-    failureMessage: true
-  }),
+  (req, res, next) => {
+    console.log('Google OAuth callback received');
+    passport.authenticate('google', (err, user) => {
+      if (err) {
+        console.error('Google authentication error:', err);
+        return res.redirect('https://bookauraba.netlify.app/login?error=authentication_failed&reason=' + encodeURIComponent(err.message));
+      }
+
+      if (!user) {
+        console.error('Google authentication failed - no user returned');
+        return res.redirect('https://bookauraba.netlify.app/login?error=authentication_failed&reason=no_user');
+      }
+
+      // Log in the user
+      req.logIn(user, (loginErr) => {
+        if (loginErr) {
+          console.error('Error logging in user after Google auth:', loginErr);
+          return res.redirect('https://bookauraba.netlify.app/login?error=authentication_failed&reason=login_error');
+        }
+
+        // Continue with the callback
+        next();
+      });
+    })(req, res, next);
+  },
   (req, res) => {
     try {
-      console.log('Google OAuth callback successful, user:', req.user);
+      console.log('Google OAuth callback successful, user:', req.user._id);
 
       // Generate JWT Token for Google OAuth
       const token = jwt.sign({
@@ -278,6 +315,8 @@ router.get('/auth/google/callback',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         path: '/' // Ensure cookie is available on all paths
       };
+
+      console.log('Setting auth cookies with token');
 
       // Set both cookie names for better compatibility
       res.cookie('authToken', token, cookieSettings);
@@ -301,25 +340,34 @@ router.get('/auth/google/callback',
 
       // Create user data object to include in the URL
       const userData = {
-        id: req.user._id,
+        id: req.user._id.toString(), // Convert ObjectId to string
         username: req.user.username,
-        email: req.user.email
+        email: req.user.email,
+        profileImage: req.user.profileImage || ''
       };
 
       // Encode user data as a URL-safe string
       const encodedUserData = encodeURIComponent(JSON.stringify(userData));
 
+      // Add timestamp to prevent caching issues
+      const timestamp = Date.now();
+
       // Log the redirect URL for debugging
-      const redirectUrl = `${frontendUrl}/?success=true&token=${token}&userData=${encodedUserData}`;
+      const redirectUrl = `${frontendUrl}/?success=true&token=${token}&userData=${encodedUserData}&t=${timestamp}`;
       console.log('Redirecting to:', redirectUrl);
 
       // Redirect to frontend with success message, token, and user data
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Error in Google callback:', error);
+
       // For production, hardcode the Netlify URL to ensure consistency
       const frontendUrl = 'https://bookauraba.netlify.app';
-      const redirectUrl = `${frontendUrl}/login?error=authentication_failed`;
+
+      // Include error details in the redirect URL
+      const errorMessage = encodeURIComponent(error.message || 'Unknown error');
+      const redirectUrl = `${frontendUrl}/login?error=authentication_failed&reason=${errorMessage}&t=${Date.now()}`;
+
       console.log('Error occurred, redirecting to:', redirectUrl);
       res.redirect(redirectUrl);
     }

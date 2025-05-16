@@ -18,8 +18,16 @@ const Login = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const errorParam = params.get('error');
+    const reasonParam = params.get('reason');
+
     if (errorParam) {
-      setError('Authentication failed. Please try again.');
+      console.log('Authentication error detected in URL params:', errorParam);
+      if (reasonParam) {
+        console.log('Error reason:', reasonParam);
+        setError(`Authentication failed: ${decodeURIComponent(reasonParam)}`);
+      } else {
+        setError('Authentication failed. Please try again.');
+      }
     }
   }, [location]);
 
@@ -50,6 +58,7 @@ const Login = () => {
 
   const handleGoogleSignIn = () => {
     setError('');
+    console.log('Starting Google authentication flow...');
 
     // Clear any existing auth data before starting Google auth flow
     localStorage.removeItem('authToken');
@@ -63,15 +72,22 @@ const Login = () => {
     // Store a flag to sync cart after Google login
     localStorage.setItem('syncCartAfterLogin', 'true');
 
+    // Store a flag to indicate we're coming from login page
+    localStorage.setItem('googleAuthSource', 'login');
+
     // Use the correct server URL for Google authentication
     // This ensures we're using the same server that's configured in the Google Developer Console
     const serverUrl = 'https://s89-akhil-bookaura-3.onrender.com';
 
+    // Add timestamp to prevent caching issues
+    const timestamp = Date.now();
+    const googleAuthUrl = `${serverUrl}/router/auth/google?t=${timestamp}`;
+
     // Log the redirect for debugging
-    console.log('Redirecting to Google authentication:', serverUrl + "/router/auth/google");
+    console.log('Redirecting to Google authentication:', googleAuthUrl);
 
     // Redirect to Google auth endpoint
-    window.location.href = serverUrl + "/router/auth/google";
+    window.location.href = googleAuthUrl;
   }
 
   return (

@@ -43,11 +43,27 @@ const Home = () => {
           const userData = JSON.parse(decodeURIComponent(encodedUserData));
           console.log('Received user data from Google auth:', userData);
 
+          // Validate user data
+          if (!userData.id || !userData.email) {
+            console.error('Invalid user data received:', userData);
+            alert('Error: Invalid user data received. Please try logging in again.');
+            return;
+          }
+
           // Store user data in localStorage for persistence
           localStorage.setItem('userData', JSON.stringify(userData));
+
+          // Log success
+          console.log('Successfully stored user data in localStorage');
         } catch (error) {
           console.error('Error parsing user data:', error);
+          alert('Error parsing user data. Please try logging in again.');
+          return;
         }
+      } else {
+        console.error('No user data received from Google auth');
+        alert('Error: No user data received. Please try logging in again.');
+        return;
       }
 
       // Clean up URL parameters
@@ -55,12 +71,18 @@ const Home = () => {
       window.history.replaceState({}, document.title, cleanUrl);
 
       // Sync cart with server
-      syncCartWithServer();
+      try {
+        syncCartWithServer();
+        console.log('Cart synced with server after Google login');
+      } catch (error) {
+        console.error('Error syncing cart with server:', error);
+      }
 
       // Show success message
       alert('Google login successful!');
 
       // Reload page to apply authentication
+      console.log('Reloading page to apply authentication...');
       setTimeout(() => {
         window.location.reload();
       }, 500);

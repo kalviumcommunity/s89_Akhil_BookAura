@@ -30,6 +30,7 @@ const Signup = () => {
 
   const handleGoogleSignIn = () => {
     setError('');
+    console.log('Starting Google authentication flow from signup page...');
 
     // Clear any existing auth data before starting Google auth flow
     localStorage.removeItem('authToken');
@@ -43,14 +44,21 @@ const Signup = () => {
     // Store a flag to sync cart after Google login
     localStorage.setItem('syncCartAfterLogin', 'true');
 
+    // Store a flag to indicate we're coming from signup page
+    localStorage.setItem('googleAuthSource', 'signup');
+
     // Use the correct server URL for Google authentication
     const serverUrl = 'https://s89-akhil-bookaura-3.onrender.com';
 
+    // Add timestamp to prevent caching issues
+    const timestamp = Date.now();
+    const googleAuthUrl = `${serverUrl}/router/auth/google?t=${timestamp}&signup=true`;
+
     // Log the redirect for debugging
-    console.log('Redirecting to Google authentication:', serverUrl + "/router/auth/google");
+    console.log('Redirecting to Google authentication:', googleAuthUrl);
 
     // Redirect to Google auth endpoint
-    window.location.href = serverUrl + "/router/auth/google";
+    window.location.href = googleAuthUrl;
   };
 
   return (
