@@ -27,9 +27,6 @@
       "router": false
     }
   },
-  "resolutions": {
-    "router": "npm:@empty-npm-package/empty"
-  },
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js"
