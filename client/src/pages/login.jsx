@@ -28,7 +28,8 @@ const Login = () => {
       if (errorParam === 'authentication_failed') {
         setError('Google authentication failed. Please try again or use email login.');
       } else if (errorParam === 'google_auth_not_configured') {
-        setError('Google authentication is not available at this time. Please use email login instead.');
+        setError('Google authentication is not available at this time. The server is missing required Google OAuth credentials. Please use email login instead.');
+        console.error('Google OAuth is not configured on the server. Check server logs for details.');
       } else {
         setError('Authentication failed. Please try again.');
       }
