@@ -23,7 +23,12 @@
     "uuid": "^11.1.0"
   },
   "overrides": {
-    "router": "2.2.0"
+    "express": {
+      "router": false
+    }
+  },
+  "resolutions": {
+    "router": "npm:@empty-npm-package/empty"
   },
   "scripts": {
     "start": "node index.js",

@@ -130,14 +130,26 @@ const paymentRoutes = require("./routes/Payment");
 const pdfProxyRoutes = require("./routes/PdfProxy");
 const cartRouter = require('./routes/CartRouter');
 const eventRouter = require('./routes/EventRouter');
-const flashcardRouter = require('./routes/FlashcardRouter');
+const registerFlashcardRoutes = require('./routes/FlashcardRouter');
 const chatHistoryRouter = require('./routes/ChatHistoryRouter');
+
+// Log loaded routers for debugging
+console.log('Loaded routers:');
+console.log('- userRouter:', typeof userRouter);
+console.log('- bookRouter:', typeof bookRouter);
+console.log('- paymentRoutes:', typeof paymentRoutes);
+console.log('- pdfProxyRoutes:', typeof pdfProxyRoutes);
+console.log('- cartRouter:', typeof cartRouter);
+console.log('- eventRouter:', typeof eventRouter);
+console.log('- registerFlashcardRoutes:', typeof registerFlashcardRoutes);
+console.log('- chatHistoryRouter:', typeof chatHistoryRouter);
 
 app.use("/api/payment", paymentRoutes);
 app.use("/api/pdf", pdfProxyRoutes);
 app.use("/api/cart", cartRouter);
 app.use("/api/events", eventRouter);
-app.use("/api/flashcards", flashcardRouter);
+// Register flashcard routes directly on the app
+registerFlashcardRoutes(app);
 app.use("/api/chat-history", chatHistoryRouter);
 
 app.use('/router', userRouter);
