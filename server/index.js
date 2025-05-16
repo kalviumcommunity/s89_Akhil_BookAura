@@ -1,11 +1,10 @@
 // server.js
 const mongoose = require('mongoose');
-const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
 
-// Configure environment variables
-dotenv.config();
+// Load environment variables using our centralized utility
+require('./utils/envConfig');
 
 // Setup Express
 const express = require('express');

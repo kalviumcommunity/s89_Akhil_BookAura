@@ -2,13 +2,16 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { loadModel } = require('./utils/modelLoader');
 
+// Load environment variables using our centralized utility
+require('./utils/envConfig');
+
 // Load the User model using our utility
 const User = loadModel('userModel');
 
 // Configure Google Strategy
 passport.use(new GoogleStrategy({
-    clientID: process.env.YOUR_GOOGLE_CLIENT_ID,
-    clientSecret: process.env.YOUR_GOOGLE_CLIENT_SECRET,
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: process.env.GOOGLE_CALLBACK_URL ||
         `${process.env.SERVER_URL || 'http://localhost:5000'}/router/auth/google/callback`,
     passReqToCallback: true

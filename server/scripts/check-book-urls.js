@@ -1,41 +1,19 @@
 // Script to check and log all book URLs in the database
 const mongoose = require('mongoose');
-const dotenv = require('dotenv');
-const path = require('path');
 const { loadModel } = require('./modelHelper');
+const { connectToMongoDB, closeMongoDB } = require('./scriptHelper');
 const User = loadModel('userModel');
 const Book = loadModel('BookModel');
 const Purchase = loadModel('PurchaseModel');
-
-
-
-
-// Load environment variables
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
-
-// Get MongoDB URI from environment variables
-let MONGODB_URI = process.env.MONGODB_URI;
-
-if (!MONGODB_URI) {
-  console.error('MONGODB_URI environment variable is not defined');
-  console.log('Using fallback connection string...');
-  // Fallback connection string
-  MONGODB_URI = 'mongodb://localhost:27017/bookaura';
-}
-
-// Connect to MongoDB
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
-    process.exit(1);
-  });
 
 // Default PDF URL to use for replacements
 const DEFAULT_PDF_URL = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
 
 async function checkAndFixBookUrls() {
   try {
+    // Connect to MongoDB
+    await connectToMongoDB();
+
     console.log('=== CHECKING BOOK COLLECTION ===');
     // Find all books
     const books = await Book.find({});
@@ -99,7 +77,7 @@ async function checkAndFixBookUrls() {
     for (const user of users) {
       console.log(`\nUser: ${user.username} (${user.email})`);
       console.log(`Purchased Books: ${user.purchasedBooks.length}`);
-      
+
       userBooksTotal += user.purchasedBooks.length;
       let userNeedsUpdate = false;
 
@@ -148,7 +126,7 @@ async function checkAndFixBookUrls() {
     console.error('Error checking book URLs:', error);
   } finally {
     // Close the MongoDB connection
-    mongoose.connection.close();
+    await closeMongoDB();
   }
 }
 

@@ -1,9 +1,7 @@
 const cloudinary = require('cloudinary').v2;
-const dotenv = require('dotenv');
-const path = require('path');
 
-// Load environment variables from .env file in the server directory
-dotenv.config({ path: path.resolve(__dirname, '.env') });
+// Load environment variables using our centralized utility
+require('./utils/envConfig');
 
 // Log Cloudinary configuration for debugging
 console.log('Cloudinary Configuration:');
