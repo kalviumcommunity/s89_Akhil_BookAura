@@ -258,6 +258,11 @@ router.get('/auth/google', (req, res, next) => {
   // Check if Google OAuth is configured
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     console.log('Google OAuth not configured - redirecting to error page');
+    console.log('GOOGLE_CLIENT_ID exists:', !!process.env.GOOGLE_CLIENT_ID);
+    console.log('GOOGLE_CLIENT_SECRET exists:', !!process.env.GOOGLE_CLIENT_SECRET);
+    console.log('Environment variables available:', Object.keys(process.env).filter(key =>
+      key.includes('GOOGLE') || key.includes('CLIENT')
+    ));
 
     // Get frontend URL from environment variable or use default
     const frontendUrl = process.env.FRONTEND_URL || 'https://bookauraba.netlify.app';
@@ -282,6 +287,11 @@ router.get('/auth/google/callback', (req, res, next) => {
   // Check if Google OAuth is configured
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     console.log('Google OAuth not configured - redirecting to error page');
+    console.log('GOOGLE_CLIENT_ID exists:', !!process.env.GOOGLE_CLIENT_ID);
+    console.log('GOOGLE_CLIENT_SECRET exists:', !!process.env.GOOGLE_CLIENT_SECRET);
+    console.log('Environment variables available:', Object.keys(process.env).filter(key =>
+      key.includes('GOOGLE') || key.includes('CLIENT')
+    ));
 
     // Get frontend URL from environment variable or use default
     const frontendUrl = process.env.FRONTEND_URL || 'https://bookauraba.netlify.app';
