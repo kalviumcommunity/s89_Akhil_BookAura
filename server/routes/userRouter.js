@@ -7,7 +7,9 @@ const jwt = require('jsonwebtoken');
 // Cookie-parser is already used at the app level
 const { verifyToken } = require('../middleware/auth');
 const { loadModel } = require('../utils/modelLoader');
-require('dotenv').config();
+
+// Load environment variables using our centralized utility
+require('../utils/envConfig');
 
 // Load User model using our utility
 const User = loadModel('userModel');
