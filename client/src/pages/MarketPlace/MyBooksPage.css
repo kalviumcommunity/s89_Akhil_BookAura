@@ -77,6 +77,9 @@
   text-align: center;
   padding: 40px 0;
   color: #666;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .error-message {
@@ -84,6 +87,78 @@
   font-weight: 500;
   margin-bottom: 15px;
   font-size: 1.1rem;
+}
+
+.auth-error {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f9f5f1;
+  border-radius: 8px;
+  max-width: 400px;
+}
+
+.login-button {
+  display: inline-block;
+  background-color: #A67C52;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 500;
+  margin-top: 15px;
+  transition: all 0.2s ease;
+}
+
+.login-button:hover {
+  background-color: #845b32;
+  transform: translateY(-2px);
+}
+
+.network-error {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f8f4f0;
+  border-radius: 8px;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+  border-left: 4px solid #e74c3c;
+}
+
+.error-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 15px;
+}
+
+.retry-button, .refresh-button {
+  margin-top: 10px;
+  background-color: #A67C52;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.refresh-button {
+  background-color: #3498db;
+}
+
+.retry-button:hover, .refresh-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.retry-button:hover {
+  background-color: #845b32;
+}
+
+.refresh-button:hover {
+  background-color: #2980b9;
 }
 
 /* Empty state */
