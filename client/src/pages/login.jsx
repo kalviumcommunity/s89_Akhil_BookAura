@@ -50,9 +50,28 @@ const Login = () => {
 
   const handleGoogleSignIn = () => {
     setError('');
+
+    // Clear any existing auth data before starting Google auth flow
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
+
+    // Clear cookies
+    document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    document.cookie = 'isLoggedIn=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
     // Store a flag to sync cart after Google login
     localStorage.setItem('syncCartAfterLogin', 'true');
-    window.location.href = api.defaults.baseURL + "/router/auth/google";
+
+    // Use the correct server URL for Google authentication
+    // This ensures we're using the same server that's configured in the Google Developer Console
+    const serverUrl = 'https://s89-akhil-bookaura-3.onrender.com';
+
+    // Log the redirect for debugging
+    console.log('Redirecting to Google authentication:', serverUrl + "/router/auth/google");
+
+    // Redirect to Google auth endpoint
+    window.location.href = serverUrl + "/router/auth/google";
   }
 
   return (

@@ -27,6 +27,19 @@ const verifyToken = (req, res, next) => {
         }
     }
 
+    // If still no token, check for raw cookies in the header
+    if (!token && req.headers.cookie) {
+        const cookies = req.headers.cookie.split(';');
+        for (const cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'authToken' || name === 'token' || name === 'jwt') {
+                token = value;
+                console.log('Found token in raw cookie header');
+                break;
+            }
+        }
+    }
+
     // Check if user is authenticated via Passport
     if (!token && req.isAuthenticated && req.isAuthenticated()) {
         console.log('User is authenticated via Passport');

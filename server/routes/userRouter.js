@@ -256,11 +256,13 @@ router.get('/auth/google',
 // Google OAuth Callback Route
 router.get('/auth/google/callback',
   passport.authenticate('google', {
-    failureRedirect: '/login',
+    failureRedirect: 'https://bookauraba.netlify.app/login?error=authentication_failed',
     failureMessage: true
   }),
   (req, res) => {
     try {
+      console.log('Google OAuth callback successful, user:', req.user);
+
       // Generate JWT Token for Google OAuth
       const token = jwt.sign({
         id: req.user._id,
@@ -268,14 +270,13 @@ router.get('/auth/google/callback',
         username: req.user.username
       }, JWT_SECRET, { expiresIn: '7d' });
 
-      // Set secure cookie settings based on environment
-      const isProduction = process.env.NODE_ENV === 'production';
+      // Set secure cookie settings for production
       const cookieSettings = {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-site in production
+        secure: true, // Always use secure cookies in production
+        sameSite: 'none', // Required for cross-site cookies
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        domain: isProduction ? '.onrender.com' : undefined // Match domain in production
+        path: '/' // Ensure cookie is available on all paths
       };
 
       // Set both cookie names for better compatibility
@@ -286,12 +287,17 @@ router.get('/auth/google/callback',
 
       // Add a non-httpOnly cookie for client-side detection
       res.cookie('isLoggedIn', 'true', {
-        ...cookieSettings,
-        httpOnly: false // This one needs to be accessible from JS
+        secure: true,
+        sameSite: 'none',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        httpOnly: false, // This one needs to be accessible from JS
+        path: '/' // Ensure cookie is available on all paths
       });
 
       // Get frontend URL from environment variable or use default
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      // For production, hardcode the Netlify URL to ensure consistency
+      const frontendUrl = 'https://bookauraba.netlify.app';
+      console.log('Redirecting to frontend URL:', frontendUrl);
 
       // Create user data object to include in the URL
       const userData = {
@@ -303,13 +309,19 @@ router.get('/auth/google/callback',
       // Encode user data as a URL-safe string
       const encodedUserData = encodeURIComponent(JSON.stringify(userData));
 
+      // Log the redirect URL for debugging
+      const redirectUrl = `${frontendUrl}/?success=true&token=${token}&userData=${encodedUserData}`;
+      console.log('Redirecting to:', redirectUrl);
+
       // Redirect to frontend with success message, token, and user data
-      res.redirect(`${frontendUrl}/?success=true&token=${token}&userData=${encodedUserData}`);
+      res.redirect(redirectUrl);
     } catch (error) {
       console.error('Error in Google callback:', error);
-      // Get frontend URL from environment variable or use default
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-      res.redirect(`${frontendUrl}/login?error=authentication_failed`);
+      // For production, hardcode the Netlify URL to ensure consistency
+      const frontendUrl = 'https://bookauraba.netlify.app';
+      const redirectUrl = `${frontendUrl}/login?error=authentication_failed`;
+      console.log('Error occurred, redirecting to:', redirectUrl);
+      res.redirect(redirectUrl);
     }
   }
 );

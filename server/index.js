@@ -85,10 +85,13 @@ app.use(cors({
         'Accept',
         'Origin',
         'Access-Control-Request-Method',
-        'Access-Control-Request-Headers'
+        'Access-Control-Request-Headers',
+        'Cache-Control',
+        'Cookie'
     ],
     exposedHeaders: ['Content-Length', 'Content-Type', 'Set-Cookie'],
-    maxAge: 86400 // 24 hours in seconds - how long the browser should cache CORS response
+    maxAge: 86400, // 24 hours in seconds - how long the browser should cache CORS response
+    preflightContinue: true // Allow preflight requests to pass through to the next handler
 }));
 app.use(express.json());
 app.use(cookieParser());
@@ -103,21 +106,19 @@ app.use(session({
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Required for cross-site cookies in modern browsers
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         httpOnly: true,
-        // Don't set domain in production to allow cookies to work across different domains
-        // domain: process.env.NODE_ENV === 'production' ? undefined : undefined
+        path: '/', // Ensure cookie is available on all paths
+        // Don't set domain to allow cookies to work across different domains
     },
-    proxy: process.env.NODE_ENV === 'production', // Trust the reverse proxy in production
+    proxy: true, // Always trust the reverse proxy (needed for Render)
     // Use a more reliable session store in production
     store: process.env.NODE_ENV === 'production'
         ? undefined // In production, you might want to use a proper session store like MongoDB or Redis
         : undefined  // In development, use the default MemoryStore (with warning)
 }));
 
-// Add warning about MemoryStore in production
-if (process.env.NODE_ENV === 'production' && !app.get('trust proxy')) {
-    console.warn('Warning: You should set "trust proxy" when behind a reverse proxy like Nginx or when deployed to cloud platforms');
-    app.set('trust proxy', 1); // Trust first proxy
-}
+// Set trust proxy for all environments when deployed
+console.log('Setting trust proxy for proper handling of secure cookies behind a proxy');
+app.set('trust proxy', 1); // Trust first proxy
 
 // Initialize Passport
 app.use(passport.initialize());

@@ -33,6 +33,10 @@ const Home = () => {
       // Set flag to sync cart
       localStorage.setItem('syncCartAfterLogin', 'true');
 
+      // Set isLoggedIn cookie for client-side detection (important for cross-domain)
+      // Use secure and SameSite=None for cross-domain cookies
+      document.cookie = `isLoggedIn=true; path=/; max-age=${7 * 24 * 60 * 60}; secure; SameSite=None`;
+
       // If we have user data, store it
       if (encodedUserData) {
         try {
@@ -41,9 +45,6 @@ const Home = () => {
 
           // Store user data in localStorage for persistence
           localStorage.setItem('userData', JSON.stringify(userData));
-
-          // Set isLoggedIn cookie for client-side detection
-          document.cookie = `isLoggedIn=true; path=/; max-age=${7 * 24 * 60 * 60}`;
         } catch (error) {
           console.error('Error parsing user data:', error);
         }
@@ -53,8 +54,16 @@ const Home = () => {
       const cleanUrl = window.location.pathname;
       window.history.replaceState({}, document.title, cleanUrl);
 
+      // Sync cart with server
+      syncCartWithServer();
+
+      // Show success message
+      alert('Google login successful!');
+
       // Reload page to apply authentication
-      window.location.reload();
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     }
 
     // Handle regular page reload

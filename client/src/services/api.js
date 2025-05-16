@@ -39,18 +39,27 @@ api.interceptors.request.use(
     // First try to get token from localStorage
     let token = localStorage.getItem('authToken');
 
+    // Log authentication status for debugging
+    console.log('Auth status check:');
+    console.log('- Token in localStorage:', token ? 'Present' : 'Missing');
+    console.log('- Cookies present:', document.cookie ? 'Yes' : 'No');
+
     // If no token in localStorage, check for cookies
     if (!token) {
       // Parse cookies to find auth token
       const cookies = document.cookie.split(';');
+      console.log('- All cookies:', cookies.map(c => c.trim()).join(', '));
+
       for (let i = 0; i < cookies.length; i++) {
         const cookie = cookies[i].trim();
         // Check for both possible cookie names
         if (cookie.startsWith('authToken=')) {
           token = cookie.substring('authToken='.length);
+          console.log('- Found token in authToken cookie');
           break;
         } else if (cookie.startsWith('token=')) {
           token = cookie.substring('token='.length);
+          console.log('- Found token in token cookie');
           break;
         }
       }
@@ -59,12 +68,28 @@ api.interceptors.request.use(
     // If token exists, add it to the Authorization header
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-
-      // For debugging
-      console.log('Adding auth token to request:', config.url);
+      console.log('- Adding auth token to request:', config.url);
     } else {
-      console.log('No auth token found for request:', config.url);
+      console.log('- No auth token found for request:', config.url);
+
+      // Check if user is logged in via cookie
+      const isLoggedInCookie = document.cookie.split(';').some(cookie =>
+        cookie.trim().startsWith('isLoggedIn=true')
+      );
+
+      if (isLoggedInCookie) {
+        console.log('- User appears to be logged in via cookie, but no token found');
+
+        // If we have isLoggedIn cookie but no token, redirect to home to trigger Google auth handling
+        if (window.location.pathname !== '/' && !window.location.pathname.includes('/login')) {
+          console.log('- Redirecting to home to handle authentication');
+          window.location.href = '/';
+        }
+      }
     }
+
+    // Always include credentials to send cookies
+    config.withCredentials = true;
 
     return config;
   },
@@ -114,8 +139,19 @@ api.interceptors.response.use(
 
       // Check if we're already on the login page to avoid redirect loops
       if (!window.location.pathname.includes('/login')) {
+        console.log('Unauthorized access, redirecting to login page');
+
         // Clear any stored auth data
         localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
+
+        // Clear cookies
+        document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        document.cookie = 'isLoggedIn=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+        // Show error message
+        alert('Your session has expired. Please log in again.');
 
         // Redirect to login page
         // Using window.location instead of navigate because this is outside of React components

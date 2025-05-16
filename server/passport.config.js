@@ -12,8 +12,7 @@ const User = loadModel('userModel');
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL ||
-        `${process.env.SERVER_URL || 'http://localhost:5000'}/router/auth/google/callback`,
+    callbackURL: "https://s89-akhil-bookaura-3.onrender.com/router/auth/google/callback",
     passReqToCallback: true
 }, async (req, accessToken, refreshToken, profile, done) => {
     try {
