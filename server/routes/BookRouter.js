@@ -214,7 +214,7 @@ router.post('/uploadBook', verifyAdmin, upload.fields([
   }
 });
 
-// Get all books (with filters)
+
 router.get('/getBooks', async (req, res) => {
   try {
     const { category, featured, bestseller, newrelease } = req.query;
