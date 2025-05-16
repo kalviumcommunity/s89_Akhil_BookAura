@@ -8,6 +8,9 @@ const { verifyToken, verifyAdmin } = require('../middleware/auth');
 const streamifier = require('streamifier');
 const axios = require('axios');
 
+// Load environment variables using our centralized utility
+require('../utils/envConfig');
+
 // Memory storage for multer
 const storage = multer.memoryStorage();
 

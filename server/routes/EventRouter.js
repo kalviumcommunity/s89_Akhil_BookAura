@@ -4,6 +4,9 @@ const { loadModel } = require('../utils/modelLoader');
 const Event = loadModel('EventModel');
 const { verifyToken } = require('../middleware/auth');
 
+// Load environment variables using our centralized utility
+require('../utils/envConfig');
+
 // Get all events for the authenticated user
 router.get('/', verifyToken, async (req, res) => {
     try {

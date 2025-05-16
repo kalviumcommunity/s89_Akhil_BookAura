@@ -1,11 +1,16 @@
 const express = require('express');
-const router = express.Router();
+// Use our custom router utility to avoid conflicts with the 'router' package
+const { createRouter } = require('../utils/expressRouter');
+const router = createRouter();
 const multer = require('multer');
 const axios = require('axios');
 const { verifyToken } = require('../middleware/auth');
 const { loadModel } = require('../utils/modelLoader');
 const FlashcardDeck = loadModel('FlashcardModel');
 const mongoose = require('mongoose');
+
+// Load environment variables using our centralized utility
+require('../utils/envConfig');
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();

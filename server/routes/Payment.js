@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const dotenv = require("dotenv");
-dotenv.config();
+
+// Load environment variables using our centralized utility
+require('../utils/envConfig');
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const { verifyToken } = require("../middleware/auth");
 const { loadModel } = require("../utils/modelLoader");
