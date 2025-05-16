@@ -7,8 +7,8 @@ const User = loadModel('userModel');
 
 // Configure Google Strategy
 passport.use(new GoogleStrategy({
-    clientID: process.env.YOUR_GOOGLE_CLIENT_ID,
-    clientSecret: process.env.YOUR_GOOGLE_CLIENT_SECRET,
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: process.env.GOOGLE_CALLBACK_URL ||
         `${process.env.SERVER_URL || 'https://s89-akhil-bookaura-3.onrender.com'}/router/auth/google/callback`,
     passReqToCallback: true

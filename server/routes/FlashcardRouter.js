@@ -171,7 +171,7 @@ router.post('/generate', verifyToken, upload.single('pdfFile'), async (req, res)
 });
 
 // Save pre-generated flashcards (alternative approach)
-router.post('/save-generated', verifyToken, express.json(), async (req, res) => {
+router.post('/save-generated', verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const { title, description, flashcards } = req.body;
