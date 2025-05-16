@@ -293,8 +293,18 @@ router.get('/auth/google/callback',
       // Get frontend URL from environment variable or use default
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
-      // Redirect to frontend with success message and user data
-      res.redirect(`${frontendUrl}/?success=true&token=${token}`);
+      // Create user data object to include in the URL
+      const userData = {
+        id: req.user._id,
+        username: req.user.username,
+        email: req.user.email
+      };
+
+      // Encode user data as a URL-safe string
+      const encodedUserData = encodeURIComponent(JSON.stringify(userData));
+
+      // Redirect to frontend with success message, token, and user data
+      res.redirect(`${frontendUrl}/?success=true&token=${token}&userData=${encodedUserData}`);
     } catch (error) {
       console.error('Error in Google callback:', error);
       // Get frontend URL from environment variable or use default

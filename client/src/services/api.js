@@ -33,15 +33,37 @@ const api = axios.create({
   }
 });
 
-// Request interceptor to add auth token from localStorage if available
+// Request interceptor to add auth token from localStorage or cookies if available
 api.interceptors.request.use(
   (config) => {
-    // Get token from localStorage
-    const token = localStorage.getItem('authToken');
+    // First try to get token from localStorage
+    let token = localStorage.getItem('authToken');
+
+    // If no token in localStorage, check for cookies
+    if (!token) {
+      // Parse cookies to find auth token
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        // Check for both possible cookie names
+        if (cookie.startsWith('authToken=')) {
+          token = cookie.substring('authToken='.length);
+          break;
+        } else if (cookie.startsWith('token=')) {
+          token = cookie.substring('token='.length);
+          break;
+        }
+      }
+    }
 
     // If token exists, add it to the Authorization header
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+
+      // For debugging
+      console.log('Adding auth token to request:', config.url);
+    } else {
+      console.log('No auth token found for request:', config.url);
     }
 
     return config;

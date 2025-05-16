@@ -86,6 +86,22 @@
   font-size: 1.1rem;
 }
 
+.retry-button {
+  background-color: #A67C52;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 500;
+  margin-top: 20px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.retry-button:hover {
+  background-color: #845b32;
+}
+
 /* Empty state */
 .empty-books {
   display: flex;

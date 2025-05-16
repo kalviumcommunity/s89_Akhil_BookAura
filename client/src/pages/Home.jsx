@@ -15,22 +15,67 @@ const Home = () => {
   const [featuredBooks, setFeaturedBooks] = useState([]);
   const location = useLocation();
 
-  // Check if we need to sync cart after Google login
+  // Check if we need to sync cart after Google login and handle token from URL
   useEffect(() => {
+    // Handle URL parameters for Google OAuth callback
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const success = params.get('success');
+    const encodedUserData = params.get('userData');
+
+    // If we have a token from Google OAuth callback, store it
+    if (token && success === 'true') {
+      console.log('Google authentication successful, storing token');
+
+      // Store token in localStorage for the API interceptor to use
+      localStorage.setItem('authToken', token);
+
+      // Set flag to sync cart
+      localStorage.setItem('syncCartAfterLogin', 'true');
+
+      // If we have user data, store it
+      if (encodedUserData) {
+        try {
+          const userData = JSON.parse(decodeURIComponent(encodedUserData));
+          console.log('Received user data from Google auth:', userData);
+
+          // Store user data in localStorage for persistence
+          localStorage.setItem('userData', JSON.stringify(userData));
+
+          // Set isLoggedIn cookie for client-side detection
+          document.cookie = `isLoggedIn=true; path=/; max-age=${7 * 24 * 60 * 60}`;
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+        }
+      }
+
+      // Clean up URL parameters
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+
+      // Reload page to apply authentication
+      window.location.reload();
+    }
+
+    // Handle regular page reload
     if (location.state?.reload) {
       window.history.replaceState({}, document.title); // prevent infinite reload
       window.location.reload(); // full reload
     }
+
+    // Fetch featured books
     const fetchBooks = async () => {
-    try {
-      const featuredResponse = await axios.get('https://s89-akhil-bookaura-3.onrender.com/router/featured');
+      try {
+        const featuredResponse = await axios.get('https://s89-akhil-bookaura-3.onrender.com/router/featured');
         setFeaturedBooks(featuredResponse.data.data.slice(0, 4)); // Limit to 4 books
-    } catch (error) {
-      console.log('Failed to fetch featured books:', error);
-      console.log(error)
+      } catch (error) {
+        console.log('Failed to fetch featured books:', error);
+        console.log(error)
+      }
     }
-  }
-  fetchBooks();
+    fetchBooks();
+
+    // Sync cart if needed
     const shouldSyncCart = localStorage.getItem('syncCartAfterLogin');
     if (shouldSyncCart === 'true') {
       // Sync cart with server
@@ -38,7 +83,7 @@ const Home = () => {
       // Remove the flag
       localStorage.removeItem('syncCartAfterLogin');
     }
-  }, [location.state,syncCartWithServer]);
+  }, [location.state, syncCartWithServer]);
 
   return (
     <div>

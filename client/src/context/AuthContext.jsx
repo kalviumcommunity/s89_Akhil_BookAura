@@ -17,6 +17,21 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkLoginStatus = async () => {
       try {
+        // Check URL parameters for token from Google OAuth
+        const params = new URLSearchParams(window.location.search);
+        const urlToken = params.get('token');
+        const success = params.get('success');
+
+        // If we have a token from Google OAuth callback, store it
+        if (urlToken && success === 'true') {
+          console.log('Google authentication successful, storing token');
+          localStorage.setItem('authToken', urlToken);
+
+          // Clean up URL parameters
+          const cleanUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
+
         // Check for the non-httpOnly isLoggedIn cookie
         const hasToken = document.cookie.includes('isLoggedIn=true');
 
@@ -53,9 +68,15 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Function to handle login
-  const login = (userData) => {
+  const login = (userData, token) => {
     setUser(userData);
     setIsLoggedIn(true);
+
+    // If token is provided, store it in localStorage
+    if (token) {
+      localStorage.setItem('authToken', token);
+      console.log('Token stored in localStorage during login');
+    }
   };
 
   // Function to handle logout
