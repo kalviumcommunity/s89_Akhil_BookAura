@@ -14,7 +14,7 @@ const getBaseUrl = () => {
   }
 
   // Production default
-  return 'https://s89-akhil-bookaura-2.onrender.com';
+  return 'https://s89-akhil-bookaura-3.onrender.com';
 };
 
 // Create a base axios instance with common configuration
