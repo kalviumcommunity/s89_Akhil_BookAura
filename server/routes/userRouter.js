@@ -11,7 +11,7 @@ require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET; // Ensure JWT_SECRET is defined
 
-// Register Route
+
 router.post('/signup', async (req, res) => {
   const { username, email, password } = req.body;
   try {
