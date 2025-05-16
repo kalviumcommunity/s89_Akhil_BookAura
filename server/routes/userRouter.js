@@ -1,18 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const passport = require('passport');
+const passport = require('passport'); // <-- Added import for passport
+const User = require('../model/userModel');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
-// Cookie-parser is already used at the app level
-const { verifyToken } = require('../middleware/auth');
-const { loadModel } = require('../utils/modelLoader');
-
-// Load environment variables using our centralized utility
-require('../utils/envConfig');
-
-// Load User model using our utility
-const User = loadModel('userModel');
+const cookiePraser = require('cookie-parser');
+const verifyToken = require('../middleware/auth');
+require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET; // Ensure JWT_SECRET is defined
 
@@ -84,26 +79,28 @@ router.post('/login', async (req, res) => {
     }
     const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
-    // Set secure cookie settings based on environment
-    const isProduction = process.env.NODE_ENV === 'production';
-    const cookieSettings = {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-site in production
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      domain: isProduction ? '.onrender.com' : undefined // Match domain in production
-    };
-
     // Set both cookie names for better compatibility
-    res.cookie('authToken', token, cookieSettings);
+    res.cookie('authToken', token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
 
     // Also set as 'token' for client-side checks
-    res.cookie('token', token, cookieSettings);
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
 
     // Add a non-httpOnly cookie for client-side detection
     res.cookie('isLoggedIn', 'true', {
-      ...cookieSettings,
-      httpOnly: false // This one needs to be accessible from JS
+      httpOnly: false,
+      secure: false,
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
     });
     res.status(200).json({ message: 'Login successful', token });
   } catch (error) {
@@ -246,36 +243,21 @@ router.get('/profile-image', verifyToken, async (req, res) => {
 });
 
 // Google OAuth Login Route
-router.get('/auth/google', (req, res, next) => {
-  // Log the request parameters
-  console.log('Google OAuth request received with params:', req.query);
-
-  // Store the signup parameter in the session if present
-  if (req.query.signup === 'true') {
-    req.session.googleSignup = true;
-    console.log('Setting googleSignup flag in session');
-  }
-
-  // Store the timestamp for debugging
-  if (req.query.t) {
-    req.session.googleAuthTimestamp = req.query.t;
-    console.log('Setting googleAuthTimestamp in session:', req.query.t);
-  }
-
-  // Continue with Google authentication
+router.get('/auth/google',
   passport.authenticate('google', {
     scope: ['profile', 'email'],
     prompt: 'select_account' // Force account selection
-  })(req, res, next);
-});
+  })
+);
 
 // Google OAuth Callback Route
 router.get('/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: 'https://bookauraba.netlify.app/login?error=authentication_failed' }),
+  passport.authenticate('google', {
+    failureRedirect: '/login',
+    failureMessage: true
+  }),
   (req, res) => {
     try {
-      console.log('Google OAuth callback successful, user:', req.user._id);
-
       // Generate JWT Token for Google OAuth
       const token = jwt.sign({
         id: req.user._id,
@@ -283,65 +265,35 @@ router.get('/auth/google/callback',
         username: req.user.username
       }, JWT_SECRET, { expiresIn: '7d' });
 
-      // Set secure cookie settings for production
-      const cookieSettings = {
-        httpOnly: true,
-        secure: true, // Always use secure cookies in production
-        sameSite: 'none', // Required for cross-site cookies
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        path: '/' // Ensure cookie is available on all paths
-      };
-
-      console.log('Setting auth cookies with token');
-
       // Set both cookie names for better compatibility
-      res.cookie('authToken', token, cookieSettings);
+      res.cookie('authToken', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production'|| false,
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
 
       // Also set as 'token' for client-side checks
-      res.cookie('token', token, cookieSettings);
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production'|| false,
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
 
       // Add a non-httpOnly cookie for client-side detection
       res.cookie('isLoggedIn', 'true', {
-        secure: true,
-        sameSite: 'none',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        httpOnly: false, // This one needs to be accessible from JS
-        path: '/' // Ensure cookie is available on all paths
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production'|| false,
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
       });
 
-      // For production, hardcode the Netlify URL to ensure consistency
-      const frontendUrl = 'https://bookauraba.netlify.app';
-      console.log('Redirecting to frontend URL:', frontendUrl);
-
-      // Create user data object to include in the URL
-      const userData = {
-        id: req.user._id.toString(), // Convert ObjectId to string
-        username: req.user.username,
-        email: req.user.email,
-        profileImage: req.user.profileImage || ''
-      };
-
-      // Encode user data as a URL-safe string
-      const encodedUserData = encodeURIComponent(JSON.stringify(userData));
-
-      // Log the redirect URL for debugging
-      const redirectUrl = `${frontendUrl}/google-auth-test?success=true&token=${token}&userData=${encodedUserData}`;
-      console.log('Redirecting to:', redirectUrl);
-
-      // Redirect to frontend with success message, token, and user data
-      res.redirect(redirectUrl);
+      // Redirect to frontend with success message and user data
+      res.redirect(`https://bookauraba.netlify.app/home?success=true&token=${token}`);
     } catch (error) {
       console.error('Error in Google callback:', error);
-
-      // For production, hardcode the Netlify URL to ensure consistency
-      const frontendUrl = 'https://bookauraba.netlify.app';
-
-      // Include error details in the redirect URL
-      const errorMessage = encodeURIComponent(error.message || 'Unknown error');
-      const redirectUrl = `${frontendUrl}/login?error=authentication_failed&reason=${errorMessage}&t=${Date.now()}`;
-
-      console.log('Error occurred, redirecting to:', redirectUrl);
-      res.redirect(redirectUrl);
+      res.redirect(`https://bookauraba.netlify.app/login?error=authentication_failed`);
     }
   }
 );
@@ -349,41 +301,15 @@ router.get('/auth/google/callback',
 // Logout Route
 router.get('/logout', (req, res) => {
   try {
-    // Set secure cookie settings based on environment
-    const isProduction = process.env.NODE_ENV === 'production';
-    const cookieSettings = {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
-      domain: isProduction ? '.onrender.com' : undefined
-    };
-
-    // Clear all auth cookies with proper settings
-    res.clearCookie('authToken', cookieSettings);
-    res.clearCookie('token', cookieSettings);
-    res.clearCookie('isLoggedIn', {
-      ...cookieSettings,
-      httpOnly: false
-    });
+    // Clear all auth cookies
+    res.clearCookie('authToken');
+    res.clearCookie('token');
+    res.clearCookie('isLoggedIn');
 
     // If using passport session
     if (req.logout) {
-      // Handle different passport versions
-      if (req.logout.length) {
-        // Passport > 0.6.0
-        req.logout(function(err) {
-          if (err) {
-            console.error('Error during passport logout:', err);
-          }
-        });
-      } else {
-        // Passport <= 0.5.0
-        req.logout();
-      }
+      req.logout();
     }
-
-    // Clear session
-    req.session.destroy();
 
     res.status(200).json({ message: 'Logged out successfully' });
   } catch (error) {
@@ -455,19 +381,20 @@ router.put('/update-profile', verifyToken, async (req, res) => {
         username: updatedUser.username
       }, JWT_SECRET, { expiresIn: '7d' });
 
-      // Set secure cookie settings based on environment
-      const isProduction = process.env.NODE_ENV === 'production';
-      const cookieSettings = {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-site in production
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        domain: isProduction ? '.onrender.com' : undefined // Match domain in production
-      };
-
       // Update cookies
-      res.cookie('authToken', newToken, cookieSettings);
-      res.cookie('token', newToken, cookieSettings);
+      res.cookie('authToken', newToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
+
+      res.cookie('token', newToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
     }
 
     res.status(200).json({

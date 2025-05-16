@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import '../pagescss/Auth.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AuthImage from '../images/Auth.png';
 import Google from '../images/google.png';
 import logo from'../images/logo.png';
 import { useCart } from './MarketPlace/cart';
-import api from '../services/api';
 
 const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -18,37 +18,27 @@ const Login = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const errorParam = params.get('error');
-    const reasonParam = params.get('reason');
-
     if (errorParam) {
-      console.log('Authentication error detected in URL params:', errorParam);
-      if (reasonParam) {
-        console.log('Error reason:', reasonParam);
-        setError(`Authentication failed: ${decodeURIComponent(reasonParam)}`);
-      } else {
-        setError('Authentication failed. Please try again.');
-      }
+      setError('Authentication failed. Please try again.');
     }
   }, [location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await api.post("/router/login", form);
-
-      // Store token in localStorage for the API interceptor to use
+      const response = await axios.post("https://s89-akhil-bookaura-3.onrender.com/router/login", form, { withCredentials: true });
       localStorage.setItem('authToken', response.data.token);
       console.log("Login successful");
 
       // Sync cart with server after successful login
       await syncCartWithServer();
 
-      setSuccess(true);
+      await setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
       }, 3000);
       setTimeout(() => {
-        navigate('/',{ state: { reload: true }});
+        navigate('/home');
       }, 2000);
     } catch (error) {
       console.error("Error logging in:", error);
@@ -58,57 +48,15 @@ const Login = () => {
 
   const handleGoogleSignIn = () => {
     setError('');
-    console.log('Starting Google authentication flow...');
-
-    // Clear any existing auth data before starting Google auth flow
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
-
-    // Clear cookies
-    document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    document.cookie = 'isLoggedIn=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-
-    // Handle direct authentication (bypass server issues)
-    const handleDirectAuth = () => {
-      // Create a mock token
-      const mockToken = 'mock_token_' + Date.now();
-
-      // Store authentication data
-      localStorage.setItem('authToken', mockToken);
-      localStorage.setItem('userData', JSON.stringify({
-        id: 'mock_user_id',
-        username: 'Google User',
-        email: 'google.user@example.com'
-      }));
-
-      // Set cookie for client-side detection
-      document.cookie = `isLoggedIn=true; path=/; max-age=${7 * 24 * 60 * 60}`;
-
-      // Show success message
-      alert('Authentication successful! (Using mock data due to server issues)');
-
-      // Redirect to home page
-      navigate('/');
-    };
-
-    // Use the correct server URL for Google authentication
-    const serverUrl = 'https://s89-akhil-bookaura-3.onrender.com';
-
-    // Show options to the user
-    if (confirm('The server might be experiencing issues with Google authentication. Choose an option:\n\nOK: Try Google authentication (might fail)\nCancel: Use direct login (mock data)')) {
-      // Redirect to Google auth endpoint
-      window.location.href = `${serverUrl}/router/auth/google`;
-    } else {
-      // Use direct authentication
-      handleDirectAuth();
-    }
+    // Store a flag to sync cart after Google login
+    localStorage.setItem('syncCartAfterLogin', 'true');
+    window.location.href = "https://s89-akhil-bookaura-3.onrender.com/router/auth/google";
   }
 
   return (
     <div className='boxes'>
       <div className='colourbox'>
-        <img className='logoimage' onClick={()=>navigate('/')} src={logo} alt="logo" />
+        <img className='logoimage' onClick={()=>navigate('/home')} src={logo} alt="logo" />
         <img className='authimage' src={AuthImage} alt="Login" />
         <br />
       </div>

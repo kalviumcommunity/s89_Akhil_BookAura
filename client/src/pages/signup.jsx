@@ -21,7 +21,7 @@ const Signup = () => {
       const response = await axios.post("https://s89-akhil-bookaura-3.onrender.com/router/signup", form, { withCredentials: true });
       console.log("Signup successful:", response.data);
       alert("Signup successful!");
-      navigate('/'); // Redirect to home after successful signup
+      navigate('/home'); // Redirect to home after successful signup
     } catch (error) {
       console.error("Error signing up:", error);
       setError(error.response?.data?.message || "Signup failed. Please try again.");
@@ -30,57 +30,14 @@ const Signup = () => {
 
   const handleGoogleSignIn = () => {
     setError('');
-    console.log('Starting Google authentication flow from signup page...');
-
-    // Clear any existing auth data before starting Google auth flow
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
-
-    // Clear cookies
-    document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    document.cookie = 'isLoggedIn=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-
-    // Handle direct authentication (bypass server issues)
-    const handleDirectAuth = () => {
-      // Create a mock token
-      const mockToken = 'mock_token_' + Date.now();
-
-      // Store authentication data
-      localStorage.setItem('authToken', mockToken);
-      localStorage.setItem('userData', JSON.stringify({
-        id: 'mock_user_id',
-        username: 'Google User',
-        email: 'google.user@example.com'
-      }));
-
-      // Set cookie for client-side detection
-      document.cookie = `isLoggedIn=true; path=/; max-age=${7 * 24 * 60 * 60}`;
-
-      // Show success message
-      alert('Authentication successful! (Using mock data due to server issues)');
-
-      // Redirect to home page
-      navigate('/');
-    };
-
-    // Use the correct server URL for Google authentication
-    const serverUrl = 'https://s89-akhil-bookaura-3.onrender.com';
-
-    // Show options to the user
-    if (confirm('The server might be experiencing issues with Google authentication. Choose an option:\n\nOK: Try Google authentication (might fail)\nCancel: Use direct signup (mock data)')) {
-      // Redirect to Google auth endpoint
-      window.location.href = `${serverUrl}/router/auth/google`;
-    } else {
-      // Use direct authentication
-      handleDirectAuth();
-    }
+    window.location.href = "https://s89-akhil-bookaura-3.onrender.com/router/auth/google";
+    // Let backend handle redirect after Google login
   };
 
   return (
     <div className="boxes">
       <div className="colourbox">
-        <img className='logoimage' onClick={()=>navigate('/')} src={logo} alt="logo" />
+        <img className='logoimage' onClick={()=>navigate('/home')} src={logo} alt="logo" />
         <img className='authimage' src={AuthImage} alt="Signup" />
         <br />
       </div>
