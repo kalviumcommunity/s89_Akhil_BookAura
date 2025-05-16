@@ -12,7 +12,7 @@ const Marketplace = () => {
   const [activeFilter, setActiveFilter] = useState('All');
 
   useEffect(() => {
-    axios.get('https://s89-akhil-bookaura-2.onrender.com/router/getBooks')
+    axios.get('https://s89-akhil-bookaura-3.onrender.com/router/getBooks')
       .then(response => {
         // Ensure books is always an array
         const booksData = Array.isArray(response.data)

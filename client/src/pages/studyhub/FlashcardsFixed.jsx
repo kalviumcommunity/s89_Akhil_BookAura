@@ -28,7 +28,7 @@ const Flashcards = () => {
   const fetchDecks = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('https://s89-akhil-bookaura-2.onrender.com/api/flashcards/decks', {
+      const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/flashcards/decks', {
         withCredentials: true
       });
       setDecks(response.data.data);
@@ -44,7 +44,7 @@ const Flashcards = () => {
   const fetchDeckDetails = async (deckId) => {
     try {
       setLoading(true);
-      const response = await axios.get(`https://s89-akhil-bookaura-2.onrender.com/api/flashcards/decks/${deckId}`, {
+      const response = await axios.get(`https://s89-akhil-bookaura-3.onrender.com/api/flashcards/decks/${deckId}`, {
         withCredentials: true
       });
       setSelectedDeck(response.data.data);
@@ -89,7 +89,7 @@ const Flashcards = () => {
       formData.append('description', deckDescription);
 
       const response = await axios.post(
-        'https://s89-akhil-bookaura-2.onrender.com/api/flashcards/generate',
+        'https://s89-akhil-bookaura-3.onrender.com/api/flashcards/generate',
         formData,
         {
           withCredentials: true,
@@ -152,7 +152,7 @@ const Flashcards = () => {
     if (!deckToDelete) return;
 
     try {
-      await axios.delete(`https://s89-akhil-bookaura-2.onrender.com/api/flashcards/decks/${deckToDelete._id}`, {
+      await axios.delete(`https://s89-akhil-bookaura-3.onrender.com/api/flashcards/decks/${deckToDelete._id}`, {
         withCredentials: true
       });
 

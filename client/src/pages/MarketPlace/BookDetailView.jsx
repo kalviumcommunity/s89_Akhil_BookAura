@@ -21,7 +21,7 @@ const BookDetailView = ({ book, onClose }) => {
   const handleBuy = async() => {
     try {
         const response = await axios.post(
-            'https://s89-akhil-bookaura-2.onrender.com/api/payment/create-checkout-session',
+            'https://s89-akhil-bookaura-3.onrender.com/api/payment/create-checkout-session',
             { book },
             {
                 withCredentials: true // This will send cookies with the request

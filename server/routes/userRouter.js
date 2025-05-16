@@ -35,30 +35,30 @@ router.post('/signup', async (req, res) => {
     const savedUser = await user.save();
     const token = jwt.sign({ id: savedUser._id, email: savedUser.email }, JWT_SECRET, { expiresIn: '7d' });
 
-    // Set both cookie names for better compatibility
-    res.cookie('authToken', token, {
+    // Set secure cookie settings based on environment - same as login route
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieSettings = {
       httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-site in production
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      domain: isProduction ? '.onrender.com' : undefined // Match domain in production
+    };
+
+    // Set both cookie names for better compatibility
+    res.cookie('authToken', token, cookieSettings);
 
     // Also set as 'token' for client-side checks
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie('token', token, cookieSettings);
 
     // Add a non-httpOnly cookie for client-side detection
     res.cookie('isLoggedIn', 'true', {
-      httpOnly: false,
-      secure: false,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      ...cookieSettings,
+      httpOnly: false // This one needs to be accessible from JS
     });
-    res.status(201).json({ message: 'User registered successfully', user: savedUser });
+
+    // Return token in response for client-side storage
+    res.status(201).json({ message: 'User registered successfully', user: savedUser, token });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal server error' });
@@ -138,11 +138,17 @@ router.post('/forgotpassword', async (req, res) => {
     });
 
     await transporter.sendMail({
-      from: "bookaura.ba@gmail.com",
+      from: '"BookAura Support" <bookaura.ba@gmail.com>',
       to: user.email,
-      subject: "Your Password Reset Code",
-      text: `Your code is: ${code}`
+      subject: "Password Reset Code",
+      text: `Hello ${user.name || ""},
+      We received a request to reset your password. Please use the following code to proceed:
+      🔒 Reset Code: ${code}
+      If you did not request a password reset, please ignore this email.
+      Best regards,
+      BookAura Team`,
     });
+
 
     return res.status(200).send({ msg: "Verification code sent successfully, check spam mails" });
   } catch (error) {
@@ -246,21 +252,64 @@ router.get('/profile-image', verifyToken, async (req, res) => {
 });
 
 // Google OAuth Login Route
-router.get('/auth/google',
+router.get('/auth/google', (req, res, next) => {
+  console.log('Google OAuth login route accessed');
+  console.log('- Request headers:', req.headers);
+  console.log('- Request URL:', req.originalUrl);
+
+  // Check if Google OAuth is configured
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    console.log('Google OAuth not configured - redirecting to error page');
+    console.log('GOOGLE_CLIENT_ID exists:', !!process.env.GOOGLE_CLIENT_ID);
+    console.log('GOOGLE_CLIENT_SECRET exists:', !!process.env.GOOGLE_CLIENT_SECRET);
+    console.log('Environment variables available:', Object.keys(process.env).filter(key =>
+      key.includes('GOOGLE') || key.includes('CLIENT')
+    ));
+
+    // Get frontend URL from environment variable or use default
+    const frontendUrl = process.env.FRONTEND_URL || 'https://bookauraba.netlify.app';
+
+    // Redirect to login page with error message
+    return res.redirect(`${frontendUrl}/login?error=google_auth_not_configured`);
+  }
+
   passport.authenticate('google', {
     scope: ['profile', 'email'],
     prompt: 'select_account' // Force account selection
-  })
-);
+  })(req, res, next);
+});
 
 // Google OAuth Callback Route
-router.get('/auth/google/callback',
+router.get('/auth/google/callback', (req, res, next) => {
+  console.log('Google OAuth callback route accessed');
+  console.log('- Request headers:', req.headers);
+  console.log('- Request URL:', req.originalUrl);
+  console.log('- Query parameters:', req.query);
+
+  // Check if Google OAuth is configured
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    console.log('Google OAuth not configured - redirecting to error page');
+    console.log('GOOGLE_CLIENT_ID exists:', !!process.env.GOOGLE_CLIENT_ID);
+    console.log('GOOGLE_CLIENT_SECRET exists:', !!process.env.GOOGLE_CLIENT_SECRET);
+    console.log('Environment variables available:', Object.keys(process.env).filter(key =>
+      key.includes('GOOGLE') || key.includes('CLIENT')
+    ));
+
+    // Get frontend URL from environment variable or use default
+    const frontendUrl = process.env.FRONTEND_URL || 'https://bookauraba.netlify.app';
+
+    // Redirect to login page with error message
+    return res.redirect(`${frontendUrl}/login?error=google_auth_not_configured`);
+  }
+
   passport.authenticate('google', {
     failureRedirect: '/login',
     failureMessage: true
-  }),
-  (req, res) => {
+  })(req, res, next);
+}, (req, res) => {
     try {
+      console.log('Google OAuth authentication successful');
+      console.log('- User:', req.user ? req.user._id : 'No user');
       // Generate JWT Token for Google OAuth
       const token = jwt.sign({
         id: req.user._id,
@@ -290,21 +339,50 @@ router.get('/auth/google/callback',
         httpOnly: false // This one needs to be accessible from JS
       });
 
-      // Get frontend URL from environment variable or use default
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      // Determine the frontend URL based on the request origin
+      let frontendUrl = process.env.FRONTEND_URL || 'https://bookauraba.netlify.app/';
 
-      // Redirect to frontend with success message and user data
-      res.redirect(`${frontendUrl}/?success=true&token=${token}`);
+      // Try to get the origin from the request headers
+      const origin = req.get('origin') || req.headers.referer;
+
+      if (origin) {
+        // Extract the origin from the referer if available
+        try {
+          const url = new URL(origin);
+          frontendUrl = `${url.protocol}//${url.host}`;
+          console.log('Using origin from request:', frontendUrl);
+        } catch (err) {
+          console.log('Error parsing origin:', err.message);
+        }
+      } else if (req.headers.host) {
+        // If no origin/referer, try to determine from host
+        const host = req.headers.host;
+
+        // For localhost development
+        if (host.includes('localhost') || host.includes('127.0.0.1')) {
+          frontendUrl = `http://${host.includes(':') ? host : host + ':5173'}`;
+          console.log('Using localhost frontend URL:', frontendUrl);
+        }
+      }
+
+      // Include user ID in the URL for client-side processing
+      const userId = req.user._id;
+
+      console.log('Redirecting to frontend URL:', frontendUrl);
+
+      // Redirect to frontend with success message, token, and user ID
+      res.redirect(`${frontendUrl}/?success=true&token=${token}&user_id=${userId}`);
     } catch (error) {
       console.error('Error in Google callback:', error);
       // Get frontend URL from environment variable or use default
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const frontendUrl = process.env.FRONTEND_URL || 'https://bookauraba.netlify.app/';
       res.redirect(`${frontendUrl}/login?error=authentication_failed`);
     }
   }
 );
 
-// Logout Route
+// Logout Route - Only clears authentication cookies and session
+// Does NOT delete any user data from the database
 router.get('/logout', (req, res) => {
   try {
     // Set secure cookie settings based on environment
@@ -544,10 +622,22 @@ router.delete('/delete-account', verifyToken, async (req, res) => {
     // Delete user
     await User.findByIdAndDelete(userId);
 
-    // Clear cookies
-    res.clearCookie('authToken');
-    res.clearCookie('token');
-    res.clearCookie('isLoggedIn');
+    // Set secure cookie settings based on environment
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieSettings = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      domain: isProduction ? '.onrender.com' : undefined
+    };
+
+    // Clear all auth cookies with proper settings
+    res.clearCookie('authToken', cookieSettings);
+    res.clearCookie('token', cookieSettings);
+    res.clearCookie('isLoggedIn', {
+      ...cookieSettings,
+      httpOnly: false
+    });
 
     res.status(200).json({
       success: true,

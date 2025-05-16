@@ -27,7 +27,7 @@ const Flashcards = () => {
   const fetchDecks = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('https://s89-akhil-bookaura-2.onrender.com/api/flashcards/decks', {
+      const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/flashcards/decks', {
         withCredentials: true
       });
       setDecks(response.data.data);
@@ -42,7 +42,7 @@ const Flashcards = () => {
   const fetchDeckDetails = async (deckId) => {
     try {
       setLoading(true);
-      const response = await axios.get(`https://s89-akhil-bookaura-2.onrender.com/api/flashcards/decks/${deckId}`, {
+      const response = await axios.get(`https://s89-akhil-bookaura-3.onrender.com/api/flashcards/decks/${deckId}`, {
         withCredentials: true
       });
       setSelectedDeck(response.data.data);
@@ -117,7 +117,7 @@ const Flashcards = () => {
       setUploadProgress(10);
 
       // First phase: Upload the file
-      const response = await axios.post('https://s89-akhil-bookaura-2.onrender.com/api/flashcards/generate', formData, {
+      const response = await axios.post('https://s89-akhil-bookaura-3.onrender.com/api/flashcards/generate', formData, {
         withCredentials: true,
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -248,14 +248,12 @@ const Flashcards = () => {
                   <p>Drag & drop a PDF file here, or click to browse</p>
                 </>
               )}
-              <p>This may take time</p>
               <input
                 type="file"
                 accept=".pdf"
                 onChange={handleFileChange}
                 className="file-input"
               />
-
             </div>
 
             {isUploading && (
@@ -267,7 +265,6 @@ const Flashcards = () => {
                   ></div>
                 </div>
                 <span>{uploadProgress}%</span>
-
               </div>
             )}
 

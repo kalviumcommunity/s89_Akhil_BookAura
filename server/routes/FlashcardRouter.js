@@ -6,9 +6,8 @@
 const express = require('express');
 const multer = require('multer');
 const axios = require('axios');
-const { verifyToken } = require('../middleware/auth');
-const { loadModel } = require('../utils/modelLoader');
-const FlashcardDeck = loadModel('FlashcardModel');
+const auth = require('../middleware/auth');
+const FlashcardDeck = require('../model/FlashcardModel');
 const mongoose = require('mongoose');
 
 // Configure multer for file uploads
@@ -103,7 +102,6 @@ const flashcardHandlers = {
 
       console.log('Preparing to send file to chatbot-api:', req.file.originalname, 'Size:', req.file.size);
 
-      // Create form data to send to the AI API
       const FormData = require('form-data');
       const formData = new FormData();
       formData.append('file', req.file.buffer, {
@@ -113,7 +111,6 @@ const flashcardHandlers = {
 
       console.log('Sending request to chatbot-api...');
 
-      // Call the external AI API to generate flashcards
       const aiResponse = await axios.post('https://s89-akhil-bookaura-1.onrender.com/chatbot-file', formData, {
         headers: {
           ...formData.getHeaders()
@@ -125,7 +122,6 @@ const flashcardHandlers = {
 
       console.log('Response received from chatbot-api with', aiResponse.data.length, 'flashcards');
 
-      // Create a new flashcard deck with the generated flashcards
       const newDeck = new FlashcardDeck({
         userId,
         title,
@@ -151,7 +147,6 @@ const flashcardHandlers = {
     } catch (error) {
       console.error('Error generating flashcards:', error);
 
-      // Detailed error logging
       if (error.response) {
         console.error('Error response data:', error.response.data);
         console.error('Error response status:', error.response.status);
@@ -160,10 +155,7 @@ const flashcardHandlers = {
       }
 
       let errorMessage = 'Error generating flashcards';
-
-      // Extract more detailed error information if available
       if (error.response && error.response.data) {
-        console.error('API error response:', error.response.data);
         errorMessage = error.response.data.message || errorMessage;
       }
 
@@ -176,7 +168,7 @@ const flashcardHandlers = {
     }
   },
 
-  // Save pre-generated flashcards (alternative approach)
+  // Save pre-generated flashcards
   saveGeneratedFlashcards: async (req, res) => {
     try {
       const userId = req.user.id;
@@ -198,7 +190,6 @@ const flashcardHandlers = {
 
       console.log('Saving pre-generated flashcards, count:', flashcards.length);
 
-      // Create a new flashcard deck with the provided flashcards
       const newDeck = new FlashcardDeck({
         userId,
         title,
@@ -269,12 +260,11 @@ const flashcardHandlers = {
 
 // Export a function that registers the routes with the app
 module.exports = function(app) {
-  // Register all flashcard routes with the correct paths
-  app.get('/api/flashcards/decks', verifyToken, flashcardHandlers.getAllDecks);
-  app.get('/api/flashcards/decks/:deckId', verifyToken, flashcardHandlers.getDeckById);
-  app.post('/api/flashcards/generate', verifyToken, upload.single('pdfFile'), flashcardHandlers.generateFlashcards);
-  app.post('/api/flashcards/save-generated', verifyToken, express.json(), flashcardHandlers.saveGeneratedFlashcards);
-  app.delete('/api/flashcards/decks/:deckId', verifyToken, flashcardHandlers.deleteDeck);
+  app.get('/api/flashcards/decks', auth, flashcardHandlers.getAllDecks);
+  app.get('/api/flashcards/decks/:deckId', auth, flashcardHandlers.getDeckById);
+  app.post('/api/flashcards/generate', auth, upload.single('pdfFile'), flashcardHandlers.generateFlashcards);
+  app.post('/api/flashcards/save-generated', auth, express.json(), flashcardHandlers.saveGeneratedFlashcards);
+  app.delete('/api/flashcards/decks/:deckId', auth, flashcardHandlers.deleteDeck);
 
   console.log('Flashcard routes registered successfully');
   return app;

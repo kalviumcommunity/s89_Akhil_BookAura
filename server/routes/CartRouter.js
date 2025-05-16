@@ -24,7 +24,7 @@ router.get('/', verifyToken, async (req, res) => {
             });
         }
 
-        // Return cart items from user document
+        
         console.log('Cart found with items:', user.cartItems ? user.cartItems.length : 0);
 
         res.status(200).json({

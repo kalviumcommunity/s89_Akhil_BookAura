@@ -29,6 +29,16 @@ router.get('/', verifyToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching chat history:', error);
+
+    // Check for authentication errors
+    if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication failed. Please log in again.',
+        error: error.message
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Error fetching chat history',
@@ -77,6 +87,16 @@ router.post('/', verifyToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error saving message to chat history:', error);
+
+    // Check for authentication errors
+    if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication failed. Please log in again.',
+        error: error.message
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Error saving message to chat history',
@@ -99,6 +119,16 @@ router.delete('/', verifyToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error clearing chat history:', error);
+
+    // Check for authentication errors
+    if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication failed. Please log in again.',
+        error: error.message
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Error clearing chat history',
