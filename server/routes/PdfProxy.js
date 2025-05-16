@@ -7,6 +7,9 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
+// Load environment variables using our centralized utility
+require('../utils/envConfig');
+
 // Generate a signed URL for Cloudinary resources
 // First try to authenticate, but allow unauthenticated access with limited functionality
 router.get('/signed-url', async (req, res) => {
