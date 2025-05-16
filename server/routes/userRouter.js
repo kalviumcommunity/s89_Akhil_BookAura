@@ -271,31 +271,7 @@ router.get('/auth/google', (req, res, next) => {
 
 // Google OAuth Callback Route
 router.get('/auth/google/callback',
-  (req, res, next) => {
-    console.log('Google OAuth callback received');
-    passport.authenticate('google', (err, user) => {
-      if (err) {
-        console.error('Google authentication error:', err);
-        return res.redirect('https://bookauraba.netlify.app/login?error=authentication_failed&reason=' + encodeURIComponent(err.message));
-      }
-
-      if (!user) {
-        console.error('Google authentication failed - no user returned');
-        return res.redirect('https://bookauraba.netlify.app/login?error=authentication_failed&reason=no_user');
-      }
-
-      // Log in the user
-      req.logIn(user, (loginErr) => {
-        if (loginErr) {
-          console.error('Error logging in user after Google auth:', loginErr);
-          return res.redirect('https://bookauraba.netlify.app/login?error=authentication_failed&reason=login_error');
-        }
-
-        // Continue with the callback
-        next();
-      });
-    })(req, res, next);
-  },
+  passport.authenticate('google', { failureRedirect: 'https://bookauraba.netlify.app/login?error=authentication_failed' }),
   (req, res) => {
     try {
       console.log('Google OAuth callback successful, user:', req.user._id);
@@ -333,7 +309,6 @@ router.get('/auth/google/callback',
         path: '/' // Ensure cookie is available on all paths
       });
 
-      // Get frontend URL from environment variable or use default
       // For production, hardcode the Netlify URL to ensure consistency
       const frontendUrl = 'https://bookauraba.netlify.app';
       console.log('Redirecting to frontend URL:', frontendUrl);
@@ -349,11 +324,8 @@ router.get('/auth/google/callback',
       // Encode user data as a URL-safe string
       const encodedUserData = encodeURIComponent(JSON.stringify(userData));
 
-      // Add timestamp to prevent caching issues
-      const timestamp = Date.now();
-
       // Log the redirect URL for debugging
-      const redirectUrl = `${frontendUrl}/?success=true&token=${token}&userData=${encodedUserData}&t=${timestamp}`;
+      const redirectUrl = `${frontendUrl}/google-auth-test?success=true&token=${token}&userData=${encodedUserData}`;
       console.log('Redirecting to:', redirectUrl);
 
       // Redirect to frontend with success message, token, and user data

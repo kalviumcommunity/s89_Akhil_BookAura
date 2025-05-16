@@ -23,6 +23,7 @@ import TestPdfJsViewer from './pages/TestPdfJsViewer';
 import TestSimplePdfViewer from './pages/TestSimplePdfViewer';
 import TestBasicPdfViewer from './pages/TestBasicPdfViewer';
 import TestPdfUpload from './pages/TestPdfUpload';
+import GoogleAuthTest from './pages/GoogleAuthTest';
 
 const pageTransition = {
   initial: { opacity: 0, x: -100 },
@@ -156,6 +157,10 @@ const AllRouting = () => {
         <Route
           path="/test-pdf-upload"
           element={<TestPdfUpload />}
+        />
+        <Route
+          path="/google-auth-test"
+          element={<GoogleAuthTest />}
         />
       </Routes>
     </AnimatePresence>
