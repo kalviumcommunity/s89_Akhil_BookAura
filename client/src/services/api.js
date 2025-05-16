@@ -13,6 +13,18 @@ const getBaseUrl = () => {
     return 'http://localhost:5000';
   }
 
+  // Check if we're running on a specific domain
+  const hostname = window.location.hostname;
+
+  // Map hostnames to API URLs
+  if (hostname === 'bookauraba.netlify.app') {
+    return 'https://s89-akhil-bookaura-3.onrender.com';
+  } else if (hostname === 'bookaura.netlify.app') {
+    return 'https://s89-akhil-bookaura-2.onrender.com';
+  } else if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+    return 'http://localhost:5000';
+  }
+
   // Production default
   return 'https://s89-akhil-bookaura-3.onrender.com';
 };

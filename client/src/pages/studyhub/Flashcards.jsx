@@ -248,14 +248,12 @@ const Flashcards = () => {
                   <p>Drag & drop a PDF file here, or click to browse</p>
                 </>
               )}
-              <p>This may take time</p>
               <input
                 type="file"
                 accept=".pdf"
                 onChange={handleFileChange}
                 className="file-input"
               />
-
             </div>
 
             {isUploading && (
@@ -267,7 +265,6 @@ const Flashcards = () => {
                   ></div>
                 </div>
                 <span>{uploadProgress}%</span>
-
               </div>
             )}
 

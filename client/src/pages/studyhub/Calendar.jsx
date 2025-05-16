@@ -38,9 +38,16 @@ const Calendar = () => {
   const fetchEvents = useCallback(async (start, end) => {
     try {
       setLoading(true);
-      const response = await axios.get('https://s89-akhil-bookaura-2.onrender.com/api/events', {
+
+      // Get auth token from localStorage
+      const authToken = localStorage.getItem('authToken');
+
+      const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/events', {
         params: { start, end },
-        withCredentials: true
+        withCredentials: true,
+        headers: {
+          'Authorization': `Bearer ${authToken || ''}`
+        }
       });
 
       if (response.data.success) {
@@ -62,7 +69,13 @@ const Calendar = () => {
       }
     } catch (err) {
       console.error('Error fetching events:', err);
-      setError('Failed to fetch events. Please try again later.');
+
+      // Check if this is an authentication error
+      if (err.response && err.response.status === 401) {
+        setError('You need to be logged in to view your calendar. Please log in and try again.');
+      } else {
+        setError('Failed to fetch events. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
@@ -154,9 +167,15 @@ const Calendar = () => {
       let response;
 
       if (modalMode === 'add') {
+        // Get auth token from localStorage
+        const authToken = localStorage.getItem('authToken');
+
         // Create new event
-        response = await axios.post('https://s89-akhil-bookaura-2.onrender.com/api/events', eventData, {
-          withCredentials: true
+        response = await axios.post('https://s89-akhil-bookaura-3.onrender.com/api/events', eventData, {
+          withCredentials: true,
+          headers: {
+            'Authorization': `Bearer ${authToken || ''}`
+          }
         });
 
         if (response.data.success) {
@@ -175,9 +194,15 @@ const Calendar = () => {
           setEvents([...events, newEvent]);
         }
       } else {
+        // Get auth token from localStorage
+        const authToken = localStorage.getItem('authToken');
+
         // Update existing event
-        response = await axios.put(`https://s89-akhil-bookaura-2.onrender.com/api/events/${selectedEvent.id}`, eventData, {
-          withCredentials: true
+        response = await axios.put(`https://s89-akhil-bookaura-3.onrender.com/api/events/${selectedEvent.id}`, eventData, {
+          withCredentials: true,
+          headers: {
+            'Authorization': `Bearer ${authToken || ''}`
+          }
         });
 
         if (response.data.success) {
@@ -219,8 +244,14 @@ const Calendar = () => {
     if (!selectedEvent) return;
 
     try {
-      const response = await axios.delete(`https://s89-akhil-bookaura-2.onrender.com/api/events/${selectedEvent.id}`, {
-        withCredentials: true
+      // Get auth token from localStorage
+      const authToken = localStorage.getItem('authToken');
+
+      const response = await axios.delete(`https://s89-akhil-bookaura-3.onrender.com/api/events/${selectedEvent.id}`, {
+        withCredentials: true,
+        headers: {
+          'Authorization': `Bearer ${authToken || ''}`
+        }
       });
 
       if (response.data.success) {
@@ -265,6 +296,11 @@ const Calendar = () => {
         {error && (
           <div className="error-message">
             {error}
+            {error.includes('logged in') && (
+              <a href="/login?redirect=/studyhub/calendar" className="login-button">
+                Log In
+              </a>
+            )}
           </div>
         )}
 

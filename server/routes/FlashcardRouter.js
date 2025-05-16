@@ -2,9 +2,8 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const axios = require('axios');
-const { verifyToken } = require('../middleware/auth');
-const { loadModel } = require('../utils/modelLoader');
-const FlashcardDeck = loadModel('FlashcardModel');
+const auth = require('../middleware/auth');
+const FlashcardDeck = require('../model/FlashcardModel');
 const mongoose = require('mongoose');
 
 // Configure multer for file uploads
@@ -15,7 +14,7 @@ const upload = multer({
 });
 
 // Get all flashcard decks for the current user
-router.get('/decks', verifyToken, async (req, res) => {
+router.get('/decks', auth, async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -39,7 +38,7 @@ router.get('/decks', verifyToken, async (req, res) => {
 });
 
 // Get a specific flashcard deck by ID
-router.get('/decks/:deckId', verifyToken, async (req, res) => {
+router.get('/decks/:deckId', auth, async (req, res) => {
   try {
     const { deckId } = req.params;
     const userId = req.user.id;
@@ -76,7 +75,7 @@ router.get('/decks/:deckId', verifyToken, async (req, res) => {
 });
 
 // Generate flashcards from PDF using the external AI API
-router.post('/generate', verifyToken, upload.single('pdfFile'), async (req, res) => {
+router.post('/generate', auth, upload.single('pdfFile'), async (req, res) => {
   try {
     const userId = req.user.id;
     const { title, description } = req.body;
@@ -171,7 +170,7 @@ router.post('/generate', verifyToken, upload.single('pdfFile'), async (req, res)
 });
 
 // Save pre-generated flashcards (alternative approach)
-router.post('/save-generated', verifyToken, express.json(), async (req, res) => {
+router.post('/save-generated', auth, express.json(), async (req, res) => {
   try {
     const userId = req.user.id;
     const { title, description, flashcards } = req.body;
@@ -225,7 +224,7 @@ router.post('/save-generated', verifyToken, express.json(), async (req, res) => 
 });
 
 // Delete a flashcard deck
-router.delete('/decks/:deckId', verifyToken, async (req, res) => {
+router.delete('/decks/:deckId', auth, async (req, res) => {
   try {
     const { deckId } = req.params;
     const userId = req.user.id;
@@ -260,21 +259,7 @@ router.delete('/decks/:deckId', verifyToken, async (req, res) => {
   }
 });
 
-// Test Gemini API connection
-router.get('/test-gemini', verifyToken, async (req, res) => {
-  try {
-    res.status(200).json({
-      success: true,
-      message: 'Gemini API connection test endpoint'
-    });
-  } catch (error) {
-    console.error('Error testing Gemini API:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Gemini API connection failed',
-      error: error.message
-    });
-  }
-});
+
 
 module.exports = router;
+

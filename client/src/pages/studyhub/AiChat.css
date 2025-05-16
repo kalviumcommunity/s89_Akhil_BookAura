@@ -178,6 +178,80 @@
   word-break: break-word;
 }
 
+/* User message with image */
+.user-message-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.message-image-container {
+  max-width: 100%;
+  margin-bottom: 5px;
+}
+
+.message-image {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+/* Image preview in input area */
+.image-preview-container {
+  padding: 10px 16px;
+  background-color: #F5F1EC;
+  border-top: 1px solid #E6D9CC;
+}
+
+.image-preview-container.mobile {
+  border-bottom: 1px solid #E6D9CC;
+  border-top: none;
+}
+
+.image-preview {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.image-preview img {
+  max-height: 120px;
+  max-width: 100%;
+  border-radius: 8px;
+  object-fit: contain;
+  border: 1px solid #E6D9CC;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #A67C52;
+  border: 1px solid #E6D9CC;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+
+.remove-image-btn:hover {
+  background-color: #A67C52;
+  color: white;
+}
+
+.image-preview-hint {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 5px 0 0;
+}
+
 .typing-indicator {
   display: flex;
   align-items: center;
@@ -225,7 +299,8 @@
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
 }
 
-.chat-input input {
+.chat-input input,
+.chat-input textarea.chat-textarea {
   flex: 1;
   padding: 12px 16px;
   border: 1px solid #E6D9CC;
@@ -234,9 +309,16 @@
   background-color: white;
   outline: none;
   transition: border-color 0.2s ease;
+  resize: none; /* Prevent manual resizing */
+  overflow-y: auto; /* Add scrollbar when needed */
+  min-height: 42px; /* Match the height of the send button */
+  max-height: 120px; /* Limit maximum height */
+  line-height: 1.4;
+  font-family: inherit; /* Use the same font as the rest of the app */
 }
 
-.chat-input input:focus {
+.chat-input input:focus,
+.chat-input textarea.chat-textarea:focus {
   border-color: #A67C52;
 }
 
@@ -579,8 +661,10 @@
     padding: 10px;
   }
 
-  .chat-input input {
+  .chat-input input,
+  .chat-input textarea.chat-textarea {
     padding: 10px 12px;
+    max-height: 100px; /* Slightly smaller max height on mobile */
   }
 
   .send-button {
@@ -777,8 +861,10 @@
     padding: 10px;
   }
 
-  .chat-input input {
+  .chat-input input,
+  .chat-input textarea.chat-textarea {
     padding: 10px;
+    max-height: 80px; /* Even smaller max height on very small screens */
   }
 
   .send-button {

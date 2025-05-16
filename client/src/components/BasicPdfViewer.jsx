@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Download, Maximize, Minimize, Moon, Sun, ExternalLink, FileText, Volume2 } from 'lucide-react';
 import './PdfViewer.css';
+import { getPdfSignedUrl, getPdfFetchUrl, getPlaceholderPdfUrl } from '../utils/apiConfig';
 
 const BasicPdfViewer = ({ fileUrl }) => {
   const [loading, setLoading] = useState(true);
@@ -42,10 +43,16 @@ const BasicPdfViewer = ({ fileUrl }) => {
           }
 
           try {
+            // Get the auth token from localStorage
+            const authToken = localStorage.getItem('authToken');
+
             // Try to get a signed URL from the server
-            const response = await axios.get(`https://s89-akhil-bookaura-2.onrender.com/api/pdf/signed-url`, {
+            const response = await axios.get(getPdfSignedUrl(), {
               params: { url: finalUrl },
-              withCredentials: true
+              withCredentials: true,
+              headers: {
+                'Authorization': `Bearer ${authToken || ''}`
+              }
             });
 
             if (response.data.success) {
@@ -56,7 +63,30 @@ const BasicPdfViewer = ({ fileUrl }) => {
             }
           } catch (fetchError) {
             console.error('Error fetching signed URL:', fetchError);
-            console.log('Using direct URL with .pdf extension as fallback');
+
+            // Check if this is an authentication error (401)
+            if (fetchError.response && fetchError.response.status === 401) {
+              console.log('Authentication error when fetching signed URL, trying to use direct URL');
+
+              // Try to use the direct URL with .pdf extension
+              console.log('Using direct URL with .pdf extension as fallback');
+
+              // If we're in development, try to use the placeholder PDF
+              if (import.meta.env.DEV) {
+                try {
+                  console.log('In development environment, trying to use placeholder PDF');
+                  const placeholderResponse = await axios.get(getPlaceholderPdfUrl());
+                  if (placeholderResponse.data && placeholderResponse.data.url) {
+                    finalUrl = placeholderResponse.data.url;
+                    console.log('Using placeholder PDF URL:', finalUrl);
+                  }
+                } catch (placeholderError) {
+                  console.error('Error fetching placeholder PDF:', placeholderError);
+                }
+              }
+            } else {
+              console.log('Using direct URL with .pdf extension as fallback');
+            }
           }
         }
 
@@ -114,12 +144,18 @@ const BasicPdfViewer = ({ fileUrl }) => {
   // Handle download button click
   const handleDownload = async () => {
     try {
+      // Get the auth token from localStorage
+      const authToken = localStorage.getItem('authToken');
+
       // Use the proxy endpoint to get the PDF data
       console.log('Downloading PDF via proxy for:', fileUrl);
-      const response = await axios.get(`https://s89-akhil-bookaura-2.onrender.com/api/pdf/fetch-pdf`, {
+      const response = await axios.get(getPdfFetchUrl(), {
         params: { url: fileUrl },
         responseType: 'blob',
-        withCredentials: true
+        withCredentials: true,
+        headers: {
+          'Authorization': `Bearer ${authToken || ''}`
+        }
       });
 
       // Create a blob URL and trigger download
@@ -134,7 +170,32 @@ const BasicPdfViewer = ({ fileUrl }) => {
       document.body.removeChild(a);
     } catch (err) {
       console.error('Error downloading PDF:', err);
-      alert('Failed to download the PDF. Please try again later.');
+
+      // Check if this is an authentication error (401)
+      if (err.response && err.response.status === 401) {
+        console.log('Authentication error when downloading PDF, trying direct download');
+
+        try {
+          // Try to download directly from the URL
+          const directUrl = processedUrl || fileUrl;
+          console.log('Attempting direct download from:', directUrl);
+
+          // Create a temporary link and trigger download
+          const a = document.createElement('a');
+          a.href = directUrl;
+          a.download = `document-${Date.now()}.pdf`;
+          a.target = '_blank'; // Open in new tab as fallback
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+
+          return; // Exit if successful
+        } catch (directErr) {
+          console.error('Direct download also failed:', directErr);
+        }
+      }
+
+      alert('Failed to download the PDF. Please try again later or open in a new tab.');
     }
   };
 
@@ -280,7 +341,7 @@ Key points:
 
       // In a real implementation, you would call an API like:
       /*
-      const response = await axios.post('https://s89-akhil-bookaura-2.onrender.com/api/summarize-pdf-page', {
+      const response = await axios.post('https://s89-akhil-bookaura-3.onrender.com/api/summarize-pdf-page', {
         url: processedUrl,
         page: currentPage
       });

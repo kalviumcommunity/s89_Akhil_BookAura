@@ -8,11 +8,16 @@ import { SafeImage, getProxiedImageUrl, handleImageError } from '../utils/imageU
 import {useNavigate,useLocation} from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
 import axios from 'axios';
+import { getFeaturedBooksUrl } from '../utils/apiConfig';
+import { useAuth } from '../context/AuthContext';
+import { storeUserDataInCookies } from '../utils/cookieUtils';
 
 const Home = () => {
   const { syncCartWithServer } = useCart();
+  const { refreshAuthState } = useAuth();
   const navigate = useNavigate();
   const [featuredBooks, setFeaturedBooks] = useState([]);
+  const [showLoginSuccess, setShowLoginSuccess] = useState(false);
   const location = useLocation();
 
   // Check if we need to sync cart after Google login
@@ -21,16 +26,98 @@ const Home = () => {
       window.history.replaceState({}, document.title); // prevent infinite reload
       window.location.reload(); // full reload
     }
+
     const fetchBooks = async () => {
-    try {
-      const featuredResponse = await axios.get('https://s89-akhil-bookaura-2.onrender.com/router/featured');
+      try {
+        const featuredResponse = await axios.get(getFeaturedBooksUrl());
         setFeaturedBooks(featuredResponse.data.data.slice(0, 4)); // Limit to 4 books
-    } catch (error) {
-      console.log('Failed to fetch featured books:', error);
-      console.log(error)
+      } catch (error) {
+        console.log('Failed to fetch featured books:', error);
+        console.log(error)
+      }
     }
-  }
-  fetchBooks();
+
+    fetchBooks();
+
+    // Handle Google OAuth callback
+    const handleGoogleCallback = async () => {
+      // Check for Google OAuth callback parameters
+      const params = new URLSearchParams(window.location.search);
+      const success = params.get('success');
+      const token = params.get('token');
+      const userId = params.get('user_id');
+
+      if (success === 'true' && token) {
+        console.log('Google login successful, processing token');
+
+        // Store the token in localStorage
+        localStorage.setItem('authToken', token);
+
+        // Extract user data from token or URL parameters
+        let userData = { _id: userId };
+
+        // Try to extract more user data from token
+        try {
+          // JWT tokens are in format: header.payload.signature
+          // We need the payload part which is the second part
+          const payload = token.split('.')[1];
+          // The payload is base64 encoded, so we need to decode it
+          const decodedPayload = JSON.parse(atob(payload));
+
+          if (decodedPayload.id) {
+            console.log('Extracted user ID from token:', decodedPayload.id);
+            userData._id = decodedPayload.id;
+            localStorage.setItem('userId', decodedPayload.id);
+          }
+
+          // Extract other user data if available
+          if (decodedPayload.email) {
+            userData.email = decodedPayload.email;
+          }
+
+          if (decodedPayload.name) {
+            userData.username = decodedPayload.name;
+          }
+        } catch (error) {
+          console.error('Error decoding JWT token:', error);
+        }
+
+        // Store user data in cookies
+        storeUserDataInCookies(userData, token);
+
+        console.log('Stored Google user data in cookies:', userData);
+
+        // Log the login status after setting everything
+        console.log('Updated login status:',
+          document.cookie.includes('isLoggedIn=true') ? 'Cookie set' : 'Cookie not set',
+          document.cookie.includes('userLoggedIn=true') ? 'userLoggedIn set' : 'userLoggedIn not set',
+          document.cookie.includes('googleAuth=true') ? 'googleAuth set' : 'googleAuth not set',
+          localStorage.getItem('authToken') ? 'Token set' : 'Token not set',
+          localStorage.getItem('userId') ? 'UserID set' : 'UserID not set'
+        );
+
+        // Refresh the authentication state
+        await refreshAuthState();
+
+        // Sync cart with server
+        await syncCartWithServer();
+
+        // Show success notification
+        setShowLoginSuccess(true);
+
+        // Hide notification after 3 seconds
+        setTimeout(() => {
+          setShowLoginSuccess(false);
+        }, 3000);
+
+        // Remove the parameters from URL to prevent reprocessing on refresh
+        window.history.replaceState({}, document.title, '/');
+      }
+    };
+
+    handleGoogleCallback();
+
+    // Check if we need to sync cart after normal login
     const shouldSyncCart = localStorage.getItem('syncCartAfterLogin');
     if (shouldSyncCart === 'true') {
       // Sync cart with server
@@ -38,11 +125,16 @@ const Home = () => {
       // Remove the flag
       localStorage.removeItem('syncCartAfterLogin');
     }
-  }, [location.state,syncCartWithServer]);
+  }, [location.state, syncCartWithServer]);
 
   return (
     <div>
       <Navbar/>
+      {showLoginSuccess && (
+        <div className="login-success-notification">
+          <p>Google login successful! Welcome back.</p>
+        </div>
+      )}
       <div className='main-box'>
         <div className='quote-container'>
           <h1 className='quote-line'>TO SUCCEED<br/>YOU MUST<br/>READ</h1>
