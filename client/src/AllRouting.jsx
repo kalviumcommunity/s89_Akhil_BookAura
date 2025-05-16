@@ -15,7 +15,6 @@ import CancelPage from './pages/MarketPlace/CancelPage';
 import MyBooksPage from './pages/MarketPlace/MyBooksPage';
 import CalendarPage from './pages/studyhub/Calendar';
 import StudyHome from './pages/studyhub/StudyHome';
-import Flashcards from './pages/studyhub/FlashcardsFixed';
 import AiChat from './pages/studyhub/AiChat';
 import Profile from './pages/Profile';
 import TestPdfViewer from './pages/TestPdfViewer';
@@ -126,10 +125,6 @@ const AllRouting = () => {
           element={<CalendarPage />}
         />
 
-        <Route
-          path="/flashcards"
-          element={<Flashcards />}
-        />
         <Route
           path="/aichat"
           element={<AiChat />}

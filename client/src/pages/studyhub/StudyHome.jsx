@@ -1,19 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StudyHubNavbar from '../../components/StudyHubNavbar';
 import './StudyHome.css';
 import {
   ChevronRight,
   Calendar,
-  BookOpen,
   MessageSquare,
   Clock,
-  TrendingUp,
   Award,
   BookMarked
 } from 'lucide-react';
 import logo from '../../images/logo.png';
-import moment from 'moment';
 import { useSchedule } from '../../context/ScheduleContext';
 
 const StudyHome = () => {
@@ -24,12 +21,6 @@ const StudyHome = () => {
   useEffect(() => {
     fetchSchedules();
   }, [fetchSchedules]);
-
-  // Function to navigate to calendar page
-  const goToCalendar = () => {
-    navigate('/calendar');
-  };
-
 
 
   // Show loading state
@@ -135,17 +126,7 @@ const StudyHome = () => {
               </button>
             </div>
 
-            <div className="feature-card" onClick={() => navigate('/flashcards')}>
-              <div className="feature-icon">
-                <BookOpen size={24} />
-              </div>
-              <h3>Flashcards</h3>
-              <p>Create and review flashcards to reinforce your learning</p>
-              <button className="feature-btn">
-                <ChevronRight size={16} />
-                Study Now
-              </button>
-            </div>
+
 
             <div className="feature-card" onClick={() => navigate('/aichat')}>
               <div className="feature-icon">
@@ -173,7 +154,7 @@ const StudyHome = () => {
           </div>
         </div>
 
-        
+
 
         {/* Quick Tips Section */}
         <div className="tips-section">

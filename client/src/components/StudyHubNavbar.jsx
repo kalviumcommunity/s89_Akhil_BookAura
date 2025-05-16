@@ -47,17 +47,7 @@ const StudyHubNavbar = () => {
             <CalendarIcon size={16} className="nav-icon" />
             Calendar
           </li>
-          <li
-            className={
-              location.pathname === "/flashcards" ? "active-1" : "notactive-1"
-            }
-            onClick={() => {
-              navigate("/flashcards");
-              setIsMenuOpen(false);
-            }}
-          >
-            Flashcards
-          </li>
+
           <li
             className={
               location.pathname === "/aichat" ? "active-1" : "notactive-1"
