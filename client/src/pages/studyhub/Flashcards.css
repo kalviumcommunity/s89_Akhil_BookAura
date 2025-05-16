@@ -172,6 +172,39 @@
   color: #e74c3c;
 }
 
+.auth-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  background-color: #fdf7f7;
+  border-radius: 10px;
+  margin: 40px auto;
+  max-width: 600px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.auth-error p {
+  margin-bottom: 20px;
+  font-size: 16px;
+  color: #e74c3c;
+}
+
+.auth-error .login-button {
+  display: inline-block;
+  background-color: #A67C52;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.auth-error .login-button:hover {
+  background-color: #8a6642;
+}
+
 /* Flashcard Study Interface */
 .flashcard-study {
   max-width: 800px;

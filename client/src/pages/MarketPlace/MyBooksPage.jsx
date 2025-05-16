@@ -7,6 +7,7 @@ import BasicPdfViewer from '../../components/BasicPdfViewer';
 import ErrorBoundary from '../../components/ErrorBoundary';
 import { Book, Calendar, ArrowLeft, FileText } from 'lucide-react';
 import { SafeImage } from '../../utils/imageUtils';
+import { getMyPurchasesUrl } from '../../utils/apiConfig';
 import './MyBooksPage.css';
 import LoadingAnimation from '../../components/LoadingAnimation';
 
@@ -34,97 +35,30 @@ const MyBooksPage = () => {
           console.log('No auth token found, user may not be logged in');
         }
 
-        const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/payment/my-purchases', {
+        // Create a minimal request configuration to avoid CORS issues
+        const response = await axios.get(getMyPurchasesUrl(), {
           withCredentials: true,
           headers: {
-            'Authorization': `Bearer ${authToken || ''}`,
-            'Cache-Control': 'no-cache' // Prevent caching
-          },
-          timeout: 15000 // 15 second timeout
+            'Authorization': `Bearer ${authToken || ''}`
+            // No additional headers that might trigger CORS preflight
+          }
         });
 
         if (response.data.success) {
           console.log('Purchased books fetched successfully:', response.data);
           console.log(`Received ${response.data.count || 0} purchased books from server`);
 
-          // Process books to ensure URLs are valid and remove duplicates
-          const bookMap = new Map();
-          const processedBooks = [];
+          console.log(`Processing ${response.data.purchasedBooks?.length || 0} books`);
 
-          // Process each book
-          (response.data.purchasedBooks || []).forEach(book => {
-            try {
-              // Safely access bookId with fallback
-              const bookId = (book.bookId?.toString() || book._id?.toString() || Math.random().toString());
-
-              // Process the book URL
-              let processedBook = book;
-
-              // Ensure book has a valid URL
-              if (!book.url || book.url === 'placeholder' || book.url.includes('placeholder.url')) {
-                console.log(`Book ${book.title} has invalid URL: ${book.url}, using default PDF`);
-                processedBook = {
-                  ...book,
-                  url: '/assets/better-placeholder.pdf'
-                };
-              } else {
-                // Keep the original URL - we'll add .pdf extension only when needed for display/download
-                processedBook = { ...book };
-              }
-
-              // Check if this is a duplicate book
-              if (!bookMap.has(bookId)) {
-                // First time seeing this book, add it
-                bookMap.set(bookId, processedBook);
-                processedBooks.push(processedBook);
-              } else {
-                console.log(`Skipping duplicate book: ${book.title} (${bookId})`);
-              }
-            } catch (err) {
-              console.error('Error processing book:', err, book);
-              // Continue with next book
-            }
-          });
-
-          console.log(`Processed ${processedBooks.length} unique books out of ${response.data.purchasedBooks?.length || 0} total`);
-
-          // Store the processed purchased books
+          // Use our processBooks function to handle the data
+          const processedBooks = response.data.purchasedBooks || [];
           setPurchasedBooks(processedBooks);
 
-          // Group books by purchase date for display
-          const books = processedBooks;
-
-          // Group books by payment ID (same transaction)
-          const groupedByPaymentId = {};
-
-          books.forEach(book => {
-            try {
-              const paymentId = book.paymentId || 'unknown';
-              const purchaseDate = book.purchaseDate || new Date();
-
-              if (!groupedByPaymentId[paymentId]) {
-                groupedByPaymentId[paymentId] = {
-                  _id: paymentId,
-                  purchaseDate: purchaseDate,
-                  books: [],
-                  totalAmount: 0
-                };
-              }
-
-              groupedByPaymentId[paymentId].books.push(book);
-              groupedByPaymentId[paymentId].totalAmount += (book.price || 0);
-            } catch (err) {
-              console.error('Error grouping book:', err, book);
-              // Continue with next book
-            }
-          });
-
-          // Convert to array and sort by date (newest first)
-          const groupedArray = Object.values(groupedByPaymentId).sort((a, b) =>
-            new Date(b.purchaseDate || 0) - new Date(a.purchaseDate || 0)
-          );
-
+          // Group the books by payment ID
+          const groupedArray = processBooks(processedBooks);
           setGroupedBooks(groupedArray);
+
+          console.log(`Processed ${processedBooks.length} books into ${groupedArray.length} purchase groups`);
 
           // Reset retry count on success
           setRetryCount(0);
@@ -157,7 +91,51 @@ const MyBooksPage = () => {
           setTimeout(() => {
             window.location.href = '/login?redirect=/my-books';
           }, 3000);
+        } else if (error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
+          // Handle CORS errors or network issues
+          setError('Network error while fetching your purchased books');
+          setErrorDetails({
+            message: 'This may be due to a CORS issue or network connectivity problem',
+            status: 'NETWORK_ERROR',
+            solution: 'Please try refreshing the page or using a different browser'
+          });
+
+          console.log('Detected network/CORS error, trying alternative approach...');
+
+          // Try an alternative approach without credentials for CORS issues
+          try {
+            // Create a fallback request without credentials or complex headers
+            const fallbackResponse = await axios.get(getMyPurchasesUrl(), {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+              },
+              // No withCredentials to avoid CORS preflight
+              timeout: 15000
+            });
+
+            if (fallbackResponse.data.success) {
+              console.log('Fallback request successful!');
+              // Process the successful response
+              setPurchasedBooks(fallbackResponse.data.purchasedBooks || []);
+              setGroupedBooks(processBooks(fallbackResponse.data.purchasedBooks || []));
+              setError(null);
+              setErrorDetails(null);
+              return; // Exit the error handler since we recovered
+            }
+          } catch (fallbackError) {
+            console.error('Fallback request also failed:', fallbackError);
+          }
+
+          // If we're here, both approaches failed
+          // Retry if we haven't reached max retries
+          if (retryCount < maxRetries) {
+            console.log(`Retrying in 3 seconds... (${retryCount + 1}/${maxRetries})`);
+            setTimeout(() => {
+              setRetryCount(prev => prev + 1);
+            }, 3000);
+          }
         } else {
+          // Handle other types of errors
           setError('An error occurred while fetching your purchased books');
           setErrorDetails({
             message: error.message,
@@ -180,6 +158,83 @@ const MyBooksPage = () => {
 
     fetchPurchasedBooks();
   }, [retryCount, maxRetries]);
+
+  // Function to process books and group them by payment ID
+  const processBooks = (books) => {
+    try {
+      // Process books to ensure URLs are valid and remove duplicates
+      const bookMap = new Map();
+      const processedBooks = [];
+
+      // Process each book
+      (books || []).forEach(book => {
+        try {
+          // Safely access bookId with fallback
+          const bookId = (book.bookId?.toString() || book._id?.toString() || Math.random().toString());
+
+          // Process the book URL
+          let processedBook = book;
+
+          // Ensure book has a valid URL
+          if (!book.url || book.url === 'placeholder' || book.url.includes('placeholder.url')) {
+            console.log(`Book ${book.title} has invalid URL: ${book.url}, using default PDF`);
+            processedBook = {
+              ...book,
+              url: '/assets/better-placeholder.pdf'
+            };
+          } else {
+            // Keep the original URL - we'll add .pdf extension only when needed for display/download
+            processedBook = { ...book };
+          }
+
+          // Check if this is a duplicate book
+          if (!bookMap.has(bookId)) {
+            // First time seeing this book, add it
+            bookMap.set(bookId, processedBook);
+            processedBooks.push(processedBook);
+          } else {
+            console.log(`Skipping duplicate book: ${book.title} (${bookId})`);
+          }
+        } catch (err) {
+          console.error('Error processing book:', err, book);
+          // Continue with next book
+        }
+      });
+
+      // Group books by payment ID (same transaction)
+      const groupedByPaymentId = {};
+
+      processedBooks.forEach(book => {
+        try {
+          const paymentId = book.paymentId || 'unknown';
+          const purchaseDate = book.purchaseDate || new Date();
+
+          if (!groupedByPaymentId[paymentId]) {
+            groupedByPaymentId[paymentId] = {
+              _id: paymentId,
+              purchaseDate: purchaseDate,
+              books: [],
+              totalAmount: 0
+            };
+          }
+
+          groupedByPaymentId[paymentId].books.push(book);
+          groupedByPaymentId[paymentId].totalAmount += (book.price || 0);
+        } catch (err) {
+          console.error('Error grouping book:', err, book);
+          // Continue with next book
+        }
+      });
+
+      // Convert to array and sort by date (newest first)
+      return Object.values(groupedByPaymentId).sort((a, b) =>
+        new Date(b.purchaseDate || 0) - new Date(a.purchaseDate || 0)
+      );
+    } catch (error) {
+      console.error('Error in processBooks:', error);
+      return [];
+    }
+  };
 
   // Function to format date
   const formatDate = (dateString) => {
@@ -221,6 +276,25 @@ const MyBooksPage = () => {
                   <Link to="/login?redirect=/my-books" className="login-button">
                     Log In
                   </Link>
+                </div>
+              ) : errorDetails?.status === 'NETWORK_ERROR' ? (
+                <div className="network-error">
+                  <p>{errorDetails.message}</p>
+                  <p>{errorDetails.solution}</p>
+                  <div className="error-actions">
+                    <button
+                      className="retry-button"
+                      onClick={() => setRetryCount(prev => prev + 1)}
+                    >
+                      Retry Now
+                    </button>
+                    <button
+                      className="refresh-button"
+                      onClick={() => window.location.reload()}
+                    >
+                      Refresh Page
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <button

@@ -114,8 +114,26 @@
   transform: translateY(-2px);
 }
 
-.retry-button {
+.network-error {
   margin-top: 20px;
+  padding: 15px;
+  background-color: #f8f4f0;
+  border-radius: 8px;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+  border-left: 4px solid #e74c3c;
+}
+
+.error-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 15px;
+}
+
+.retry-button, .refresh-button {
+  margin-top: 10px;
   background-color: #A67C52;
   color: white;
   border: none;
@@ -126,9 +144,21 @@
   transition: all 0.2s ease;
 }
 
+.refresh-button {
+  background-color: #3498db;
+}
+
+.retry-button:hover, .refresh-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
 .retry-button:hover {
   background-color: #845b32;
-  transform: translateY(-2px);
+}
+
+.refresh-button:hover {
+  background-color: #2980b9;
 }
 
 /* Empty state */

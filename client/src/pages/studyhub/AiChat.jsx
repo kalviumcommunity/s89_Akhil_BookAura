@@ -134,7 +134,16 @@ const AiChat = () => {
   const loadChatHistory = async () => {
     try {
       setIsChatHistoryLoading(true);
-      const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/chat-history', { withCredentials: true });
+
+      // Get auth token from localStorage
+      const authToken = localStorage.getItem('authToken');
+
+      const response = await axios.get('https://s89-akhil-3.onrender.com/api/chat-history', {
+        withCredentials: true,
+        headers: {
+          'Authorization': `Bearer ${authToken || ''}`
+        }
+      });
 
       if (response.data.success) {
         setMessages(response.data.data);
@@ -150,7 +159,18 @@ const AiChat = () => {
     if (!isLoggedIn) return;
 
     try {
-      await axios.post('https://s89-akhil-bookaura-3.onrender.com/api/chat-history', { text, sender }, { withCredentials: true });
+      // Get auth token from localStorage
+      const authToken = localStorage.getItem('authToken');
+
+      await axios.post('https://s89-akhil-bookaura-3.onrender.com/api/chat-history',
+        { text, sender },
+        {
+          withCredentials: true,
+          headers: {
+            'Authorization': `Bearer ${authToken || ''}`
+          }
+        }
+      );
     } catch (error) {
       console.error('Error saving message to chat history:', error);
     }
@@ -160,7 +180,16 @@ const AiChat = () => {
     if (!isLoggedIn) return;
 
     try {
-      const response = await axios.delete('https://s89-akhil-bookaura-3.onrender.com/api/chat-history', { withCredentials: true });
+      // Get auth token from localStorage
+      const authToken = localStorage.getItem('authToken');
+
+      const response = await axios.delete('https://s89-akhil-bookaura-3.onrender.com/api/chat-history', {
+        withCredentials: true,
+        headers: {
+          'Authorization': `Bearer ${authToken || ''}`
+        }
+      });
+
       if (response.data.success) setMessages([]);
     } catch (error) {
       console.error('Error clearing chat history:', error);
@@ -228,10 +257,16 @@ const AiChat = () => {
       formData.append('userId', userId);
 
       try {
+        // Get auth token from localStorage
+        const authToken = localStorage.getItem('authToken');
+
         // Use fetch instead of axios for better compatibility with FormData
-        const response = await fetch('https://s89-akhil-bookaura.onrender.com/api/chat', {
+        const response = await fetch('https://s89-akhil-bookaura-1.onrender.com/api/chat', {
           method: 'POST',
           body: formData, // Don't set Content-Type header, browser will set it with boundary
+          headers: {
+            'Authorization': `Bearer ${authToken || ''}`
+          }
         });
 
         if (!response.ok) {
@@ -294,9 +329,15 @@ const AiChat = () => {
                       return id;
                     })();
 
-      const response = await fetch('https://s89-akhil-bookaura.onrender.com/api/chat', {
+      // Get auth token from localStorage
+      const authToken = localStorage.getItem('authToken');
+
+      const response = await fetch('https://s89-akhil-bookaura-1.onrender.com/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken || ''}`
+        },
         body: JSON.stringify({
           userId: userId,
           message: inputMessage,

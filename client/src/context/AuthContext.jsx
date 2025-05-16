@@ -1,5 +1,11 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import api from '../services/api';
+import {
+  storeUserDataInCookies,
+  clearUserCookies,
+  getUserDataFromCookies,
+  hasCookie
+} from '../utils/cookieUtils';
 
 // Create the context
 const AuthContext = createContext();
@@ -17,14 +23,31 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkLoginStatus = async () => {
       try {
-        // Check for the non-httpOnly isLoggedIn cookie
-        const hasToken = document.cookie.includes('isLoggedIn=true');
+        // Get user data from cookies
+        const cookieData = getUserDataFromCookies();
 
-        // Also check if we have a token in localStorage
+        // Also check if we have a token in localStorage (legacy support)
         const localToken = localStorage.getItem('authToken');
 
-        // If either is true, consider the user logged in
-        const isAuthenticated = hasToken || !!localToken;
+        // Check if we have a user ID in localStorage (legacy support)
+        const localUserId = localStorage.getItem('userId');
+
+        // Log detailed authentication state for debugging
+        console.log('Auth check details:', {
+          cookieData,
+          tokenInLocalStorage: !!localToken,
+          userIdInLocalStorage: !!localUserId,
+          cookieContent: document.cookie
+        });
+
+        // Determine if user is authenticated
+        const isAuthenticated = cookieData.isLoggedIn || !!localToken;
+
+        // If we have user ID in localStorage but not in cookies, store it in cookies
+        if (!cookieData.userId && localUserId) {
+          console.log('Migrating user ID from localStorage to cookies');
+          storeUserDataInCookies({ _id: localUserId }, localToken);
+        }
 
         setIsLoggedIn(isAuthenticated);
 
@@ -59,9 +82,15 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Function to handle login
-  const login = (userData) => {
+  const login = (userData, token) => {
+    // Store user data in state
     setUser(userData);
     setIsLoggedIn(true);
+
+    // Store user data in cookies
+    storeUserDataInCookies(userData, token || localStorage.getItem('authToken'));
+
+    console.log('User logged in and data stored in cookies:', userData?._id);
   };
 
   // Function to handle logout
@@ -128,21 +157,65 @@ export const AuthProvider = ({ children }) => {
     // The user's cart items, purchased books, and other data will remain on the server
     // Only clearing client-side storage
 
-    // 9. Clear cookies (this is a fallback, the server should handle this)
-    // Delete isLoggedIn cookie with various path and domain combinations to ensure it's removed
-    const cookieDomains = ['', window.location.hostname, `.${window.location.hostname}`];
-    const cookiePaths = ['/', '/router', ''];
-
-    cookieDomains.forEach(domain => {
-      cookiePaths.forEach(path => {
-        document.cookie = `isLoggedIn=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=${path}${domain ? `; domain=${domain}` : ''}`;
-      });
-    });
+    // 9. Clear cookies using our cookie utility
+    clearUserCookies();
 
     // For secure cookies that can't be directly accessed by JavaScript,
     // the server-side logout endpoint should handle clearing them
 
     console.log('All user data cleared');
+  };
+
+  // Function to force refresh the auth state
+  const refreshAuthState = async () => {
+    try {
+      setLoading(true);
+
+      // Get user data from cookies
+      const cookieData = getUserDataFromCookies();
+
+      // Also check if we have a token in localStorage (legacy support)
+      const localToken = localStorage.getItem('authToken');
+
+      // Check if we have a user ID in localStorage (legacy support)
+      const localUserId = localStorage.getItem('userId');
+
+      // Log detailed authentication state for debugging
+      console.log('Auth refresh details:', {
+        cookieData,
+        tokenInLocalStorage: !!localToken,
+        userIdInLocalStorage: !!localUserId,
+        cookieContent: document.cookie
+      });
+
+      // Determine if user is authenticated
+      const isAuthenticated = cookieData.isLoggedIn || !!localToken;
+
+      // If we have user ID in localStorage but not in cookies, store it in cookies
+      if (!cookieData.userId && localUserId) {
+        console.log('Migrating user ID from localStorage to cookies during refresh');
+        storeUserDataInCookies({ _id: localUserId }, localToken);
+      }
+
+      setIsLoggedIn(isAuthenticated);
+      console.log('Refreshed login status:', isAuthenticated ? 'Logged in' : 'Not logged in');
+
+      // If authenticated, try to fetch user data
+      if (isAuthenticated) {
+        try {
+          const response = await api.get('/router/profile');
+          if (response.data.success) {
+            setUser(response.data.user);
+          }
+        } catch (error) {
+          console.error('Error fetching user data during refresh:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing auth state:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Value to be provided to consumers
@@ -151,7 +224,8 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     login,
-    logout
+    logout,
+    refreshAuthState
   };
 
   return (
