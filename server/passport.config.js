@@ -43,8 +43,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         return `${serverUrl}/router/auth/google/callback`;
     },
     passReqToCallback: true
-}, async (_, _accessToken, _refreshToken, profile, done) => {
-    // Note: req, accessToken, and refreshToken are not used but are required by the interface
+}, async (req, accessToken, refreshToken, profile, done) => {
     try {
         console.log('Google Profile:', profile);
 
