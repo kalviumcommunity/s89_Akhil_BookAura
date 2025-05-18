@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 
+// Middleware to verify JWT token and authenticate user
 const verifyToken = (req, res, next) => {
-    // Log request details for debugging
     console.log('Auth middleware - Request headers:', {
         authorization: req.headers.authorization,
         cookie: req.headers.cookie,
@@ -9,30 +9,29 @@ const verifyToken = (req, res, next) => {
     });
     console.log('Auth middleware - Request cookies:', req.cookies);
 
-    // Check for token in Authorization header
     let token;
-    const authHeader = req.headers.authorization;
 
-    if (authHeader && authHeader.startsWith('Bearer ')) {
+    // 1. Try Authorization header
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
         token = authHeader.split(' ')[1];
         console.log('Found token in Authorization header');
     }
 
-    // If no token in header, check cookies
+    // 2. Try common cookie names
     if (!token && req.cookies) {
-        // Check all possible cookie names
         token = req.cookies.authToken || req.cookies.token || req.cookies.jwt;
         if (token) {
             console.log('Found token in cookies');
         }
     }
 
-    // If still no token, check for raw cookies in the header
+    // 3. Try raw cookie header
     if (!token && req.headers.cookie) {
         const cookies = req.headers.cookie.split(';');
         for (const cookie of cookies) {
             const [name, value] = cookie.trim().split('=');
-            if (name === 'authToken' || name === 'token' || name === 'jwt') {
+            if (['authToken', 'token', 'jwt'].includes(name)) {
                 token = value;
                 console.log('Found token in raw cookie header');
                 break;
@@ -40,44 +39,40 @@ const verifyToken = (req, res, next) => {
         }
     }
 
-    // Check if user is authenticated via Passport
-    if (!token && req.isAuthenticated && req.isAuthenticated()) {
+    // 4. Fallback: Passport authentication
+    if (!token && req.isAuthenticated?.()) {
         console.log('User is authenticated via Passport');
-        req.user = req.user || {};
-        return next();
+        return next(); // Passport sets req.user
     }
 
+    // 5. No token found
     if (!token) {
         console.log('No token found in request');
-        return res.status(401).send({message: "Access Denied. No token provided"});
+        return res.status(401).json({ message: 'Access Denied. No token provided' });
     }
 
+    // 6. Verify token
     try {
-        const verified = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
         console.log('Token verified successfully');
-        req.user = verified;
+        req.user = decoded;
         next();
     } catch (error) {
         console.error('Token verification failed:', error.message);
-        return res.status(401).send({message: "Invalid token", error});
+        return res.status(401).json({ message: 'Invalid token', error: error.message });
     }
-}
+};
 
-// Middleware to verify admin privileges
+// Middleware to verify admin role
 const verifyAdmin = (req, res, next) => {
-    // First verify that the user is authenticated
-    verifyToken(req, res, (err) => {
-        if (err) {
-            return res.status(401).json({ message: "Authentication failed", error: err.message });
-        }
+    if (req.user?.userType === 'admin') {
+        return next();
+    } else {
+        return res.status(403).json({ message: 'Access Denied. Admin access required' });
+    }
+};
 
-        // Then check if the user is an admin
-        if (req.user && req.user.userType === 'admin') {
-            return next();
-        } else {
-            return res.status(403).json({ message: "Access Denied. Admin access required" });
-        }
-    });
-}
-
-module.exports = { verifyToken, verifyAdmin };
+module.exports = {
+    verifyToken,
+    verifyAdmin
+};
