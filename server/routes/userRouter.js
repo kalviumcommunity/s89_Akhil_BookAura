@@ -6,8 +6,9 @@ const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const cookiePraser = require('cookie-parser');
-const verifyToken = require('../middleware/auth');
+const {verifyToken} = require('../middleware/auth');
 require('dotenv').config();
+
 
 const JWT_SECRET = process.env.JWT_SECRET; // Ensure JWT_SECRET is defined
 
@@ -175,8 +176,8 @@ router.post('/resetpassword', async (req, res) => {
   }
 });
 
-router.get('/user', verifyToken, (req, res) => {
-  res.status(200).send({ username: req.user.email });
+router.get('/profile', verifyToken, (req, res) => {
+  res.json({ user: req.user });
 });
 
 // Get user profile data
