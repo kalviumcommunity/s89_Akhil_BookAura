@@ -291,7 +291,7 @@ router.get('/auth/google/callback',
       });
 
       // Redirect to frontend with success message and user data
-      res.redirect(`https://bookauraba.netlify.app/home?success=true&token=${token}`);
+      res.redirect(`https://bookauraba.netlify.app/?success=true&token=${token}`);
     } catch (error) {
       console.error('Error in Google callback:', error);
       res.redirect(`https://bookauraba.netlify.app/login?error=authentication_failed`);
