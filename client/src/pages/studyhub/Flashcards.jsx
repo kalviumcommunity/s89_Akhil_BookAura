@@ -28,7 +28,12 @@ const Flashcards = () => {
     try {
       setLoading(true);
       const response = await api.get('/api/flashcards/decks');
-      setDecks(response.data);
+
+      // Ensure we're working with an array
+      const decksData = Array.isArray(response.data) ? response.data : [];
+      console.log('Fetched decks:', decksData);
+
+      setDecks(decksData);
       setLoading(false);
     } catch (err) {
       console.error('Error fetching flashcard decks:', err);
@@ -41,7 +46,17 @@ const Flashcards = () => {
     try {
       setLoading(true);
       const response = await api.get(`/api/flashcards/decks/${deckId}`);
-      setSelectedDeck(response.data);
+
+      // Ensure we have a valid deck object with flashcards array
+      const deckData = response.data;
+      console.log('Fetched deck details:', deckData);
+
+      if (deckData && !deckData.flashcards) {
+        // If flashcards is missing, initialize it as an empty array
+        deckData.flashcards = [];
+      }
+
+      setSelectedDeck(deckData);
       setCurrentCardIndex(0);
       setIsFlipped(false);
       setLoading(false);
@@ -154,7 +169,10 @@ const Flashcards = () => {
       await fetchDecks();
 
       // Show success message with the number of flashcards generated
-      const flashcardCount = response.data.data.flashcardCount;
+      const responseData = response.data;
+      const flashcardCount = responseData && responseData.data && responseData.data.flashcardCount
+        ? responseData.data.flashcardCount
+        : 'multiple';
       alert(`Success! Generated ${flashcardCount} flashcards from your PDF.`);
 
     } catch (err) {
@@ -355,7 +373,7 @@ const Flashcards = () => {
       return <div className="error">{error}</div>;
     }
 
-    if (decks.length === 0) {
+    if (!decks || decks.length === 0) {
       return (
         <div className="no-decks">
           <p>You don't have any flashcard decks yet.</p>
@@ -382,7 +400,7 @@ const Flashcards = () => {
         </div>
 
         <div className="deck-grid">
-          {decks.map(deck => (
+          {Array.isArray(decks) && decks.map(deck => (
             <div key={deck._id} className="deck-card">
               <div className="deck-card-content">
                 <h3>{deck.title}</h3>
