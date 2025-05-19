@@ -120,7 +120,7 @@ const Flashcards = () => {
 
       // Create form data
       const formData = new FormData();
-      formData.append('pdfFile', uploadFile);
+      formData.append('pdf', uploadFile); // Changed from 'pdfFile' to 'pdf' to match server expectation
       formData.append('title', deckTitle);
       formData.append('description', deckDescription);
 
