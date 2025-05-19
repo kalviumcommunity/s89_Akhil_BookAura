@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Calendar as CalendarIcon, ArrowLeft, Menu, X } from "lucide-react";
 
 
+
 const StudyHubNavbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -47,7 +48,17 @@ const StudyHubNavbar = () => {
             <CalendarIcon size={16} className="nav-icon" />
             Calendar
           </li>
-
+          <li
+            className={
+              location.pathname === "/flashcards" ? "active-1" : "notactive-1"
+            }
+            onClick={() => {
+              navigate("/flashcards");
+              setIsMenuOpen(false);
+            }}
+          >
+            <FlashcardsIcon size={16} className="nav-icon" /> Flashcards
+          </li>
           <li
             className={
               location.pathname === "/aichat" ? "active-1" : "notactive-1"

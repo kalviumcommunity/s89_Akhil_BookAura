@@ -24,6 +24,7 @@ import TestSimplePdfViewer from './pages/TestSimplePdfViewer';
 import TestBasicPdfViewer from './pages/TestBasicPdfViewer';
 import TestPdfUpload from './pages/TestPdfUpload';
 import GoogleAuthTest from './pages/GoogleAuthTest';
+import Flashcards from './pages/studyhub/Flashcards';
 
 const pageTransition = {
   initial: { opacity: 0, x: -100 },
@@ -162,6 +163,10 @@ const AllRouting = () => {
           path="/google-auth-test"
           element={<GoogleAuthTest />}
         />
+        <Route
+          path="/flashcards"
+          element={<Flashcards />}
+        />  
       </Routes>
     </AnimatePresence>
   );
