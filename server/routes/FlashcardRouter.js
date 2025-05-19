@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const axios = require('axios');
-const auth = require('../middleware/auth');
+const {auth} = require('../middleware/auth');
 const FlashcardDeck = require('../model/FlashcardModel');
 const mongoose = require('mongoose');
 
-// Configure multer for file uploads
+
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
