@@ -31,6 +31,7 @@ router.get('/decks', verifyToken, async (req, res) => {
     const decks = await FlashcardDeck.find({ userId }, '_id title description sourceDocumentName createdAt updatedAt');
     res.status(200).json(decks);
   } catch (err) {
+    console.error('Error fetching flashcard decks:', err);
     res.status(500).json({ message: 'Failed to fetch flashcard decks', error: err.message });
   }
 });
@@ -43,6 +44,7 @@ router.get('/decks/:deckId', verifyToken, async (req, res) => {
     if (!deck) return res.status(404).json({ message: 'Deck not found' });
     res.status(200).json(deck);
   } catch (err) {
+    console.error('Error fetching flashcard deck:', err);
     res.status(500).json({ message: 'Failed to fetch flashcard deck', error: err.message });
   }
 });

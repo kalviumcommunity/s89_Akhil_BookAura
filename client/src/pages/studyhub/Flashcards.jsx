@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import LeftNavbar from '../../components/StudyHubNavbar';
 import './Flashcards.css';
 import { Upload, Plus, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import api from '../../services/api';
 
 const Flashcards = () => {
   const [decks, setDecks] = useState([]);
@@ -27,10 +27,8 @@ const Flashcards = () => {
   const fetchDecks = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/flashcards/decks', {
-        withCredentials: true
-      });
-      setDecks(response.data.data);
+      const response = await api.get('/api/flashcards/decks');
+      setDecks(response.data);
       setLoading(false);
     } catch (err) {
       console.error('Error fetching flashcard decks:', err);
@@ -42,10 +40,8 @@ const Flashcards = () => {
   const fetchDeckDetails = async (deckId) => {
     try {
       setLoading(true);
-      const response = await axios.get(`https://s89-akhil-bookaura-3.onrender.com/api/flashcards/decks/${deckId}`, {
-        withCredentials: true
-      });
-      setSelectedDeck(response.data.data);
+      const response = await api.get(`/api/flashcards/decks/${deckId}`);
+      setSelectedDeck(response.data);
       setCurrentCardIndex(0);
       setIsFlipped(false);
       setLoading(false);
@@ -117,8 +113,7 @@ const Flashcards = () => {
       setUploadProgress(10);
 
       // First phase: Upload the file
-      const response = await axios.post('https://s89-akhil-bookaura-3.onrender.com/api/flashcards/generate', formData, {
-        withCredentials: true,
+      const response = await api.post('/api/flashcards/generate', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         },
