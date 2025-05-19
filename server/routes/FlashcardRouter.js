@@ -2,258 +2,96 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const axios = require('axios');
-const { verifyToken } = require('../middleware/auth');
-const FlashcardDeck = require('../model/FlashcardModel');
-const mongoose = require('mongoose');
+const FormData = require('form-data');
+const fs = require('fs');
+const path = require('path');
+const FlashcardDeck = require('../models/FlashcardDeck');
 
-// Configure multer for file uploads
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
-});
-
-// Get all flashcard decks for the current user
-router.get('/decks', verifyToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const decks = await FlashcardDeck.find({ userId })
-      .sort({ createdAt: -1 })
-      .select('-flashcards'); // Exclude flashcards for better performance
-
-    res.status(200).json({
-      success: true,
-      message: 'Flashcard decks retrieved successfully',
-      data: decks
-    });
-  } catch (error) {
-    console.error('Error fetching flashcard decks:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching flashcard decks',
-      error: error.message
-    });
+// Multer configuration
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = path.join(__dirname, '../uploads');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath);
+    }
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    cb(null, `${Date.now()}-${file.originalname}`);
   }
 });
 
-// Get a specific flashcard deck by ID
-router.get('/decks/:deckId', verifyToken, async (req, res) => {
+const upload = multer({ storage });
+
+// Get all decks for a user
+router.get('/decks', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const decks = await FlashcardDeck.find({ userId }, '_id title description createdAt updatedAt');
+    res.status(200).json(decks);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch flashcard decks', error: err.message });
+  }
+});
+
+// Get a specific deck
+router.get('/decks/:deckId', async (req, res) => {
   try {
     const { deckId } = req.params;
-    const userId = req.user.id;
-
-    if (!mongoose.Types.ObjectId.isValid(deckId)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid deck ID format'
-      });
-    }
-
-    const deck = await FlashcardDeck.findOne({ _id: deckId, userId });
-
-    if (!deck) {
-      return res.status(404).json({
-        success: false,
-        message: 'Flashcard deck not found'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Flashcard deck retrieved successfully',
-      data: deck
-    });
-  } catch (error) {
-    console.error('Error fetching flashcard deck:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching flashcard deck',
-      error: error.message
-    });
+    const deck = await FlashcardDeck.findById(deckId);
+    if (!deck) return res.status(404).json({ message: 'Deck not found' });
+    res.status(200).json(deck);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch flashcard deck', error: err.message });
   }
 });
 
-// Generate flashcards from PDF using the external AI API
-router.post('/generate', verifyToken, upload.single('pdfFile'), async (req, res) => {
+// Generate flashcards from PDF
+router.post('/generate', upload.single('pdf'), async (req, res) => {
   try {
     const userId = req.user.id;
     const { title, description } = req.body;
+    const pdfPath = req.file.path;
 
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'No PDF file uploaded'
-      });
-    }
-
-    if (!title) {
-      return res.status(400).json({
-        success: false,
-        message: 'Title is required'
-      });
-    }
-
-    console.log('Preparing to send file to chatbot-api:', req.file.originalname, 'Size:', req.file.size);
-
-    // Create form data to send to the AI API
-    const FormData = require('form-data');
+    // Prepare PDF for external AI API
     const formData = new FormData();
-    formData.append('file', req.file.buffer, {
-      filename: req.file.originalname,
-      contentType: req.file.mimetype
-    });
+    formData.append('pdf', fs.createReadStream(pdfPath));
 
-    console.log('Sending request to chatbot-api...');
+    // Send to external AI service
+    const aiResponse = await axios.post(
+      'http://localhost:8080/ai/generate-flashcards',
+      formData,
+      { headers: formData.getHeaders() }
+    );
 
-    // Call the external AI API to generate flashcards
-    const aiResponse = await axios.post('https://s89-akhil-bookaura-2.onrender.com/chatbot-file', formData, {
-      headers: {
-        ...formData.getHeaders()
-      },
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity,
-      timeout: 300000 // 5 minutes
-    });
+    const generatedFlashcards = aiResponse.data; // Expecting [{ question, answer }, ...]
 
-    console.log('Response received from chatbot-api with', aiResponse.data.length, 'flashcards');
-
-    // Create a new flashcard deck with the generated flashcards
+    // Save to MongoDB
     const newDeck = new FlashcardDeck({
       userId,
       title,
-      description: description || '',
-      sourceDocumentName: req.file.originalname,
-      flashcards: aiResponse.data.map(card => ({
-        question: card.question,
-        answer: card.answer
-      }))
+      description,
+      flashcards: generatedFlashcards
     });
 
     await newDeck.save();
-    console.log('Saved new flashcard deck with ID:', newDeck._id);
+
+    // Cleanup uploaded file
+    fs.unlinkSync(pdfPath);
 
     res.status(201).json({
       success: true,
-      message: 'Flashcards generated successfully',
+      message: 'Flashcards generated and deck created successfully',
       data: {
         deckId: newDeck._id,
         flashcardCount: newDeck.flashcards.length
       }
     });
   } catch (error) {
-    console.error('Error generating flashcards:', error);
-
-    // Detailed error logging
-    if (error.response) {
-      console.error('Error response data:', error.response.data);
-      console.error('Error response status:', error.response.status);
-    } else if (error.request) {
-      console.error('No response received from API');
-    }
-
-    let errorMessage = 'Error generating flashcards';
-
-    // Extract more detailed error information if available
-    if (error.response && error.response.data) {
-      console.error('API error response:', error.response.data);
-      errorMessage = error.response.data.message || errorMessage;
-    }
-
+    console.error('AI generation error:', error.response?.data || error.message);
     res.status(500).json({
       success: false,
-      message: errorMessage,
-      error: error.message,
-      details: error.response?.data || 'No additional details'
-    });
-  }
-});
-
-// Save pre-generated flashcards (alternative approach)
-router.post('/save-generated', verifyToken, express.json(), async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { title, description, flashcards } = req.body;
-
-    if (!title) {
-      return res.status(400).json({
-        success: false,
-        message: 'Title is required'
-      });
-    }
-
-    if (!flashcards || !Array.isArray(flashcards)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Valid flashcards array is required'
-      });
-    }
-
-    console.log('Saving pre-generated flashcards, count:', flashcards.length);
-
-    // Create a new flashcard deck with the provided flashcards
-    const newDeck = new FlashcardDeck({
-      userId,
-      title,
-      description: description || '',
-      flashcards: flashcards.map(card => ({
-        question: card.question,
-        answer: card.answer
-      }))
-    });
-
-    await newDeck.save();
-    console.log('Saved new flashcard deck with ID:', newDeck._id);
-
-    res.status(201).json({
-      success: true,
-      message: 'Flashcards saved successfully',
-      data: {
-        deckId: newDeck._id,
-        flashcardCount: newDeck.flashcards.length
-      }
-    });
-  } catch (error) {
-    console.error('Error saving flashcards:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error saving flashcards',
-      error: error.message
-    });
-  }
-});
-
-// Delete a flashcard deck
-router.delete('/decks/:deckId', verifyToken, async (req, res) => {
-  try {
-    const { deckId } = req.params;
-    const userId = req.user.id;
-
-    if (!mongoose.Types.ObjectId.isValid(deckId)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid deck ID format'
-      });
-    }
-
-    const result = await FlashcardDeck.findOneAndDelete({ _id: deckId, userId });
-
-    if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: 'Flashcard deck not found or you do not have permission to delete it'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Flashcard deck deleted successfully'
-    });
-  } catch (error) {
-    console.error('Error deleting flashcard deck:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error deleting flashcard deck',
+      message: 'Failed to generate flashcards from the PDF',
       error: error.message
     });
   }
