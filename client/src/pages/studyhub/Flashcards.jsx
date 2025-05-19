@@ -169,25 +169,68 @@ const Flashcards = () => {
       await fetchDecks();
 
       // Show success message with the number of flashcards generated
+      console.log('Response from server:', response.data);
+
       const responseData = response.data;
-      const flashcardCount = responseData && responseData.data && responseData.data.flashcardCount
-        ? responseData.data.flashcardCount
-        : 'multiple';
-      alert(`Success! Generated ${flashcardCount} flashcards from your PDF.`);
+      let flashcardCount = 'multiple';
+      let deckTitle = '';
+
+      if (responseData && responseData.data) {
+        if (responseData.data.flashcardCount) {
+          flashcardCount = responseData.data.flashcardCount;
+        }
+        if (responseData.data.title) {
+          deckTitle = responseData.data.title;
+        }
+      }
+
+      const successMessage = deckTitle
+        ? `Success! Generated ${flashcardCount} flashcards in deck "${deckTitle}".`
+        : `Success! Generated ${flashcardCount} flashcards from your PDF.`;
+
+      alert(successMessage);
 
     } catch (err) {
       console.error('Error uploading PDF:', err);
-      setIsUploading(false);
 
-      // Extract error message from response if available
-      const errorMessage = err.response && err.response.data && err.response.data.message
-        ? err.response.data.message
-        : 'Failed to generate flashcards. Please try again.';
+      // Try to extract detailed error information
+      let errorDetails = '';
+      if (err.response) {
+        console.error('Error response:', err.response);
+        errorDetails = `Status: ${err.response.status}`;
+
+        if (err.response.data) {
+          console.error('Error data:', err.response.data);
+          if (err.response.data.message) {
+            errorDetails += ` - ${err.response.data.message}`;
+          }
+          if (err.response.data.error) {
+            errorDetails += ` (${err.response.data.error})`;
+          }
+        }
+      } else if (err.request) {
+        // Request was made but no response received
+        errorDetails = 'No response received from server. Please check your connection.';
+      } else {
+        // Error in setting up the request
+        errorDetails = err.message || 'Unknown error occurred';
+      }
+
+      console.error('Error details:', errorDetails);
+
+      // Create a user-friendly error message
+      const errorMessage = 'Failed to generate flashcards. ' +
+        (errorDetails ? `Error: ${errorDetails}` : 'Please try again later.');
 
       alert(errorMessage);
+
+      // Reset UI state
+      setIsUploading(false);
+      setUploadProgress(0);
     } finally {
-      // Ensure progress is reset if there was an error
+      // Ensure modal stays open if there was an error so user can try again
       if (isUploading) {
+        setIsUploading(false);
         setUploadProgress(0);
       }
     }

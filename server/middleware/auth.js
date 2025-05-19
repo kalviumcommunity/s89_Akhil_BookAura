@@ -71,9 +71,17 @@ const verifyAdmin = (req, res, next) => {
         return res.status(403).json({ message: 'Access Denied. Admin access required' });
     }
 };
+const auth = (req, res, next) => {
+    if (req.user) {
+        next();
+    } else {
+        res.status(401).json({ message: 'Unauthorized' });
+    }
+};
 
 module.exports = {
     verifyToken,
-    verifyAdmin
+    verifyAdmin,
+    auth,
 };
 //
