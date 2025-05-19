@@ -5,9 +5,10 @@ const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');
-const FlashcardDeck = require('../models/FlashcardDeck');
+const FlashcardDeck = require('../model/FlashcardModel');
+const { verifyToken } = require('../middleware/auth');
 
-// Multer configuration
+// Multer storage config
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadPath = path.join(__dirname, '../uploads');
@@ -27,7 +28,7 @@ const upload = multer({ storage });
 router.get('/decks', async (req, res) => {
   try {
     const userId = req.user.id;
-    const decks = await FlashcardDeck.find({ userId }, '_id title description createdAt updatedAt');
+    const decks = await FlashcardDeck.find({ userId }, '_id title description sourceDocumentName createdAt updatedAt');
     res.status(200).json(decks);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch flashcard decks', error: err.message });
@@ -52,46 +53,49 @@ router.post('/generate', upload.single('pdf'), async (req, res) => {
     const userId = req.user.id;
     const { title, description } = req.body;
     const pdfPath = req.file.path;
+    const pdfOriginalName = req.file.originalname;
 
-    // Prepare PDF for external AI API
+    // Prepare PDF for AI processing
     const formData = new FormData();
     formData.append('pdf', fs.createReadStream(pdfPath));
 
-    // Send to external AI service
+    // Send to AI service
     const aiResponse = await axios.post(
       'http://localhost:8080/ai/generate-flashcards',
       formData,
       { headers: formData.getHeaders() }
     );
 
-    const generatedFlashcards = aiResponse.data; // Expecting [{ question, answer }, ...]
+    const generatedFlashcards = aiResponse.data; // Should match your flashcard schema
 
-    // Save to MongoDB
+    // Save to DB
     const newDeck = new FlashcardDeck({
       userId,
       title,
       description,
+      sourceDocument: pdfPath,
+      sourceDocumentName: pdfOriginalName,
       flashcards: generatedFlashcards
     });
 
     await newDeck.save();
 
-    // Cleanup uploaded file
-    fs.unlinkSync(pdfPath);
+    // Optionally delete local PDF
+    // fs.unlinkSync(pdfPath);
 
     res.status(201).json({
       success: true,
-      message: 'Flashcards generated and deck created successfully',
+      message: 'Flashcards generated and deck saved successfully',
       data: {
         deckId: newDeck._id,
         flashcardCount: newDeck.flashcards.length
       }
     });
   } catch (error) {
-    console.error('AI generation error:', error.response?.data || error.message);
+    console.error('AI error:', error.response?.data || error.message);
     res.status(500).json({
       success: false,
-      message: 'Failed to generate flashcards from the PDF',
+      message: 'Failed to generate flashcards',
       error: error.message
     });
   }
