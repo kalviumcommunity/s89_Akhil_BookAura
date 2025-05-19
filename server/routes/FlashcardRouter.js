@@ -25,7 +25,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Get all decks for a user
-router.get('/decks', async (req, res) => {
+router.get('/decks', verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const decks = await FlashcardDeck.find({ userId }, '_id title description sourceDocumentName createdAt updatedAt');
@@ -36,7 +36,7 @@ router.get('/decks', async (req, res) => {
 });
 
 // Get a specific deck
-router.get('/decks/:deckId', async (req, res) => {
+router.get('/decks/:deckId', verifyToken, async (req, res) => {
   try {
     const { deckId } = req.params;
     const deck = await FlashcardDeck.findById(deckId);
@@ -48,7 +48,7 @@ router.get('/decks/:deckId', async (req, res) => {
 });
 
 // Generate flashcards from PDF
-router.post('/generate', upload.single('pdf'), async (req, res) => {
+router.post('/generate', verifyToken, upload.single('pdf'), async (req, res) => {
   try {
     const userId = req.user.id;
     const { title, description } = req.body;
