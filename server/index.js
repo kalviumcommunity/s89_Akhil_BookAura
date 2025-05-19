@@ -96,6 +96,7 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+
 // Session middleware
 app.use(session({
     secret: process.env.JWT_SECRET || 'fallback-secret-key-for-development',
@@ -132,6 +133,7 @@ const pdfProxyRoutes = require("./routes/PdfProxy");
 const cartRouter = require('./routes/CartRouter');
 const eventRouter = require('./routes/EventRouter');
 const chatHistoryRouter = require('./routes/ChatHistoryRouter');
+const flashcardRouter = require('./routes/FlashcardRouter');
 
 // Log loaded routers for debugging
 console.log('Loaded routers:');
@@ -148,6 +150,7 @@ app.use("/api/pdf", pdfProxyRoutes);
 app.use("/api/cart", cartRouter);
 app.use("/api/events", eventRouter);
 app.use("/api/chat-history", chatHistoryRouter);
+app.use("/api/flashcards", flashcardRouter);
 
 app.use('/router', userRouter);
 app.use('/router', bookRouter);
