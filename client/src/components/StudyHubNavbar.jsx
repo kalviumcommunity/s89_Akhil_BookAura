@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import "./StudyHubNavbar.css";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Calendar as CalendarIcon, ArrowLeft, Menu, X, Cards as FlashcardsIcon } from "lucide-react";
+import { Calendar as CalendarIcon, ArrowLeft, Menu, X } from "lucide-react";
 
 
 
@@ -57,7 +57,7 @@ const StudyHubNavbar = () => {
               setIsMenuOpen(false);
             }}
           >
-            <FlashcardsIcon size={16} className="nav-icon" /> Flashcards
+            Flashcards
           </li>
           <li
             className={
