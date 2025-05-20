@@ -111,7 +111,7 @@ const AiChat = () => {
 
     try {
       // Use fetch instead of axios for better compatibility with FormData
-      const response = await fetch('https://s89-akhil-bookaura.onrender.com/api/chat', {
+      const response = await fetch('https://s89-akhil-bookaura-3.onrender.com/api/chat', {
         method: 'POST',
         body: formData, // Don't set Content-Type header, browser will set it with boundary
       });
@@ -226,7 +226,7 @@ const AiChat = () => {
                       return id;
                     })();
 
-      const response = await fetch('https://s89-akhil-bookaura.onrender.com/api/chat', {
+      const response = await fetch('https://s89-akhil-bookaura-3.onrender.com/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

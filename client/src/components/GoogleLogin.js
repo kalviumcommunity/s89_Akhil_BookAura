@@ -9,7 +9,7 @@ const GoogleLogin = () => {
     useEffect(() => {
         const handleGoogleCallback = async () => {
             try {
-                const response = await fetch('https://s89-akhil-bookaura-2.onrender.com/router/auth/google/callback', {
+                const response = await fetch('https://s89-akhil-bookaura-3.onrender.com/router/auth/google/callback', {
                     method: 'GET',
                     credentials: 'include'
                 });

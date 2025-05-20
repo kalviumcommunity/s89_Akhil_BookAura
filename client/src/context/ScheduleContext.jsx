@@ -52,7 +52,7 @@ export const ScheduleProvider = ({ children }) => {
         const start = moment().startOf('month').format();
         const end = moment().endOf('month').format();
 
-        const response = await axios.get('https://s89-akhil-bookaura-2.onrender.com/api/events', {
+        const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/events', {
           params: { start, end },
           withCredentials: true
         });
@@ -101,7 +101,7 @@ export const ScheduleProvider = ({ children }) => {
           color: '#A67C52'
         };
 
-        const response = await axios.post('https://s89-akhil-bookaura-2.onrender.com/api/events', scheduleData, {
+        const response = await axios.post('https://s89-akhil-bookaura-3.onrender.com/api/events', scheduleData, {
           withCredentials: true
         });
 
@@ -146,7 +146,7 @@ export const ScheduleProvider = ({ children }) => {
       const token = document.cookie.includes('token=');
 
       if (token) {
-        const response = await axios.delete(`https://s89-akhil-bookaura-2.onrender.com/api/events/${id}`, {
+        const response = await axios.delete(`https://s89-akhil-bookaura-3.onrender.com/api/events/${id}`, {
           withCredentials: true
         });
 
