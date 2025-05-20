@@ -3,7 +3,8 @@ const router = express.Router();
 const multer = require('multer');
 const axios = require('axios');
 const fs = require('fs');
-const { verifyToken } = require('../middleware/auth');
+const { verifyToken ,auth} = require('../middleware/auth');
+
 const FlashcardDeck = require('../model/FlashcardModel');
 const mongoose = require('mongoose');
 
