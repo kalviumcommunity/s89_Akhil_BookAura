@@ -43,7 +43,7 @@ const BasicPdfViewer = ({ fileUrl }) => {
 
           try {
             // Try to get a signed URL from the server
-            const response = await axios.get(`https://s89-akhil-bookaura-2.onrender.com/api/pdf/signed-url`, {
+            const response = await axios.get(`https://s89-akhil-bookaura-3.onrender.com/api/pdf/signed-url`, {
               params: { url: finalUrl },
               withCredentials: true
             });
@@ -116,7 +116,7 @@ const BasicPdfViewer = ({ fileUrl }) => {
     try {
       // Use the proxy endpoint to get the PDF data
       console.log('Downloading PDF via proxy for:', fileUrl);
-      const response = await axios.get(`https://s89-akhil-bookaura-2.onrender.com/api/pdf/fetch-pdf`, {
+      const response = await axios.get(`https://s89-akhil-bookaura-3.onrender.com/api/pdf/fetch-pdf`, {
         params: { url: fileUrl },
         responseType: 'blob',
         withCredentials: true

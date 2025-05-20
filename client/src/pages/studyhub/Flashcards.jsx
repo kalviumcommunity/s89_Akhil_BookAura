@@ -173,47 +173,57 @@ const Flashcards = () => {
 
       const responseData = response.data;
       let flashcardCount = 'multiple';
-      let deckTitle = '';
+      let responseDeckTitle = ''; // Renamed from deckTitle to avoid conflict with state variable
 
       if (responseData && responseData.data) {
         if (responseData.data.flashcardCount) {
           flashcardCount = responseData.data.flashcardCount;
         }
         if (responseData.data.title) {
-          deckTitle = responseData.data.title;
+          responseDeckTitle = responseData.data.title;
         }
       }
 
-      const successMessage = deckTitle
-        ? `Success! Generated ${flashcardCount} flashcards in deck "${deckTitle}".`
+      const successMessage = responseDeckTitle
+        ? `Success! Generated ${flashcardCount} flashcards in deck "${responseDeckTitle}".`
         : `Success! Generated ${flashcardCount} flashcards from your PDF.`;
 
       alert(successMessage);
 
     } catch (err) {
+      // Log the full error object for debugging
       console.error('Error uploading PDF:', err);
+      console.error('Error name:', err.name);
+      console.error('Error message:', err.message);
+      console.error('Error stack:', err.stack);
 
       // Try to extract detailed error information
       let errorDetails = '';
-      if (err.response) {
-        console.error('Error response:', err.response);
-        errorDetails = `Status: ${err.response.status}`;
 
-        if (err.response.data) {
-          console.error('Error data:', err.response.data);
-          if (err.response.data.message) {
-            errorDetails += ` - ${err.response.data.message}`;
+      try {
+        if (err.response) {
+          console.error('Error response:', err.response);
+          errorDetails = `Status: ${err.response.status}`;
+
+          if (err.response.data) {
+            console.error('Error data:', err.response.data);
+            if (err.response.data.message) {
+              errorDetails += ` - ${err.response.data.message}`;
+            }
+            if (err.response.data.error) {
+              errorDetails += ` (${err.response.data.error})`;
+            }
           }
-          if (err.response.data.error) {
-            errorDetails += ` (${err.response.data.error})`;
-          }
+        } else if (err.request) {
+          // Request was made but no response received
+          errorDetails = 'No response received from server. Please check your connection.';
+        } else {
+          // Error in setting up the request
+          errorDetails = err.message || 'Unknown error occurred';
         }
-      } else if (err.request) {
-        // Request was made but no response received
-        errorDetails = 'No response received from server. Please check your connection.';
-      } else {
-        // Error in setting up the request
-        errorDetails = err.message || 'Unknown error occurred';
+      } catch (parseError) {
+        console.error('Error while parsing error details:', parseError);
+        errorDetails = 'Error information could not be processed';
       }
 
       console.error('Error details:', errorDetails);

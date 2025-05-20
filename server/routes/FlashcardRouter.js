@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const axios = require('axios');
-const {auth} = require('../middleware/auth');
+const fs = require('fs');
+const { verifyToken } = require('../middleware/auth');
 const FlashcardDeck = require('../model/FlashcardModel');
 const mongoose = require('mongoose');
 
@@ -75,12 +76,23 @@ router.get('/decks/:deckId', auth, async (req, res) => {
 });
 
 // Generate flashcards from PDF using the external AI API
-router.post('/generate', auth, upload.single('pdfFile'), async (req, res) => {
+router.post('/generate', verifyToken, upload.single('pdf'), async (req, res) => {
   try {
+    console.log('Flashcard generation request received');
+    console.log('User ID:', req.user.id);
+    console.log('Request body:', req.body);
+    console.log('Request file:', req.file ? {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      fieldname: req.file.fieldname
+    } : 'No file');
+
     const userId = req.user.id;
     const { title, description } = req.body;
 
     if (!req.file) {
+      console.error('No file uploaded');
       return res.status(400).json({
         success: false,
         message: 'No PDF file uploaded'
@@ -99,10 +111,27 @@ router.post('/generate', auth, upload.single('pdfFile'), async (req, res) => {
     // Create form data to send to the AI API
     const FormData = require('form-data');
     const formData = new FormData();
-    formData.append('file', req.file.buffer, {
-      filename: req.file.originalname,
-      contentType: req.file.mimetype
-    });
+
+    // Check if we have a buffer (memory storage) or a path (disk storage)
+    if (req.file.buffer) {
+      console.log('Using buffer from memory storage');
+      formData.append('file', req.file.buffer, {
+        filename: req.file.originalname,
+        contentType: req.file.mimetype
+      });
+    } else if (req.file.path) {
+      console.log('Using file path from disk storage');
+      formData.append('file', fs.createReadStream(req.file.path), {
+        filename: req.file.originalname,
+        contentType: req.file.mimetype
+      });
+    } else {
+      console.error('No file buffer or path available');
+      return res.status(400).json({
+        success: false,
+        message: 'File upload failed - no data available'
+      });
+    }
 
     console.log('Sending request to chatbot-api...');
 
@@ -170,7 +199,7 @@ router.post('/generate', auth, upload.single('pdfFile'), async (req, res) => {
 });
 
 // Save pre-generated flashcards (alternative approach)
-router.post('/save-generated', auth, express.json(), async (req, res) => {
+router.post('/save-generated', verifyToken, express.json(), async (req, res) => {
   try {
     const userId = req.user.id;
     const { title, description, flashcards } = req.body;
@@ -224,7 +253,7 @@ router.post('/save-generated', auth, express.json(), async (req, res) => {
 });
 
 // Delete a flashcard deck
-router.delete('/decks/:deckId', auth, async (req, res) => {
+router.delete('/decks/:deckId', verifyToken, async (req, res) => {
   try {
     const { deckId } = req.params;
     const userId = req.user.id;
