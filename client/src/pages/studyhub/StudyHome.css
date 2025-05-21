@@ -14,7 +14,6 @@
   transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
 }
 
-/* Hero Section */
 .study-hero {
   display: flex;
   background: linear-gradient(135deg, #A67C52 0%, #8a6642 100%);
