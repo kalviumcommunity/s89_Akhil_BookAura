@@ -37,11 +37,32 @@ router.get('/test-gemini', verifyToken, async (_, res) => {
 // Get all flashcard decks for the current user
 router.get('/decks', verifyToken, async (req, res) => {
   try {
+    console.log('Fetching flashcard decks for user:', req.user.id);
+    console.log('User object:', req.user);
+
     const userId = req.user.id;
+
+    // Validate userId is a valid MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      console.error('Invalid user ID format:', userId);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID format'
+      });
+    }
+
+    console.log('Finding flashcard decks with userId:', userId);
 
     const decks = await FlashcardDeck.find({ userId })
       .sort({ createdAt: -1 })
       .select('-flashcards'); // Exclude flashcards for better performance
+
+    console.log('Found', decks.length, 'flashcard decks');
+
+    // Log the IDs of found decks
+    if (decks.length > 0) {
+      console.log('Deck IDs:', decks.map(deck => deck._id));
+    }
 
     res.status(200).json({
       success: true,
@@ -64,21 +85,39 @@ router.get('/decks/:deckId', verifyToken, async (req, res) => {
     const { deckId } = req.params;
     const userId = req.user.id;
 
+    console.log('Fetching specific flashcard deck:', deckId);
+    console.log('For user:', userId);
+
+    // Validate deckId
     if (!mongoose.Types.ObjectId.isValid(deckId)) {
+      console.error('Invalid deck ID format:', deckId);
       return res.status(400).json({
         success: false,
         message: 'Invalid deck ID format'
       });
     }
 
+    // Validate userId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      console.error('Invalid user ID format:', userId);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID format'
+      });
+    }
+
+    console.log('Finding deck with ID:', deckId, 'and userId:', userId);
     const deck = await FlashcardDeck.findOne({ _id: deckId, userId });
 
     if (!deck) {
+      console.log('No deck found with ID:', deckId, 'for user:', userId);
       return res.status(404).json({
         success: false,
         message: 'Flashcard deck not found'
       });
     }
+
+    console.log('Found deck:', deck._id, 'with', deck.flashcards.length, 'flashcards');
 
     res.status(200).json({
       success: true,
@@ -100,6 +139,7 @@ router.post('/generate', verifyToken, upload.single('pdf'), async (req, res) => 
   try {
     console.log('Flashcard generation request received');
     console.log('User ID:', req.user.id);
+    console.log('User object:', req.user);
     console.log('Request body:', req.body);
     console.log('Request file:', req.file ? {
       originalname: req.file.originalname,
@@ -108,7 +148,17 @@ router.post('/generate', verifyToken, upload.single('pdf'), async (req, res) => 
       fieldname: req.file.fieldname
     } : 'No file');
 
+    // Ensure userId is a valid MongoDB ObjectId
     const userId = req.user.id;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      console.error('Invalid user ID format:', userId);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID format'
+      });
+    }
+
+    console.log('Validated user ID:', userId);
     const { title, description } = req.body;
 
     if (!req.file) {
@@ -156,19 +206,33 @@ router.post('/generate', verifyToken, upload.single('pdf'), async (req, res) => 
     console.log('Generated', flashcards.length, 'flashcards');
 
     // Create a new flashcard deck with the generated flashcards
+    console.log('Creating new flashcard deck with userId:', userId);
+
+    // Prepare flashcards data
+    const flashcardsData = flashcards.map(card => ({
+      question: card.question,
+      answer: card.answer
+    }));
+
+    console.log('Prepared flashcards data:', flashcardsData.length, 'cards');
+
     const newDeck = new FlashcardDeck({
       userId,
       title,
       description: description || '',
       sourceDocumentName: req.file.originalname,
-      flashcards: flashcards.map(card => ({
-        question: card.question,
-        answer: card.answer
-      }))
+      flashcards: flashcardsData
     });
 
-    await newDeck.save();
-    console.log('Saved new flashcard deck with ID:', newDeck._id);
+    console.log('New deck object created:', newDeck);
+
+    try {
+      await newDeck.save();
+      console.log('Saved new flashcard deck with ID:', newDeck._id);
+    } catch (saveError) {
+      console.error('Error saving flashcard deck to MongoDB:', saveError);
+      throw new Error(`Failed to save flashcard deck: ${saveError.message}`);
+    }
 
     res.status(201).json({
       success: true,

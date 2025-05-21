@@ -44,12 +44,26 @@ const Flashcards = () => {
     try {
       setLoading(true);
       const response = await api.get('/api/flashcards/decks');
+      console.log('Raw response from server:', response);
 
-      // Ensure we're working with an array
-      const decksData = Array.isArray(response.data) ? response.data : [];
-      console.log('Fetched decks:', decksData);
+      // Check if the response has the expected structure
+      if (response.data && response.data.success) {
+        // Get the data array from the nested structure
+        const decksData = response.data.data || [];
+        console.log('Fetched decks:', decksData);
 
-      setDecks(decksData);
+        // Ensure we're working with an array
+        if (Array.isArray(decksData)) {
+          setDecks(decksData);
+        } else {
+          console.error('Decks data is not an array:', decksData);
+          setDecks([]);
+        }
+      } else {
+        console.error('Unexpected response format:', response.data);
+        setDecks([]);
+      }
+
       setLoading(false);
     } catch (err) {
       console.error('Error fetching flashcard decks:', err);
@@ -62,19 +76,33 @@ const Flashcards = () => {
     try {
       setLoading(true);
       const response = await api.get(`/api/flashcards/decks/${deckId}`);
+      console.log('Raw deck details response:', response);
 
-      // Ensure we have a valid deck object with flashcards array
-      const deckData = response.data;
-      console.log('Fetched deck details:', deckData);
+      // Check if the response has the expected structure
+      if (response.data && response.data.success) {
+        // Get the deck data from the nested structure
+        const deckData = response.data.data;
+        console.log('Fetched deck details:', deckData);
 
-      if (deckData && !deckData.flashcards) {
-        // If flashcards is missing, initialize it as an empty array
-        deckData.flashcards = [];
+        if (deckData) {
+          // Ensure flashcards array exists
+          if (!deckData.flashcards) {
+            console.warn('Flashcards array is missing, initializing as empty array');
+            deckData.flashcards = [];
+          }
+
+          setSelectedDeck(deckData);
+          setCurrentCardIndex(0);
+          setIsFlipped(false);
+        } else {
+          console.error('Deck data is missing in the response');
+          setError('Failed to load flashcard deck. Data is missing.');
+        }
+      } else {
+        console.error('Unexpected response format:', response.data);
+        setError('Failed to load flashcard deck. Unexpected response format.');
       }
 
-      setSelectedDeck(deckData);
-      setCurrentCardIndex(0);
-      setIsFlipped(false);
       setLoading(false);
     } catch (err) {
       console.error('Error fetching deck details:', err);
