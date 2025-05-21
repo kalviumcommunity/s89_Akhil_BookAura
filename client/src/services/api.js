@@ -66,8 +66,19 @@ api.interceptors.request.use(
       if (isLoggedInCookie) {
         console.log('- User appears to be logged in via cookie, but no token found');
 
+        // For payment-related requests, try to recover the token from URL if available
+        if (config.url.includes('/payment') && window.location.search.includes('session_id')) {
+          const urlParams = new URLSearchParams(window.location.search);
+          const urlToken = urlParams.get('token');
+          if (urlToken) {
+            console.log('- Found token in URL parameters, using it for payment request');
+            config.headers.Authorization = `Bearer ${urlToken}`;
+            // Save it to localStorage for future requests
+            localStorage.setItem('authToken', urlToken);
+          }
+        }
         // For profile requests, we need to handle this specially
-        if (config.url.includes('/profile')) {
+        else if (config.url.includes('/profile')) {
           console.log('- Profile request detected without token, this may fail');
         } else {
           console.log('- Continuing request without token');

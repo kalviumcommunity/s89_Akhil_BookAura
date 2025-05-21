@@ -4,7 +4,7 @@ import { CheckCircle, ArrowLeft, ShoppingBag } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useCart } from './cart';
-import axios from 'axios';
+import api from '../../services/api';
 import './SuccessPage.css';
 import LoadingAnimation from '../../components/LoadingAnimation';
 
@@ -34,9 +34,8 @@ const SuccessPage = () => {
 
     try {
       // First check if the purchase already exists
-      const verifyResponse = await axios.get(
-        `https://s89-akhil-bookaura-3.onrender.com/api/payment/verify-purchase?purchaseId=${purchaseId}`,
-        { withCredentials: true }
+      const verifyResponse = await api.get(
+        `/api/payment/verify-purchase?purchaseId=${purchaseId}`
       );
 
       if (verifyResponse.data.success) {
@@ -73,16 +72,12 @@ const SuccessPage = () => {
         };
       });
 
-      const response = await axios.post(
-        'https://s89-akhil-bookaura-3.onrender.com/api/payment/save-purchase',
+      const response = await api.post(
+        '/api/payment/save-purchase',
         {
           sessionId: sessionId || 'manual-recovery',
           purchaseId,
           books: processedCartItems
-        },
-        {
-          withCredentials: true,
-          timeout: 30000
         }
       );
 
@@ -120,10 +115,22 @@ const SuccessPage = () => {
       setSaveStatus('saving');
 
       try {
+        // Check for token in URL (might be present from Google OAuth redirect)
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlToken = urlParams.get('token');
+
+        // If token is in URL, store it for future requests
+        if (urlToken) {
+          console.log('Found token in URL, storing for authentication');
+          localStorage.setItem('authToken', urlToken);
+
+          // Also set a client-side cookie for isLoggedIn status
+          document.cookie = `isLoggedIn=true; path=/; max-age=${7 * 24 * 60 * 60}`;
+        }
+
         // Verify Stripe session
-        const sessionResponse = await axios.get(
-          `https://s89-akhil-bookaura-3.onrender.com/api/payment/verify-session?sessionId=${sessionId}`,
-          { withCredentials: true }
+        const sessionResponse = await api.get(
+          `/api/payment/verify-session?sessionId=${sessionId}`
         );
 
         if (!sessionResponse.data.success) {
@@ -134,9 +141,8 @@ const SuccessPage = () => {
 
         // Check if purchase already exists
         try {
-          const verifyResponse = await axios.get(
-            `https://s89-akhil-bookaura-3.onrender.com/api/payment/verify-purchase?purchaseId=${purchaseId}`,
-            { withCredentials: true }
+          const verifyResponse = await api.get(
+            `/api/payment/verify-purchase?purchaseId=${purchaseId}`
           );
 
           if (verifyResponse.data.success) {
@@ -152,6 +158,10 @@ const SuccessPage = () => {
 
         if (cartItems.length === 0) {
           setSaveStatus('error');
+          setErrorDetails({
+            message: 'Cart is empty. Cannot save purchase without cart data.',
+            timestamp: new Date().toISOString()
+          });
           setIsLoading(false);
           return;
         }
@@ -167,16 +177,13 @@ const SuccessPage = () => {
           };
         });
 
-        const response = await axios.post(
-          'https://s89-akhil-bookaura-3.onrender.com/api/payment/save-purchase',
+        // Single attempt to save purchase - no retries
+        const response = await api.post(
+          '/api/payment/save-purchase',
           {
             sessionId,
             purchaseId,
             books: processedCartItems
-          },
-          {
-            withCredentials: true,
-            timeout: 15000
           }
         );
 
@@ -184,6 +191,11 @@ const SuccessPage = () => {
           setSaveStatus('success');
           clearCart();
         } else {
+          setErrorDetails({
+            message: 'Server returned error',
+            responseData: response.data,
+            timestamp: new Date().toISOString()
+          });
           setSaveStatus('error');
         }
       } catch (error) {
@@ -203,42 +215,7 @@ const SuccessPage = () => {
 
         // Update state with error details
         setErrorDetails(details);
-
-        // Retry once if timeout or server error
-        if (error.code === 'ECONNABORTED' || (error.response && error.response.status >= 500)) {
-          console.log('Attempting retry for save-purchase...');
-          try {
-            const retryResponse = await axios.post(
-              'https://s89-akhil-bookaura-3.onrender.com/api/payment/save-purchase',
-              {
-                sessionId,
-                purchaseId,
-                books: cartItems.map(book => ({
-                  ...book,
-                  url: book.url || 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1746792433/bookstore/bookFiles/zspcnbobqoimglk83yz6'
-                }))
-              },
-              {
-                withCredentials: true,
-                timeout: 20000
-              }
-            );
-
-            if (retryResponse.data.success) {
-              console.log('Retry successful');
-              setSaveStatus('success');
-              clearCart();
-            } else {
-              console.error('Retry failed with response:', retryResponse.data);
-              setSaveStatus('error');
-            }
-          } catch (retryError) {
-            console.error('Retry error:', retryError);
-            setSaveStatus('error');
-          }
-        } else {
-          setSaveStatus('error');
-        }
+        setSaveStatus('error');
       } finally {
         setIsLoading(false);
       }
@@ -288,22 +265,10 @@ const SuccessPage = () => {
 
                   <div className="recovery-actions">
                     <button
-                      className="retry-button"
-                      onClick={() => {
-                        setIsLoading(true);
-                        setSaveStatus('pending');
-                        setHasProcessed(false);
-                        setErrorDetails(null);
-                      }}
-                    >
-                      Retry Normal Process
-                    </button>
-
-                    <button
                       className="recovery-button"
                       onClick={recoverPurchase}
                     >
-                      Advanced Recovery
+                      Try Again
                     </button>
                   </div>
                 </>
