@@ -35,6 +35,27 @@ const Login = () => {
       // This ensures the login state persists even if localStorage is cleared
       document.cookie = `isLoggedIn=true; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=None; ${window.location.protocol === 'https:' ? 'Secure' : ''}`;
 
+      // If the response includes user data, store it in localStorage for faster loading
+      if (response.data.user) {
+        localStorage.setItem('userData', JSON.stringify(response.data.user));
+        console.log('User data cached in localStorage');
+      } else {
+        // Try to fetch user data to cache it
+        try {
+          const userResponse = await axios.get("https://s89-akhil-bookaura-3.onrender.com/router/profile", {
+            headers: { Authorization: `Bearer ${response.data.token}` },
+            withCredentials: true
+          });
+
+          if (userResponse.data.success) {
+            localStorage.setItem('userData', JSON.stringify(userResponse.data.user));
+            console.log('User data fetched and cached in localStorage');
+          }
+        } catch (userError) {
+          console.error("Error fetching user data for caching:", userError);
+        }
+      }
+
       console.log("Login successful");
 
       // Sync cart with server after successful login

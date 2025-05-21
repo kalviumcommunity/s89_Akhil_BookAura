@@ -57,6 +57,30 @@ const Profile = () => {
       return;
     }
 
+    // Set a timeout to prevent infinite loading
+    const loadingTimeout = setTimeout(() => {
+      if (loading) {
+        console.log('Loading timeout reached, showing default data');
+        setLoading(false);
+
+        // Try to get cached user data from localStorage
+        const cachedUserData = localStorage.getItem('userData');
+        if (cachedUserData) {
+          try {
+            const parsedData = JSON.parse(cachedUserData);
+            setUserData(parsedData);
+            setEditData({
+              username: parsedData.username,
+              email: parsedData.email,
+              profileImage: parsedData.profileImage
+            });
+          } catch (e) {
+            console.error('Error parsing cached user data:', e);
+          }
+        }
+      }
+    }, 5000); // 5 second timeout
+
     // Fetch user data
     const fetchUserData = async () => {
       try {
@@ -73,16 +97,31 @@ const Profile = () => {
 
         // Add a timestamp parameter to prevent caching
         const timestamp = new Date().getTime();
-        const response = await api.get(`/router/profile?_t=${timestamp}`, { headers });
+
+        // Set a timeout for the API request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+        const response = await api.get(`/router/profile?_t=${timestamp}`, {
+          headers,
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId); // Clear the timeout if request completes
 
         if (response.data.success) {
           console.log('User profile data retrieved successfully');
-          setUserData(response.data.user);
+          const userData = response.data.user;
+
+          // Cache the user data in localStorage
+          localStorage.setItem('userData', JSON.stringify(userData));
+
+          setUserData(userData);
           // Initialize edit data with current user data
           setEditData({
-            username: response.data.user.username,
-            email: response.data.user.email,
-            profileImage: response.data.user.profileImage
+            username: userData.username,
+            email: userData.email,
+            profileImage: userData.profileImage
           });
         }
         setLoading(false);
@@ -103,6 +142,22 @@ const Profile = () => {
           document.cookie = 'isLoggedIn=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
 
           navigate('/login');
+        } else {
+          // For other errors, try to use cached data
+          const cachedUserData = localStorage.getItem('userData');
+          if (cachedUserData) {
+            try {
+              const parsedData = JSON.parse(cachedUserData);
+              setUserData(parsedData);
+              setEditData({
+                username: parsedData.username,
+                email: parsedData.email,
+                profileImage: parsedData.profileImage
+              });
+            } catch (e) {
+              console.error('Error parsing cached user data:', e);
+            }
+          }
         }
 
         setLoading(false);
@@ -110,6 +165,11 @@ const Profile = () => {
     };
 
     fetchUserData();
+
+    // Clean up the timeout when the component unmounts
+    return () => {
+      clearTimeout(loadingTimeout);
+    };
   }, [isLoggedIn, loading, navigate]);
 
   const handleLogout = async () => {
@@ -268,7 +328,14 @@ const Profile = () => {
       <div>
         <Navbar />
         <div className="profile-container">
-          <div className="loading">Loading...</div>
+          <div className="profile-card loading-card">
+            <div className="loading-spinner"></div>
+            <div className="loading-text">
+              <h2>Loading Profile Data...</h2>
+              <p>Please wait while we fetch your information.</p>
+              <p>If this takes too long, the page will automatically load with cached data.</p>
+            </div>
+          </div>
         </div>
         <Footer />
       </div>

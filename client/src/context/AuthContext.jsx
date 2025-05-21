@@ -58,6 +58,18 @@ export const AuthProvider = ({ children }) => {
           try {
             console.log('Fetching user profile data...');
 
+            // First, check if we have cached user data
+            const cachedUserData = localStorage.getItem('userData');
+            if (cachedUserData) {
+              try {
+                const parsedData = JSON.parse(cachedUserData);
+                console.log('Using cached user data while fetching fresh data');
+                setUser(parsedData);
+              } catch (e) {
+                console.error('Error parsing cached user data:', e);
+              }
+            }
+
             // Set the token in the Authorization header explicitly
             const headers = {};
             if (localToken) {
@@ -66,11 +78,26 @@ export const AuthProvider = ({ children }) => {
 
             // Add a timestamp parameter to prevent caching
             const timestamp = new Date().getTime();
-            const response = await api.get(`/router/profile?_t=${timestamp}`, { headers });
+
+            // Set a timeout for the API request
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+
+            const response = await api.get(`/router/profile?_t=${timestamp}`, {
+              headers,
+              signal: controller.signal
+            });
+
+            clearTimeout(timeoutId); // Clear the timeout if request completes
 
             if (response.data.success) {
               console.log('User profile data retrieved successfully');
-              setUser(response.data.user);
+              const userData = response.data.user;
+
+              // Cache the user data in localStorage
+              localStorage.setItem('userData', JSON.stringify(userData));
+
+              setUser(userData);
             }
           } catch (profileError) {
             console.error('Error fetching user profile:', profileError);
@@ -88,8 +115,20 @@ export const AuthProvider = ({ children }) => {
                 console.log('Authentication failed, but not redirecting');
               }
             } else {
-              // For other errors, we'll just continue without user data
-              console.log('Non-authentication error occurred, continuing as logged in');
+              // For other errors, try to use cached data
+              const cachedUserData = localStorage.getItem('userData');
+              if (cachedUserData) {
+                try {
+                  const parsedData = JSON.parse(cachedUserData);
+                  console.log('Using cached user data due to fetch error');
+                  setUser(parsedData);
+                } catch (e) {
+                  console.error('Error parsing cached user data:', e);
+                }
+              } else {
+                // For other errors, we'll just continue without user data
+                console.log('Non-authentication error occurred, continuing as logged in');
+              }
             }
           }
         }
