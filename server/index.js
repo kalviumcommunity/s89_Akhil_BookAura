@@ -87,6 +87,8 @@ app.use(cors({
         'Access-Control-Request-Method',
         'Access-Control-Request-Headers',
         'Cache-Control',
+        'Pragma',
+        'Expires',
         'Cookie'
     ],
     exposedHeaders: ['Content-Length', 'Content-Type', 'Set-Cookie'],

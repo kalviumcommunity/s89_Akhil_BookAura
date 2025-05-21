@@ -71,7 +71,9 @@ const Profile = () => {
           headers.Authorization = `Bearer ${token}`;
         }
 
-        const response = await api.get('/router/profile', { headers });
+        // Add a timestamp parameter to prevent caching
+        const timestamp = new Date().getTime();
+        const response = await api.get(`/router/profile?_t=${timestamp}`, { headers });
 
         if (response.data.success) {
           console.log('User profile data retrieved successfully');

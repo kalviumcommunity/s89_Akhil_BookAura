@@ -79,7 +79,19 @@ const Navbar = () => {
     const fetchProfileImage = async () => {
       if (isLoggedIn) {
         try {
-          const response = await api.get('/router/profile-image');
+          // Get token from localStorage
+          const token = localStorage.getItem('authToken');
+
+          // Set up headers with token if available
+          const headers = {};
+          if (token) {
+            headers.Authorization = `Bearer ${token}`;
+          }
+
+          // Add a timestamp parameter to prevent caching
+          const timestamp = new Date().getTime();
+          const response = await api.get(`/router/profile-image?_t=${timestamp}`, { headers });
+
           if (response.data.success) {
             setProfileImage(response.data.profileImage);
             setUserName(response.data.username);

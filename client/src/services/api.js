@@ -78,12 +78,8 @@ api.interceptors.request.use(
     // Always include credentials to send cookies
     config.withCredentials = true;
 
-    // Add cache control headers to prevent caching of authenticated requests
-    if (token || config.url.includes('/profile')) {
-      config.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
-      config.headers['Pragma'] = 'no-cache';
-      config.headers['Expires'] = '0';
-    }
+    // We're removing the cache control headers completely to avoid CORS issues
+    // If caching becomes a problem, we'll need to update the server's CORS configuration
 
     return config;
   },
