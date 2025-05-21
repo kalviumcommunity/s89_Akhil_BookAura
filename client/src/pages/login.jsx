@@ -49,8 +49,15 @@ const Login = () => {
 
       // If the response includes user data, update the cache
       if (response.data.user) {
-        localStorage.setItem('userData', JSON.stringify(response.data.user));
-        console.log('Complete user data cached in localStorage');
+        // Ensure we have all required fields with defaults if missing
+        const userData = {
+          username: response.data.user.username || form.email.split('@')[0],
+          email: response.data.user.email || form.email,
+          profileImage: response.data.user.profileImage || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'
+        };
+
+        localStorage.setItem('userData', JSON.stringify(userData));
+        console.log('Complete user data cached in localStorage:', userData);
       } else {
         // Try to fetch user data to cache it in the background
         // We won't await this to avoid delaying the login process
@@ -61,8 +68,15 @@ const Login = () => {
           })
           .then(userResponse => {
             if (userResponse.data.success) {
-              localStorage.setItem('userData', JSON.stringify(userResponse.data.user));
-              console.log('User data fetched and cached in localStorage (background)');
+              // Ensure we have all required fields with defaults if missing
+              const userData = {
+                username: userResponse.data.user.username || form.email.split('@')[0],
+                email: userResponse.data.user.email || form.email,
+                profileImage: userResponse.data.user.profileImage || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'
+              };
+
+              localStorage.setItem('userData', JSON.stringify(userData));
+              console.log('User data fetched and cached in localStorage (background):', userData);
             }
           })
           .catch(userError => {

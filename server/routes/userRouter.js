@@ -109,7 +109,17 @@ router.post('/login', async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: '/'
     });
-    res.status(200).json({ message: 'Login successful', token });
+    // Include user data in the response for immediate use
+    res.status(200).json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        profileImage: user.profileImage
+      }
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal server error' });
@@ -182,9 +192,7 @@ router.post('/resetpassword', async (req, res) => {
   }
 });
 
-router.get('/profile', verifyToken, (req, res) => {
-  res.json({ user: req.user });
-});
+// This route was duplicated - removed in favor of the more complete implementation below
 
 // Get user profile data
 router.get('/profile', verifyToken, async (req, res) => {

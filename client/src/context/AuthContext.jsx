@@ -61,7 +61,16 @@ export const AuthProvider = ({ children }) => {
             try {
               const parsedData = JSON.parse(cachedUserData);
               console.log('IMMEDIATELY using cached user data');
-              setUser(parsedData);
+
+              // Ensure we have all required fields with defaults if missing
+              const userData = {
+                username: parsedData.username || 'User',
+                email: parsedData.email || '',
+                profileImage: parsedData.profileImage || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'
+              };
+
+              console.log('Processed user data in AuthContext:', userData);
+              setUser(userData);
 
               // Set loading to false right away
               setLoading(false);
@@ -114,11 +123,20 @@ export const AuthProvider = ({ children }) => {
                 console.log('Fresh user profile data retrieved successfully in background');
                 const userData = response.data.user;
 
+                // Ensure we have all required fields with defaults if missing
+                const processedUserData = {
+                  username: userData.username || 'User',
+                  email: userData.email || '',
+                  profileImage: userData.profileImage || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'
+                };
+
+                console.log('Fresh user data processed in AuthContext:', processedUserData);
+
                 // Cache the user data in localStorage
-                localStorage.setItem('userData', JSON.stringify(userData));
+                localStorage.setItem('userData', JSON.stringify(processedUserData));
 
                 // Update the user data
-                setUser(userData);
+                setUser(processedUserData);
               }
             } catch (profileError) {
               console.error('Error in background fetch of user profile:', profileError);

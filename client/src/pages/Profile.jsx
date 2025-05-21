@@ -63,12 +63,23 @@ const Profile = () => {
       try {
         console.log('Using cached user data immediately');
         const parsedData = JSON.parse(cachedUserData);
-        setUserData(parsedData);
+
+        // Ensure we have all required fields with defaults if missing
+        const userData = {
+          username: parsedData.username || 'User',
+          email: parsedData.email || '',
+          profileImage: parsedData.profileImage || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'
+        };
+
+        console.log('Parsed user data:', userData);
+
+        setUserData(userData);
         setEditData({
-          username: parsedData.username,
-          email: parsedData.email,
-          profileImage: parsedData.profileImage
+          username: userData.username,
+          email: userData.email,
+          profileImage: userData.profileImage
         });
+
         // Set loading to false immediately to show the UI
         setLoading(false);
       } catch (e) {
@@ -126,12 +137,21 @@ const Profile = () => {
           // Cache the user data in localStorage
           localStorage.setItem('userData', JSON.stringify(userData));
 
+          // Ensure we have all required fields with defaults if missing
+          const processedUserData = {
+            username: userData.username || 'User',
+            email: userData.email || '',
+            profileImage: userData.profileImage || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'
+          };
+
+          console.log('Fresh user data processed:', processedUserData);
+
           // Update the UI with fresh data
-          setUserData(userData);
+          setUserData(processedUserData);
           setEditData({
-            username: userData.username,
-            email: userData.email,
-            profileImage: userData.profileImage
+            username: processedUserData.username,
+            email: processedUserData.email,
+            profileImage: processedUserData.profileImage
           });
         }
       } catch (error) {
