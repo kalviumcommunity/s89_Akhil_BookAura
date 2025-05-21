@@ -21,7 +21,23 @@ const Flashcards = () => {
 
   // Fetch flashcard decks on component mount
   useEffect(() => {
-    fetchDecks();
+    // Check if user is logged in before fetching decks
+    const checkAuthAndFetchDecks = async () => {
+      // Check for auth token in localStorage or cookies
+      const token = localStorage.getItem('authToken') ||
+                    document.cookie.split(';').find(c => c.trim().startsWith('authToken=') || c.trim().startsWith('token='));
+
+      if (token) {
+        console.log('Auth token found, fetching flashcard decks');
+        fetchDecks();
+      } else {
+        console.log('No auth token found, user needs to log in');
+        setLoading(false);
+        setError('Please log in to view your flashcards');
+      }
+    };
+
+    checkAuthAndFetchDecks();
   }, []);
 
   const fetchDecks = async () => {
@@ -267,7 +283,7 @@ const Flashcards = () => {
   const handleBackToDeckList = () => {
     setSelectedDeck(null);
   };
-  
+
 
   // Render the upload modal
   const renderUploadModal = () => {
@@ -424,6 +440,15 @@ const Flashcards = () => {
     }
 
     if (error) {
+      // Special handling for authentication errors
+      if (error.includes('Please log in')) {
+        return (
+          <div className="auth-error">
+            <p>{error}</p>
+            <a href="/login" className="login-button">Log In</a>
+          </div>
+        );
+      }
       return <div className="error">{error}</div>;
     }
 

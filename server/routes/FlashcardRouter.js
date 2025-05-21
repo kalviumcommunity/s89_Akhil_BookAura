@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const fs = require('fs');
-const { verifyToken, auth } = require('../middleware/auth');
+const { verifyToken } = require('../middleware/auth');
 
 const FlashcardDeck = require('../model/FlashcardModel');
 const mongoose = require('mongoose');
@@ -16,7 +16,7 @@ const upload = multer({
 });
 
 // Test the Gemini API connection
-router.get('/test-gemini', auth, async (_, res) => {
+router.get('/test-gemini', verifyToken, async (_, res) => {
   try {
     const response = await testGeminiConnection();
     res.status(200).json({
@@ -35,7 +35,7 @@ router.get('/test-gemini', auth, async (_, res) => {
 });
 
 // Get all flashcard decks for the current user
-router.get('/decks', auth, async (req, res) => {
+router.get('/decks', verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -59,7 +59,7 @@ router.get('/decks', auth, async (req, res) => {
 });
 
 // Get a specific flashcard deck by ID
-router.get('/decks/:deckId', auth, async (req, res) => {
+router.get('/decks/:deckId', verifyToken, async (req, res) => {
   try {
     const { deckId } = req.params;
     const userId = req.user.id;
