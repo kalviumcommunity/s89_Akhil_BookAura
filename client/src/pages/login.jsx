@@ -27,7 +27,14 @@ const Login = () => {
     e.preventDefault();
     try {
       const response = await axios.post("https://s89-akhil-bookaura-3.onrender.com/router/login", form, { withCredentials: true });
+
+      // Store token in localStorage
       localStorage.setItem('authToken', response.data.token);
+
+      // Also set a client-side cookie for isLoggedIn status
+      // This ensures the login state persists even if localStorage is cleared
+      document.cookie = `isLoggedIn=true; path=/; max-age=${7 * 24 * 60 * 60}`;
+
       console.log("Login successful");
 
       // Sync cart with server after successful login

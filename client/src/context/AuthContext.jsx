@@ -17,6 +17,8 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkLoginStatus = async () => {
       try {
+        console.log('Checking login status...');
+
         // Check URL parameters for token from Google OAuth
         const params = new URLSearchParams(window.location.search);
         const urlToken = params.get('token');
@@ -27,38 +29,59 @@ export const AuthProvider = ({ children }) => {
           console.log('Google authentication successful, storing token');
           localStorage.setItem('authToken', urlToken);
 
+          // Also set a non-httpOnly cookie for client-side detection
+          document.cookie = `isLoggedIn=true; path=/; max-age=${7 * 24 * 60 * 60}`;
+
           // Clean up URL parameters
           const cleanUrl = window.location.pathname;
           window.history.replaceState({}, document.title, cleanUrl);
         }
 
         // Check for the non-httpOnly isLoggedIn cookie
-        const hasToken = document.cookie.includes('isLoggedIn=true');
+        const isLoggedInCookie = document.cookie.split(';').some(cookie =>
+          cookie.trim().startsWith('isLoggedIn=true')
+        );
+        console.log('isLoggedIn cookie present:', isLoggedInCookie);
 
-        // Also check if we have a token in localStorage
+        // Check if we have a token in localStorage
         const localToken = localStorage.getItem('authToken');
+        console.log('Token in localStorage:', localToken ? 'Present' : 'Not present');
 
         // If either is true, consider the user logged in
-        const isAuthenticated = hasToken || !!localToken;
+        const isAuthenticated = isLoggedInCookie || !!localToken;
+        console.log('Authentication status:', isAuthenticated ? 'Logged in' : 'Not logged in');
 
         setIsLoggedIn(isAuthenticated);
 
         // If authenticated, try to fetch user data
         if (isAuthenticated) {
           try {
+            console.log('Fetching user profile data...');
             const response = await api.get('/router/profile');
             if (response.data.success) {
+              console.log('User profile data retrieved successfully');
               setUser(response.data.user);
             }
           } catch (profileError) {
             console.error('Error fetching user profile:', profileError);
-            // If we can't get the profile, we'll just continue without user data
+
+            // If we get a 401 error, the token might be invalid or expired
+            if (profileError.response && profileError.response.status === 401) {
+              console.log('Authentication token invalid or expired');
+
+              // Only clear auth state if we're not on the login page
+              if (!window.location.pathname.includes('/login')) {
+                setIsLoggedIn(false);
+                setUser(null);
+              }
+            } else {
+              // For other errors, we'll just continue without user data
+              console.log('Non-authentication error occurred, continuing as logged in');
+            }
           }
         }
-
-        console.log('User login status:', isAuthenticated ? 'Logged in' : 'Not logged in');
       } catch (error) {
-        console.error('Error checking login status:', error);
+        console.error('Error in authentication check:', error);
       } finally {
         setLoading(false);
       }

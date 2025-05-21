@@ -1,20 +1,11 @@
 import axios from 'axios';
 
 // Determine the API base URL based on environment
-const getBaseUrl = () => {
-  
-  // Check if we're in development or production
-  if (import.meta.env.DEV) {
-    // Local development - use localhost
-    return 'http://localhost:5000';
-  }
-
-  return 'https://s89-akhil-bookaura-3.onrender.com';
-};
+const getBaseUrl = 'https://s89-akhil-bookaura-3.onrender.com';
 
 // Create a base axios instance with common configuration
 const api = axios.create({
-  baseURL: getBaseUrl(),
+  baseURL: getBaseUrl,
   withCredentials: true, // Always send cookies with requests
   timeout: 30000, // 30 second timeout
   headers: {
@@ -75,11 +66,10 @@ api.interceptors.request.use(
       if (isLoggedInCookie) {
         console.log('- User appears to be logged in via cookie, but no token found');
 
-        // If we have isLoggedIn cookie but no token, redirect to home to trigger Google auth handling
-        if (window.location.pathname !== '/' && !window.location.pathname.includes('/login')) {
-          console.log('- Redirecting to home to handle authentication');
-          window.location.href = '/';
-        }
+        // Don't redirect - this was causing the profile page reload issue
+        // Instead, we'll let the request proceed without a token
+        // The server will return 401 if authentication is required
+        console.log('- Continuing request without token');
       }
     }
 
@@ -133,24 +123,36 @@ api.interceptors.response.use(
       console.log('Authentication error:', error.response.data);
 
       // Check if we're already on the login page to avoid redirect loops
-      if (!window.location.pathname.includes('/login')) {
-        console.log('Unauthorized access, redirecting to login page');
+      // Also check if we're on the profile page, which is a protected route
+      const isProfilePage = window.location.pathname.includes('/profile');
+      const isLoginPage = window.location.pathname.includes('/login');
 
-        // Clear any stored auth data
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userData');
+      if (!isLoginPage) {
+        console.log('Unauthorized access detected');
 
-        // Clear cookies
-        document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        document.cookie = 'isLoggedIn=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        // Only clear auth data and redirect if this is a protected route like profile
+        // For other routes, we'll just let the error propagate
+        if (isProfilePage) {
+          console.log('Protected route detected, redirecting to login page');
 
-        // Show error message
-        alert('Your session has expired. Please log in again.');
+          // Clear any stored auth data
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('userData');
 
-        // Redirect to login page
-        // Using window.location instead of navigate because this is outside of React components
-        window.location.href = '/login';
+          // Clear cookies
+          document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+          document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+          document.cookie = 'isLoggedIn=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+          // Show error message
+          alert('Your session has expired. Please log in again.');
+
+          // Redirect to login page
+          // Using window.location instead of navigate because this is outside of React components
+          window.location.href = '/login';
+        } else {
+          console.log('Non-protected route, continuing with error');
+        }
       }
     }
 

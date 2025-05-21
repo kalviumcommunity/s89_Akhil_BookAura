@@ -42,8 +42,11 @@ const Profile = () => {
   const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
-    // Redirect if not logged in
+    console.log('Profile component mounted, auth status:', isLoggedIn ? 'Logged in' : 'Not logged in');
+
+    // Check authentication status
     if (!isLoggedIn) {
+      console.log('User not logged in, redirecting to login page');
       navigate('/login');
       return;
     }
@@ -51,9 +54,11 @@ const Profile = () => {
     // Fetch user data
     const fetchUserData = async () => {
       try {
+        console.log('Fetching user profile data...');
         const response = await api.get('/router/profile');
 
         if (response.data.success) {
+          console.log('User profile data retrieved successfully');
           setUserData(response.data.user);
           // Initialize edit data with current user data
           setEditData({
@@ -65,6 +70,13 @@ const Profile = () => {
         setLoading(false);
       } catch (error) {
         console.error('Error fetching user data:', error);
+
+        // If we get a 401 error, the token might be invalid or expired
+        if (error.response && error.response.status === 401) {
+          console.log('Authentication failed, redirecting to login');
+          navigate('/login');
+        }
+
         setLoading(false);
       }
     };
