@@ -118,7 +118,7 @@ const AiChat = () => {
       console.log('Sending image to:', chatUrl);
 
       // Use fetch instead of axios for better compatibility with FormData
-      const response = await fetch(chatUrl, {
+      const response = await fetch('https://s89-akhil-bookaura.onrender.com/api/chat', {
         method: 'POST',
         headers: {
           // Include auth token if available
@@ -277,7 +277,7 @@ const AiChat = () => {
       // Use the base URL from our API service but make a direct fetch call
       // This is because the chat API is a separate service
       const baseUrl = api.defaults.baseURL;
-      const chatUrl = `${baseUrl}/api/chat`;
+      const chatUrl = `https://s89-akhil-bookaura.onrender.com/api/chat`;
 
       console.log('Sending request to:', chatUrl);
 
