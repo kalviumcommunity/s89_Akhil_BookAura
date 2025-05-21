@@ -52,55 +52,65 @@ const Profile = () => {
     }
 
     // Don't fetch if we're still loading auth state or not logged in
-    if (loading || !isLoggedIn) {
-      console.log('Waiting for auth state to resolve...');
+    if (!isLoggedIn) {
+      console.log('Not logged in, waiting for auth state to resolve...');
       return;
     }
 
-    // Set a timeout to prevent infinite loading
+    // IMMEDIATELY check for cached data and show it
+    const cachedUserData = localStorage.getItem('userData');
+    if (cachedUserData) {
+      try {
+        console.log('Using cached user data immediately');
+        const parsedData = JSON.parse(cachedUserData);
+        setUserData(parsedData);
+        setEditData({
+          username: parsedData.username,
+          email: parsedData.email,
+          profileImage: parsedData.profileImage
+        });
+        // Set loading to false immediately to show the UI
+        setLoading(false);
+      } catch (e) {
+        console.error('Error parsing cached user data:', e);
+      }
+    }
+
+    // Set a very short timeout to prevent any loading state
     const loadingTimeout = setTimeout(() => {
       if (loading) {
-        console.log('Loading timeout reached, showing default data');
+        console.log('Loading timeout reached after 1 second, forcing display');
         setLoading(false);
-
-        // Try to get cached user data from localStorage
-        const cachedUserData = localStorage.getItem('userData');
-        if (cachedUserData) {
-          try {
-            const parsedData = JSON.parse(cachedUserData);
-            setUserData(parsedData);
-            setEditData({
-              username: parsedData.username,
-              email: parsedData.email,
-              profileImage: parsedData.profileImage
-            });
-          } catch (e) {
-            console.error('Error parsing cached user data:', e);
-          }
-        }
       }
-    }, 5000); // 5 second timeout
+    }, 1000); // Just 1 second timeout as a fallback
 
-    // Fetch user data
+    // Fetch user data in the background
     const fetchUserData = async () => {
       try {
-        console.log('Fetching user profile data...');
+        console.log('Fetching fresh user profile data in background...');
 
         // Get token from localStorage
         const token = localStorage.getItem('authToken');
-
-        // Set up headers with token if available
-        const headers = {};
-        if (token) {
-          headers.Authorization = `Bearer ${token}`;
+        if (!token) {
+          console.log('No auth token found, skipping profile fetch');
+          setLoading(false);
+          return;
         }
+
+        // Set up headers with token
+        const headers = {
+          Authorization: `Bearer ${token}`
+        };
 
         // Add a timestamp parameter to prevent caching
         const timestamp = new Date().getTime();
 
         // Set a timeout for the API request
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        const timeoutId = setTimeout(() => {
+          console.log('API request timeout reached, aborting');
+          controller.abort();
+        }, 5000); // Reduced to 5 second timeout
 
         const response = await api.get(`/router/profile?_t=${timestamp}`, {
           headers,
@@ -110,23 +120,22 @@ const Profile = () => {
         clearTimeout(timeoutId); // Clear the timeout if request completes
 
         if (response.data.success) {
-          console.log('User profile data retrieved successfully');
+          console.log('Fresh user profile data retrieved successfully');
           const userData = response.data.user;
 
           // Cache the user data in localStorage
           localStorage.setItem('userData', JSON.stringify(userData));
 
+          // Update the UI with fresh data
           setUserData(userData);
-          // Initialize edit data with current user data
           setEditData({
             username: userData.username,
             email: userData.email,
             profileImage: userData.profileImage
           });
         }
-        setLoading(false);
       } catch (error) {
-        console.error('Error fetching user data:', error);
+        console.error('Error fetching fresh user data:', error);
 
         // If we get a 401 error, the token might be invalid or expired
         if (error.response && error.response.status === 401) {
@@ -142,28 +151,12 @@ const Profile = () => {
           document.cookie = 'isLoggedIn=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
 
           navigate('/login');
-        } else {
-          // For other errors, try to use cached data
-          const cachedUserData = localStorage.getItem('userData');
-          if (cachedUserData) {
-            try {
-              const parsedData = JSON.parse(cachedUserData);
-              setUserData(parsedData);
-              setEditData({
-                username: parsedData.username,
-                email: parsedData.email,
-                profileImage: parsedData.profileImage
-              });
-            } catch (e) {
-              console.error('Error parsing cached user data:', e);
-            }
-          }
         }
-
-        setLoading(false);
+        // For other errors, we already have cached data displayed, so just log the error
       }
     };
 
+    // Start fetching in the background
     fetchUserData();
 
     // Clean up the timeout when the component unmounts
@@ -323,17 +316,16 @@ const Profile = () => {
     }
   };
 
+  // We'll show a simplified loading state that will appear very briefly
   if (loading) {
     return (
       <div>
         <Navbar />
         <div className="profile-container">
           <div className="profile-card loading-card">
-            <div className="loading-spinner"></div>
-            <div className="loading-text">
-              <h2>Loading Profile Data...</h2>
-              <p>Please wait while we fetch your information.</p>
-              <p>If this takes too long, the page will automatically load with cached data.</p>
+            <div className="loading-spinner-small"></div>
+            <div className="loading-text-small">
+              <p>Loading profile...</p>
             </div>
           </div>
         </div>

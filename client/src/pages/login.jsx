@@ -35,25 +35,40 @@ const Login = () => {
       // This ensures the login state persists even if localStorage is cleared
       document.cookie = `isLoggedIn=true; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=None; ${window.location.protocol === 'https:' ? 'Secure' : ''}`;
 
-      // If the response includes user data, store it in localStorage for faster loading
+      // Create a minimal user data object to cache immediately
+      // This ensures we have something to show right away on profile page
+      const minimalUserData = {
+        username: form.email.split('@')[0], // Use part of email as temporary username
+        email: form.email,
+        profileImage: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'
+      };
+
+      // Store this minimal data immediately
+      localStorage.setItem('userData', JSON.stringify(minimalUserData));
+      console.log('Minimal user data cached in localStorage');
+
+      // If the response includes user data, update the cache
       if (response.data.user) {
         localStorage.setItem('userData', JSON.stringify(response.data.user));
-        console.log('User data cached in localStorage');
+        console.log('Complete user data cached in localStorage');
       } else {
-        // Try to fetch user data to cache it
-        try {
-          const userResponse = await axios.get("https://s89-akhil-bookaura-3.onrender.com/router/profile", {
+        // Try to fetch user data to cache it in the background
+        // We won't await this to avoid delaying the login process
+        setTimeout(() => {
+          axios.get("https://s89-akhil-bookaura-3.onrender.com/router/profile", {
             headers: { Authorization: `Bearer ${response.data.token}` },
             withCredentials: true
+          })
+          .then(userResponse => {
+            if (userResponse.data.success) {
+              localStorage.setItem('userData', JSON.stringify(userResponse.data.user));
+              console.log('User data fetched and cached in localStorage (background)');
+            }
+          })
+          .catch(userError => {
+            console.error("Error fetching user data for caching:", userError);
           });
-
-          if (userResponse.data.success) {
-            localStorage.setItem('userData', JSON.stringify(userResponse.data.user));
-            console.log('User data fetched and cached in localStorage');
-          }
-        } catch (userError) {
-          console.error("Error fetching user data for caching:", userError);
-        }
+        }, 100); // Small delay to prioritize UI response
       }
 
       console.log("Login successful");

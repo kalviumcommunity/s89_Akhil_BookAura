@@ -51,90 +51,100 @@ export const AuthProvider = ({ children }) => {
         const isAuthenticated = isLoggedInCookie || !!localToken;
         console.log('Authentication status:', isAuthenticated ? 'Logged in' : 'Not logged in');
 
+        // IMMEDIATELY set login status to avoid delays
         setIsLoggedIn(isAuthenticated);
 
-        // If authenticated, try to fetch user data
+        // IMMEDIATELY check for cached user data
         if (isAuthenticated) {
-          try {
-            console.log('Fetching user profile data...');
+          const cachedUserData = localStorage.getItem('userData');
+          if (cachedUserData) {
+            try {
+              const parsedData = JSON.parse(cachedUserData);
+              console.log('IMMEDIATELY using cached user data');
+              setUser(parsedData);
 
-            // First, check if we have cached user data
-            const cachedUserData = localStorage.getItem('userData');
-            if (cachedUserData) {
-              try {
-                const parsedData = JSON.parse(cachedUserData);
-                console.log('Using cached user data while fetching fresh data');
-                setUser(parsedData);
-              } catch (e) {
-                console.error('Error parsing cached user data:', e);
-              }
-            }
-
-            // Set the token in the Authorization header explicitly
-            const headers = {};
-            if (localToken) {
-              headers.Authorization = `Bearer ${localToken}`;
-            }
-
-            // Add a timestamp parameter to prevent caching
-            const timestamp = new Date().getTime();
-
-            // Set a timeout for the API request
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
-
-            const response = await api.get(`/router/profile?_t=${timestamp}`, {
-              headers,
-              signal: controller.signal
-            });
-
-            clearTimeout(timeoutId); // Clear the timeout if request completes
-
-            if (response.data.success) {
-              console.log('User profile data retrieved successfully');
-              const userData = response.data.user;
-
-              // Cache the user data in localStorage
-              localStorage.setItem('userData', JSON.stringify(userData));
-
-              setUser(userData);
-            }
-          } catch (profileError) {
-            console.error('Error fetching user profile:', profileError);
-
-            // If we get a 401 error, the token might be invalid or expired
-            if (profileError.response && profileError.response.status === 401) {
-              console.log('Authentication token invalid or expired');
-
-              // Only clear auth state if we're not on the login page
-              if (!window.location.pathname.includes('/login')) {
-                setIsLoggedIn(false);
-                setUser(null);
-
-                // Don't redirect here - let the component handle it
-                console.log('Authentication failed, but not redirecting');
-              }
-            } else {
-              // For other errors, try to use cached data
-              const cachedUserData = localStorage.getItem('userData');
-              if (cachedUserData) {
-                try {
-                  const parsedData = JSON.parse(cachedUserData);
-                  console.log('Using cached user data due to fetch error');
-                  setUser(parsedData);
-                } catch (e) {
-                  console.error('Error parsing cached user data:', e);
-                }
-              } else {
-                // For other errors, we'll just continue without user data
-                console.log('Non-authentication error occurred, continuing as logged in');
-              }
+              // Set loading to false right away
+              setLoading(false);
+            } catch (e) {
+              console.error('Error parsing cached user data:', e);
             }
           }
         }
+
+        // Set a very short timeout to ensure loading state is cleared
+        setTimeout(() => {
+          setLoading(false);
+        }, 500);
+
+        // If authenticated, try to fetch fresh user data in the background
+        if (isAuthenticated) {
+          // Use a separate async function to fetch in background
+          const fetchUserDataInBackground = async () => {
+            try {
+              console.log('Fetching fresh user profile data in background...');
+
+              if (!localToken) {
+                console.log('No token available for background fetch');
+                return;
+              }
+
+              // Set the token in the Authorization header explicitly
+              const headers = {
+                Authorization: `Bearer ${localToken}`
+              };
+
+              // Add a timestamp parameter to prevent caching
+              const timestamp = new Date().getTime();
+
+              // Set a timeout for the API request
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => {
+                console.log('Background API request timeout reached, aborting');
+                controller.abort();
+              }, 5000); // 5 second timeout
+
+              const response = await api.get(`/router/profile?_t=${timestamp}`, {
+                headers,
+                signal: controller.signal
+              });
+
+              clearTimeout(timeoutId); // Clear the timeout if request completes
+
+              if (response.data.success) {
+                console.log('Fresh user profile data retrieved successfully in background');
+                const userData = response.data.user;
+
+                // Cache the user data in localStorage
+                localStorage.setItem('userData', JSON.stringify(userData));
+
+                // Update the user data
+                setUser(userData);
+              }
+            } catch (profileError) {
+              console.error('Error in background fetch of user profile:', profileError);
+
+              // If we get a 401 error, the token might be invalid or expired
+              if (profileError.response && profileError.response.status === 401) {
+                console.log('Authentication token invalid or expired');
+
+                // Only clear auth state if we're not on the login page
+                if (!window.location.pathname.includes('/login')) {
+                  setIsLoggedIn(false);
+                  setUser(null);
+                }
+              }
+              // For other errors, we already have cached data, so just log
+            }
+          };
+
+          // Start the background fetch
+          fetchUserDataInBackground();
+        } else {
+          // Not authenticated, ensure loading is false
+          setLoading(false);
+        }
       } catch (error) {
         console.error('Error in authentication check:', error);
-      } finally {
         setLoading(false);
       }
     };
