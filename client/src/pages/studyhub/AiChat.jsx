@@ -112,8 +112,8 @@ const AiChat = () => {
     try {
       // Use the base URL from our API service but make a direct fetch call
       // This is because the chat API is a separate service
-      const baseUrl = api.defaults.baseURL;
-      const chatUrl = `${baseUrl}/api/chat`;
+      
+      const chatUrl = 'https://s89-akhil-bookaura.onrender.com/api/chat';
 
       console.log('Sending image to:', chatUrl);
 
