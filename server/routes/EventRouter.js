@@ -102,15 +102,53 @@ router.post('/', verifyToken, async (req, res) => {
             title,
             start: start ? new Date(start).toISOString() : null,
             end: end ? new Date(end).toISOString() : null,
-            calendarId
+            calendarId,
+            color,
+            isAllDay
         });
+
+        // Check if userId is valid
+        if (!userId) {
+            console.error('No userId found in request. User object:', req.user);
+            return res.status(400).json({
+                success: false,
+                message: 'User ID is required'
+            });
+        }
 
         // Validate required fields
         if (!title || !start || !end) {
-            console.log('Missing required fields');
+            console.error('Missing required fields:', {
+                title: !!title,
+                start: !!start,
+                end: !!end
+            });
             return res.status(400).json({
                 success: false,
                 message: 'Title, start, and end are required fields'
+            });
+        }
+
+        // Validate date formats
+        let startDate, endDate;
+        try {
+            startDate = new Date(start);
+            endDate = new Date(end);
+
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                throw new Error('Invalid date format');
+            }
+
+            console.log('Parsed dates:', {
+                start: startDate.toISOString(),
+                end: endDate.toISOString()
+            });
+        } catch (dateError) {
+            console.error('Date parsing error:', dateError);
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid date format',
+                error: dateError.message
             });
         }
 
@@ -119,8 +157,8 @@ router.post('/', verifyToken, async (req, res) => {
             userId,
             title,
             description,
-            start: new Date(start),
-            end: new Date(end),
+            start: startDate,
+            end: endDate,
             location,
             attendees: attendees || [],
             calendarId,
@@ -142,19 +180,33 @@ router.post('/', verifyToken, async (req, res) => {
     } catch (error) {
         console.error('Error creating event:', error);
 
-        // Check for specific error types
+        // Log more detailed error information
         if (error.name === 'ValidationError') {
+            console.error('Validation error details:', error.errors);
             return res.status(400).json({
                 success: false,
                 message: 'Validation error',
-                error: error.message
+                error: error.message,
+                details: Object.keys(error.errors).reduce((acc, key) => {
+                    acc[key] = error.errors[key].message;
+                    return acc;
+                }, {})
+            });
+        } else if (error.name === 'CastError') {
+            console.error('Cast error details:', error);
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid data format',
+                error: error.message,
+                field: error.path
             });
         }
 
         res.status(500).json({
             success: false,
             message: 'Error creating event',
-            error: error.message
+            error: error.message,
+            errorType: error.name
         });
     }
 });

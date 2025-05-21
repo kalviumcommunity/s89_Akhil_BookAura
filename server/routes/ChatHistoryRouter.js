@@ -43,7 +43,22 @@ router.post('/', verifyToken, async (req, res) => {
     const userId = req.user.id;
     const { text, sender } = req.body;
 
+    console.log('Saving message to chat history:', {
+      userId,
+      text: text?.substring(0, 50) + (text?.length > 50 ? '...' : ''),
+      sender
+    });
+
+    if (!userId) {
+      console.error('No userId found in request. User object:', req.user);
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
     if (!text || !sender) {
+      console.error('Missing required fields:', { text: !!text, sender: !!sender });
       return res.status(400).json({
         success: false,
         message: 'Text and sender are required'
@@ -51,24 +66,32 @@ router.post('/', verifyToken, async (req, res) => {
     }
 
     // Find or create chat history for the user
+    console.log('Finding chat history for user:', userId);
     let chatHistory = await ChatHistory.findOne({ userId });
 
     if (!chatHistory) {
+      console.log('No existing chat history found, creating new one');
       chatHistory = new ChatHistory({
         userId,
         messages: []
       });
+    } else {
+      console.log('Found existing chat history with', chatHistory.messages.length, 'messages');
     }
 
     // Add the new message
+    const timestamp = new Date();
     chatHistory.messages.push({
       text,
       sender,
-      timestamp: new Date()
+      timestamp
     });
+
+    console.log('Added new message to chat history, saving...');
 
     // Save the updated chat history
     await chatHistory.save();
+    console.log('Chat history saved successfully');
 
     res.status(201).json({
       success: true,
@@ -77,10 +100,19 @@ router.post('/', verifyToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error saving message to chat history:', error);
+
+    // Log more detailed error information
+    if (error.name === 'ValidationError') {
+      console.error('Validation error details:', error.errors);
+    } else if (error.name === 'CastError') {
+      console.error('Cast error details:', error);
+    }
+
     res.status(500).json({
       success: false,
       message: 'Error saving message to chat history',
-      error: error.message
+      error: error.message,
+      errorType: error.name
     });
   }
 });

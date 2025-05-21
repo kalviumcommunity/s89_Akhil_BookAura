@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import './AiChat.css';
 import Navbar from '../../components/StudyHubNavbar';
 import { Send, Loader2, Image, Trash2 } from 'lucide-react';
-import axios from 'axios';
+import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 const AiChat = () => {
@@ -110,10 +110,25 @@ const AiChat = () => {
     console.log("Sending image:", file.name, file.type, `${(file.size/1024).toFixed(2)}KB`, "with userId:", userId);
 
     try {
+      // Use the base URL from our API service but make a direct fetch call
+      // This is because the chat API is a separate service
+      const baseUrl = api.defaults.baseURL;
+      const chatUrl = `${baseUrl}/api/chat`;
+
+      console.log('Sending image to:', chatUrl);
+
       // Use fetch instead of axios for better compatibility with FormData
-      const response = await fetch('https://s89-akhil-bookaura-3.onrender.com/api/chat', {
+      const response = await fetch(chatUrl, {
         method: 'POST',
-        body: formData, // Don't set Content-Type header, browser will set it with boundary
+        headers: {
+          // Include auth token if available
+          ...(localStorage.getItem('authToken') ? {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          } : {})
+          // Don't set Content-Type header, browser will set it with boundary for FormData
+        },
+        credentials: 'include', // Include cookies
+        body: formData
       });
 
       if (!response.ok) {
@@ -121,12 +136,13 @@ const AiChat = () => {
       }
 
       const data = await response.json();
-      const aiMessage = { text: data.response, sender: 'ai' };
+      console.log('AI response received for image:', data);
 
+      const aiMessage = { text: data.response, sender: 'ai' };
       setMessages(prev => [...prev, aiMessage]);
 
       if (isLoggedIn) {
-        saveToChatHistory(aiMessage.text, 'ai');
+        await saveToChatHistory(aiMessage.text, 'ai');
       }
     } catch (error) {
       console.error('Error sending message with image:', error);
@@ -157,7 +173,10 @@ const AiChat = () => {
 
   useEffect(() => {
     if (isLoggedIn) {
+      console.log('User is logged in, loading chat history...');
       loadChatHistory();
+    } else {
+      console.log('User is not logged in, skipping chat history load');
     }
   }, [isLoggedIn]);
 
@@ -170,36 +189,62 @@ const AiChat = () => {
   const loadChatHistory = async () => {
     try {
       setIsChatHistoryLoading(true);
-      const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/chat-history', { withCredentials: true });
+      console.log('Loading chat history...');
+      const response = await api.get('/api/chat-history');
 
       if (response.data.success) {
+        console.log('Chat history loaded successfully:', response.data.data.length, 'messages');
         setMessages(response.data.data);
       }
     } catch (error) {
       console.error('Error loading chat history:', error);
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      }
     } finally {
       setIsChatHistoryLoading(false);
     }
   };
 
   const saveToChatHistory = async (text, sender) => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn) {
+      console.log('Not saving message to history - user not logged in');
+      return;
+    }
 
     try {
-      await axios.post('https://s89-akhil-bookaura-3.onrender.com/api/chat-history', { text, sender }, { withCredentials: true });
+      console.log('Saving message to chat history:', { text, sender });
+      const response = await api.post('/api/chat-history', { text, sender });
+      console.log('Message saved successfully:', response.data);
     } catch (error) {
       console.error('Error saving message to chat history:', error);
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      }
     }
   };
 
   const clearChatHistory = async () => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn) {
+      console.log('Not clearing history - user not logged in');
+      return;
+    }
 
     try {
-      const response = await axios.delete('https://s89-akhil-bookaura-3.onrender.com/api/chat-history', { withCredentials: true });
-      if (response.data.success) setMessages([]);
+      console.log('Clearing chat history...');
+      const response = await api.delete('/api/chat-history');
+      if (response.data.success) {
+        console.log('Chat history cleared successfully');
+        setMessages([]);
+      }
     } catch (error) {
       console.error('Error clearing chat history:', error);
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      }
     }
   };
 
@@ -213,8 +258,9 @@ const AiChat = () => {
     setInputMessage('');
     setIsLoading(true);
 
+    // Save user message to chat history
     if (isLoggedIn) {
-      saveToChatHistory(userMessage.text, 'user');
+      await saveToChatHistory(userMessage.text, 'user');
     }
 
     try {
@@ -226,9 +272,25 @@ const AiChat = () => {
                       return id;
                     })();
 
-      const response = await fetch('https://s89-akhil-bookaura-3.onrender.com/api/chat', {
+      console.log('Sending message to AI chat service with userId:', userId);
+
+      // Use the base URL from our API service but make a direct fetch call
+      // This is because the chat API is a separate service
+      const baseUrl = api.defaults.baseURL;
+      const chatUrl = `${baseUrl}/api/chat`;
+
+      console.log('Sending request to:', chatUrl);
+
+      const response = await fetch(chatUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          // Include auth token if available
+          ...(localStorage.getItem('authToken') ? {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          } : {})
+        },
+        credentials: 'include', // Include cookies
         body: JSON.stringify({
           userId: userId,
           message: inputMessage,
@@ -236,21 +298,38 @@ const AiChat = () => {
         }),
       });
 
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('AI response received:', data);
+
       const aiMessage = { text: data.response, sender: 'ai' };
       setMessages(prev => [...prev, aiMessage]);
 
+      // Save AI response to chat history
       if (isLoggedIn) {
-        saveToChatHistory(aiMessage.text, 'ai');
+        await saveToChatHistory(aiMessage.text, 'ai');
       }
     } catch (error) {
       console.error('Error sending message:', error);
 
-      const errorMessage = { text: 'Sorry, I encountered an error. Please try again.', sender: 'ai' };
+      // Log detailed error information
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      }
+
+      const errorMessage = {
+        text: 'Sorry, I encountered an error. Please try again. ' +
+              (error.message ? `(${error.message})` : ''),
+        sender: 'ai'
+      };
       setMessages(prev => [...prev, errorMessage]);
 
       if (isLoggedIn) {
-        saveToChatHistory(errorMessage.text, 'ai');
+        await saveToChatHistory(errorMessage.text, 'ai');
       }
     } finally {
       setIsLoading(false);
