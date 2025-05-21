@@ -26,7 +26,7 @@ api.interceptors.request.use(
     let token = localStorage.getItem('authToken');
 
     // Log authentication status for debugging
-    console.log('Auth status check:');
+    console.log('Auth status check for request to:', config.url);
     console.log('- Token in localStorage:', token ? 'Present' : 'Missing');
     console.log('- Cookies present:', document.cookie ? 'Yes' : 'No');
 
@@ -66,15 +66,24 @@ api.interceptors.request.use(
       if (isLoggedInCookie) {
         console.log('- User appears to be logged in via cookie, but no token found');
 
-        // Don't redirect - this was causing the profile page reload issue
-        // Instead, we'll let the request proceed without a token
-        // The server will return 401 if authentication is required
-        console.log('- Continuing request without token');
+        // For profile requests, we need to handle this specially
+        if (config.url.includes('/profile')) {
+          console.log('- Profile request detected without token, this may fail');
+        } else {
+          console.log('- Continuing request without token');
+        }
       }
     }
 
     // Always include credentials to send cookies
     config.withCredentials = true;
+
+    // Add cache control headers to prevent caching of authenticated requests
+    if (token || config.url.includes('/profile')) {
+      config.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+      config.headers['Pragma'] = 'no-cache';
+      config.headers['Expires'] = '0';
+    }
 
     return config;
   },

@@ -34,25 +34,28 @@ router.post('/signup', async (req, res) => {
     // Set both cookie names for better compatibility
     res.cookie('authToken', token, {
       httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
       maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/'
     });
 
     // Also set as 'token' for client-side checks
     res.cookie('token', token, {
       httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
       maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/'
     });
 
     // Add a non-httpOnly cookie for client-side detection
     res.cookie('isLoggedIn', 'true', {
       httpOnly: false,
-      secure: false,
-      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
       maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/'
     });
     res.status(201).json({ message: 'User registered successfully', user: savedUser });
   } catch (error) {
@@ -83,25 +86,28 @@ router.post('/login', async (req, res) => {
     // Set both cookie names for better compatibility
     res.cookie('authToken', token, {
       httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/'
     });
 
     // Also set as 'token' for client-side checks
     res.cookie('token', token, {
       httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/'
     });
 
     // Add a non-httpOnly cookie for client-side detection
     res.cookie('isLoggedIn', 'true', {
       httpOnly: false,
-      secure: false,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/'
     });
     res.status(200).json({ message: 'Login successful', token });
   } catch (error) {
@@ -269,25 +275,28 @@ router.get('/auth/google/callback',
       // Set both cookie names for better compatibility
       res.cookie('authToken', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production'|| false,
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'none',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: '/'
       });
 
       // Also set as 'token' for client-side checks
       res.cookie('token', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production'|| false,
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'none',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: '/'
       });
 
       // Add a non-httpOnly cookie for client-side detection
       res.cookie('isLoggedIn', 'true', {
         httpOnly: false,
-        secure: process.env.NODE_ENV === 'production'|| false,
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'none',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: '/'
       });
 
       // Redirect to frontend with success message and user data

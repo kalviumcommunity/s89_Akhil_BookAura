@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
           localStorage.setItem('authToken', urlToken);
 
           // Also set a non-httpOnly cookie for client-side detection
-          document.cookie = `isLoggedIn=true; path=/; max-age=${7 * 24 * 60 * 60}`;
+          document.cookie = `isLoggedIn=true; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=None; ${window.location.protocol === 'https:' ? 'Secure' : ''}`;
 
           // Clean up URL parameters
           const cleanUrl = window.location.pathname;
@@ -57,7 +57,15 @@ export const AuthProvider = ({ children }) => {
         if (isAuthenticated) {
           try {
             console.log('Fetching user profile data...');
-            const response = await api.get('/router/profile');
+
+            // Set the token in the Authorization header explicitly
+            const headers = {};
+            if (localToken) {
+              headers.Authorization = `Bearer ${localToken}`;
+            }
+
+            const response = await api.get('/router/profile', { headers });
+
             if (response.data.success) {
               console.log('User profile data retrieved successfully');
               setUser(response.data.user);
@@ -73,6 +81,9 @@ export const AuthProvider = ({ children }) => {
               if (!window.location.pathname.includes('/login')) {
                 setIsLoggedIn(false);
                 setUser(null);
+
+                // Don't redirect here - let the component handle it
+                console.log('Authentication failed, but not redirecting');
               }
             } else {
               // For other errors, we'll just continue without user data

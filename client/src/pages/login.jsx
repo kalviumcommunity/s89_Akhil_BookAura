@@ -33,7 +33,7 @@ const Login = () => {
 
       // Also set a client-side cookie for isLoggedIn status
       // This ensures the login state persists even if localStorage is cleared
-      document.cookie = `isLoggedIn=true; path=/; max-age=${7 * 24 * 60 * 60}`;
+      document.cookie = `isLoggedIn=true; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=None; ${window.location.protocol === 'https:' ? 'Secure' : ''}`;
 
       console.log("Login successful");
 

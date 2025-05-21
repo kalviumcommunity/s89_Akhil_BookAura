@@ -45,9 +45,15 @@ const Profile = () => {
     console.log('Profile component mounted, auth status:', isLoggedIn ? 'Logged in' : 'Not logged in');
 
     // Check authentication status
-    if (!isLoggedIn) {
+    if (!isLoggedIn && !loading) {
       console.log('User not logged in, redirecting to login page');
       navigate('/login');
+      return;
+    }
+
+    // Don't fetch if we're still loading auth state or not logged in
+    if (loading || !isLoggedIn) {
+      console.log('Waiting for auth state to resolve...');
       return;
     }
 
@@ -55,7 +61,17 @@ const Profile = () => {
     const fetchUserData = async () => {
       try {
         console.log('Fetching user profile data...');
-        const response = await api.get('/router/profile');
+
+        // Get token from localStorage
+        const token = localStorage.getItem('authToken');
+
+        // Set up headers with token if available
+        const headers = {};
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+
+        const response = await api.get('/router/profile', { headers });
 
         if (response.data.success) {
           console.log('User profile data retrieved successfully');
@@ -74,6 +90,16 @@ const Profile = () => {
         // If we get a 401 error, the token might be invalid or expired
         if (error.response && error.response.status === 401) {
           console.log('Authentication failed, redirecting to login');
+
+          // Clear any stored auth data
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('userData');
+
+          // Clear cookies
+          document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+          document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+          document.cookie = 'isLoggedIn=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
           navigate('/login');
         }
 
@@ -82,7 +108,7 @@ const Profile = () => {
     };
 
     fetchUserData();
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, loading, navigate]);
 
   const handleLogout = async () => {
     await logout();
