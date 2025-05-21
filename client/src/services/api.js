@@ -2,18 +2,13 @@ import axios from 'axios';
 
 // Determine the API base URL based on environment
 const getBaseUrl = () => {
-  // Check if we have an environment variable (Vite uses import.meta.env)
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-
+  
   // Check if we're in development or production
   if (import.meta.env.DEV) {
     // Local development - use localhost
     return 'http://localhost:5000';
   }
 
-  // Production default
   return 'https://s89-akhil-bookaura-3.onrender.com';
 };
 
