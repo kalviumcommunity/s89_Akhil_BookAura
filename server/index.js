@@ -146,6 +146,7 @@ console.log('- pdfProxyRoutes:', typeof pdfProxyRoutes);
 console.log('- cartRouter:', typeof cartRouter);
 console.log('- eventRouter:', typeof eventRouter);
 console.log('- chatHistoryRouter:', typeof chatHistoryRouter);
+console.log('- flashcardRouter:', typeof flashcardRouter);
 
 app.use("/api/payment", paymentRoutes);
 app.use("/api/pdf", pdfProxyRoutes);

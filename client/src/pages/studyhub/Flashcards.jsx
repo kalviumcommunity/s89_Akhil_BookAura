@@ -267,6 +267,7 @@ const Flashcards = () => {
   const handleBackToDeckList = () => {
     setSelectedDeck(null);
   };
+  
 
   // Render the upload modal
   const renderUploadModal = () => {
