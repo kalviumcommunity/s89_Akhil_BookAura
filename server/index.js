@@ -100,6 +100,12 @@ app.use(cookieParser());
 
 
 // Session middleware
+// Log session configuration for debugging
+console.log('Configuring session middleware:');
+console.log('- NODE_ENV:', process.env.NODE_ENV);
+console.log('- JWT_SECRET:', process.env.JWT_SECRET ? 'Set' : 'Not set');
+
+// Configure session with improved settings
 app.use(session({
     secret: process.env.JWT_SECRET || 'fallback-secret-key-for-development',
     resave: false,
@@ -110,14 +116,18 @@ app.use(session({
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         httpOnly: true,
         path: '/', // Ensure cookie is available on all paths
-        // Don't set domain to allow cookies to work across different domains
     },
     proxy: true, // Always trust the reverse proxy (needed for Render)
-    // Use a more reliable session store in production
-    store: process.env.NODE_ENV === 'production'
-        ? undefined // In production, you might want to use a proper session store like MongoDB or Redis
-        : undefined  // In development, use the default MemoryStore (with warning)
+    // Even with MemoryStore, we need to ensure it's properly configured
+    store: undefined, // Using default MemoryStore for simplicity
+    name: 'bookaura.sid' // Custom name to avoid conflicts
 }));
+
+// Add warning about MemoryStore in production
+if (process.env.NODE_ENV === 'production') {
+    console.warn('WARNING: Using MemoryStore in production is not recommended.');
+    console.warn('Consider implementing a persistent session store like MongoDB or Redis.');
+}
 
 // Set trust proxy for all environments when deployed
 console.log('Setting trust proxy for proper handling of secure cookies behind a proxy');

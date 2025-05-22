@@ -15,7 +15,7 @@ function loadEnv() {
   // Determine the server directory path
   const serverDir = path.resolve(__dirname, '..');
   const envPath = path.join(serverDir, '.env');
-  
+
   // Check if .env file exists
   if (fs.existsSync(envPath)) {
     console.log(`Loading environment variables from ${envPath}`);
@@ -25,7 +25,7 @@ function loadEnv() {
     // Load without specifying path as fallback
     dotenv.config();
   }
-  
+
   // Validate critical environment variables
   validateEnvVariables();
 }
@@ -42,11 +42,13 @@ function validateEnvVariables() {
     'GOOGLE_CLIENT_SECRET',
     'CLOUDINARY_CLOUD_NAME',
     'CLOUDINARY_API_KEY',
-    'CLOUDINARY_API_SECRET'
+    'CLOUDINARY_API_SECRET',
+    'STRIPE_SECRET_KEY',
+    'FRONTEND_URL'
   ];
-  
+
   const missingVars = criticalVars.filter(varName => !process.env[varName]);
-  
+
   if (missingVars.length > 0) {
     console.warn('WARNING: The following critical environment variables are not set:');
     missingVars.forEach(varName => console.warn(`- ${varName}`));

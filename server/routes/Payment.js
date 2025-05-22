@@ -3,6 +3,17 @@ const router = express.Router();
 
 // Load environment variables using our centralized utility
 require('../utils/envConfig');
+
+// Verify Stripe secret key is available
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.error('STRIPE_SECRET_KEY is not defined in environment variables');
+  throw new Error('Stripe secret key is missing. Payment functionality will not work.');
+}
+
+// Log Stripe configuration (without revealing the actual key)
+console.log('Stripe Configuration:');
+console.log('- STRIPE_SECRET_KEY:', process.env.STRIPE_SECRET_KEY ? 'Set' : 'Not set');
+
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const { verifyToken } = require("../middleware/auth");
 const { loadModel } = require("../utils/modelLoader");
@@ -64,17 +75,53 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
       }
     });
 
-    req.session.pendingPurchase = {
-      _id: purchaseId,
-      userId: req.user.id,
-      books: books || [book],
-      totalAmount,
-      paymentStatus: 'pending'
-    };
+    // Store pending purchase in session if available
+    try {
+      if (req.session) {
+        req.session.pendingPurchase = {
+          _id: purchaseId,
+          userId: req.user.id,
+          books: books || [book],
+          totalAmount,
+          paymentStatus: 'pending'
+        };
+        console.log('Stored pending purchase in session:', purchaseId.toString());
+      } else {
+        console.warn('Session object not available, cannot store pending purchase');
+      }
+    } catch (sessionError) {
+      console.error('Error storing purchase in session:', sessionError);
+      // Continue without session storage - we'll rely on the success URL parameters
+    }
 
     res.json({ url: session.url });
   } catch (error) {
-    res.status(500).json({ error: "Failed to create checkout session" });
+    console.error('Stripe checkout session creation error:', error);
+
+    // Provide more detailed error information
+    let errorMessage = "Failed to create checkout session";
+    let statusCode = 500;
+
+    // Handle specific Stripe errors
+    if (error.type === 'StripeCardError') {
+      errorMessage = error.message;
+      statusCode = 400;
+    } else if (error.type === 'StripeInvalidRequestError') {
+      errorMessage = 'Invalid request to Stripe API';
+      statusCode = 400;
+    } else if (error.type === 'StripeAPIError') {
+      errorMessage = 'Stripe API error';
+    } else if (error.type === 'StripeConnectionError') {
+      errorMessage = 'Failed to connect to Stripe API';
+    } else if (error.type === 'StripeAuthenticationError') {
+      errorMessage = 'Stripe authentication failed';
+      console.error('Stripe API key may be invalid or missing');
+    }
+
+    res.status(statusCode).json({
+      error: errorMessage,
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
