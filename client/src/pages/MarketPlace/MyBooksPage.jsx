@@ -2,10 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import EpubViewer from '../../components/EpubViewer';
-import SimpleEpubViewer from '../../components/SimpleEpubViewer';
-import BasicEpubViewer from '../../components/BasicEpubViewer';
-import ErrorBoundary from '../../components/ErrorBoundary';
 import { Book, Calendar, ArrowLeft, FileText } from 'lucide-react';
 import { SafeImage } from '../../utils/imageUtils';
 import './MyBooksPage.css';
@@ -16,10 +12,7 @@ const MyBooksPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedBook, setSelectedBook] = useState(null);
   const [groupedBooks, setGroupedBooks] = useState([]);
-  const [useSimpleViewer, setUseSimpleViewer] = useState(false);
-  const [viewerError, setViewerError] = useState(false);
 
   // Fetch books inside useEffect directly
   useEffect(() => {
@@ -198,10 +191,9 @@ const MyBooksPage = () => {
 
                                   if (isEpub) {
                                     console.log("Opening EPUB in viewer:", book.url);
-                                    // Set viewerError to true to use BasicEpubViewer first
-                                    setViewerError(true);
-                                    setUseSimpleViewer(false);
-                                    setSelectedBook(book.url);
+                                    // Navigate to the EPUB viewer page with the encoded URL
+                                    const encodedUrl = encodeURIComponent(book.url);
+                                    navigate(`/read-epub/${encodedUrl}`);
                                   } else {
                                     // For non-EPUB files, open in a new tab
                                     console.log("Opening non-EPUB in new tab:", book.url);
@@ -229,110 +221,7 @@ const MyBooksPage = () => {
           )}
         </div>
 
-        {selectedBook && (
-          <div className="epub-viewer-overlay">
-            <div className="epub-viewer-wrapper">
-              <div className="epub-viewer-header">
-                <h3>Reading EPUB Book</h3>
-                <div className="epub-viewer-actions">
-                  <div className="viewer-buttons">
-                    <button
-                      className="switch-viewer-button"
-                      onClick={() => {
-                        setViewerError(false);
-                        setUseSimpleViewer(false);
-                      }}
-                      style={{
-                        marginRight: '10px',
-                        backgroundColor: !viewerError && !useSimpleViewer ? '#A67C52' : '#845b32',
-                        color: 'white',
-                        border: 'none',
-                        padding: '8px 12px',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Advanced Viewer
-                    </button>
-                    <button
-                      className="switch-viewer-button"
-                      onClick={() => {
-                        setViewerError(true);
-                        setUseSimpleViewer(false);
-                      }}
-                      style={{
-                        marginRight: '10px',
-                        backgroundColor: viewerError && !useSimpleViewer ? '#A67C52' : '#845b32',
-                        color: 'white',
-                        border: 'none',
-                        padding: '8px 12px',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Basic Viewer
-                    </button>
-                    <button
-                      className="switch-viewer-button"
-                      onClick={() => {
-                        setUseSimpleViewer(true);
-                      }}
-                      style={{
-                        marginRight: '10px',
-                        backgroundColor: useSimpleViewer ? '#A67C52' : '#845b32',
-                        color: 'white',
-                        border: 'none',
-                        padding: '8px 12px',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Simple Viewer
-                    </button>
-                  </div>
-                  <button
-                    className="close-button"
-                    onClick={() => {
-                      setSelectedBook(null);
-                      setUseSimpleViewer(false);
-                      setViewerError(false);
-                    }}
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-              <div className="epub-viewer-content">
-                <div className="epub-viewer-container-wrapper">
-                  <ErrorBoundary
-                    showDetails={false}
-                    onError={() => {
-                      console.error("Error in EpubViewer, switching to simple viewer");
-                      setViewerError(true);
-                      setUseSimpleViewer(true);
-                    }}
-                  >
-                    {useSimpleViewer ? (
-                      <SimpleEpubViewer key={`simple-${selectedBook}`} epubUrl={selectedBook} />
-                    ) : viewerError ? (
-                      <BasicEpubViewer key={`basic-${selectedBook}`} epubUrl={selectedBook} />
-                    ) : (
-                      <EpubViewer
-                        key={`full-${selectedBook}`}
-                        epubUrl={selectedBook}
-                        onError={() => {
-                          console.error("Error in EpubViewer component");
-                          setViewerError(true);
-                          setUseSimpleViewer(true);
-                        }}
-                      />
-                    )}
-                  </ErrorBoundary>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+
       </div>
       <Footer />
     </>

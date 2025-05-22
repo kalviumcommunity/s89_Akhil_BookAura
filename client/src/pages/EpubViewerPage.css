@@ -1,0 +1,120 @@
+.epub-viewer-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.epub-viewer-container {
+  flex: 1;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.epub-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.epub-header h1 {
+  margin: 0;
+  font-family: 'MightySouly', serif;
+  color: #845b32;
+  flex: 1;
+  text-align: center;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background-color: #A67C52;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.back-button:hover {
+  background-color: #845b32;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 500px;
+}
+
+.error-container {
+  text-align: center;
+  padding: 40px;
+  background-color: #fff3f3;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.error-container h2 {
+  color: #d32f2f;
+  margin-bottom: 10px;
+}
+
+.epub-content {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 200px);
+  min-height: 500px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #f9f9f9;
+}
+
+.epub-viewer {
+  flex: 1;
+  overflow: hidden;
+  background-color: white;
+}
+
+.epub-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #f0e6dd;
+  border-top: 1px solid #e0e0e0;
+}
+
+.nav-button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background-color: #A67C52;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.nav-button:hover:not(:disabled) {
+  background-color: #845b32;
+}
+
+.nav-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-weight: bold;
+  color: #845b32;
+}

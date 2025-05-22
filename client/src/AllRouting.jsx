@@ -13,6 +13,7 @@ import CartPage from './pages/MarketPlace/CartPage';
 import SuccessPage from './pages/MarketPlace/SuccessPage';
 import CancelPage from './pages/MarketPlace/CancelPage';
 import MyBooksPage from './pages/MarketPlace/MyBooksPage';
+import EpubViewerPage from './pages/EpubViewerPage';
 import CalendarPage from './pages/studyhub/Calendar';
 import StudyHome from './pages/studyhub/StudyHome';
 import AiChat from './pages/studyhub/AiChat';
@@ -171,6 +172,10 @@ const AllRouting = () => {
         <Route
           path="/test-epub"
           element={<TestEpubViewer />}
+        />
+        <Route
+          path="/read-epub/:encodedUrl"
+          element={<EpubViewerPage />}
         />
       </Routes>
     </AnimatePresence>
