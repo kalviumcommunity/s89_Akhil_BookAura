@@ -53,6 +53,18 @@
   height: 500px;
 }
 
+.loading-container p {
+  margin-top: 15px;
+  font-size: 18px;
+  color: #845b32;
+}
+
+.loading-tip {
+  font-size: 14px !important;
+  color: #999 !important;
+  margin-top: 5px !important;
+}
+
 .error-container {
   text-align: center;
   padding: 40px;
@@ -75,12 +87,25 @@
   border-radius: 8px;
   overflow: hidden;
   background-color: #f9f9f9;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .epub-viewer {
   flex: 1;
   overflow: hidden;
   background-color: white;
+  padding: 20px;
+}
+
+/* Style the epub.js elements */
+.epub-viewer iframe {
+  border: none !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.epub-viewer div {
+  max-width: 100% !important;
 }
 
 .epub-navigation {
