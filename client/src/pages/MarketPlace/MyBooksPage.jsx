@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import { Book, Calendar, ArrowLeft, FileText } from 'lucide-react';
+import { Book, Calendar, ArrowLeft, FileText, ExternalLink } from 'lucide-react';
 import { SafeImage } from '../../utils/imageUtils';
 import './MyBooksPage.css';
 import LoadingAnimation from '../../components/LoadingAnimation';
@@ -181,35 +181,53 @@ const MyBooksPage = () => {
                           <h3 className="book-title">{book.title}</h3>
                           <p className="book-author">by {book.author}</p>
                           <div className="book-actions">
-                            <button
-                              className="read-button"
-                              onClick={() => {
-                                if (book.url && book.url.startsWith('http')) {
-                                  // Check if it's an EPUB file by extension or content type
-                                  const isEpub = book.url.toLowerCase().endsWith('.epub') ||
-                                                book.url.toLowerCase().includes('epub');
-
-                                  if (isEpub) {
-                                    console.log("Opening EPUB in viewer:", book.url);
-                                    // Navigate to the EPUB viewer page with the encoded URL
-                                    const encodedUrl = encodeURIComponent(book.url);
-                                    navigate(`/read-epub/${encodedUrl}`);
-                                  } else {
-                                    // For non-EPUB files, open in a new tab
+                            {book.url && (book.url.toLowerCase().endsWith('.epub') || book.url.toLowerCase().includes('epub')) ? (
+                              <>
+                                <button
+                                  className="read-button"
+                                  onClick={() => {
+                                    if (book.url && book.url.startsWith('http')) {
+                                      console.log("Opening EPUB in viewer:", book.url);
+                                      // Navigate to the EPUB viewer page with the encoded URL
+                                      const encodedUrl = encodeURIComponent(book.url);
+                                      navigate(`/read-epub/${encodedUrl}`);
+                                    } else {
+                                      // Skip books without valid URLs
+                                      alert('This book does not have a valid URL');
+                                    }
+                                  }}
+                                >
+                                  <FileText size={16} /> Read EPUB
+                                </button>
+                                <button
+                                  className="open-button"
+                                  onClick={() => {
+                                    if (book.url && book.url.startsWith('http')) {
+                                      console.log("Opening EPUB directly in new tab:", book.url);
+                                      window.open(book.url, '_blank');
+                                    } else {
+                                      alert('This book does not have a valid URL');
+                                    }
+                                  }}
+                                >
+                                  <ExternalLink size={16} /> Open Directly
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                className="read-button"
+                                onClick={() => {
+                                  if (book.url && book.url.startsWith('http')) {
                                     console.log("Opening non-EPUB in new tab:", book.url);
                                     window.open(book.url, '_blank');
+                                  } else {
+                                    alert('This book does not have a valid URL');
                                   }
-                                } else {
-                                  // Skip books without valid URLs
-                                  alert('This book does not have a valid URL');
-                                }
-                              }}
-                            >
-                              <FileText size={16} />
-                              {book.url && (book.url.toLowerCase().endsWith('.epub') || book.url.toLowerCase().includes('epub'))
-                                ? 'Read EPUB'
-                                : 'Open Book'}
-                            </button>
+                                }}
+                              >
+                                <FileText size={16} /> Open Book
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>

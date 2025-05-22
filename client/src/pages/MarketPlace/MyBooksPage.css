@@ -235,9 +235,10 @@
   display: flex;
   gap: 10px;
   margin-top: auto;
+  flex-wrap: wrap;
 }
 
-.read-button, .download-button {
+.read-button, .download-button, .open-button {
   padding: 8px 12px;
   border-radius: 4px;
   font-size: 0.8rem;
@@ -252,10 +253,25 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  flex: 1;
 }
 
 .read-button:hover {
   background-color: #845b32;
+}
+
+.open-button {
+  background-color: #6c757d;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.open-button:hover {
+  background-color: #5a6268;
 }
 
 .download-button {
@@ -409,5 +425,11 @@
   .book-actions {
     flex-direction: column;
     gap: 8px;
+    width: 100%;
+  }
+
+  .read-button, .open-button {
+    width: 100%;
+    justify-content: center;
   }
 }
