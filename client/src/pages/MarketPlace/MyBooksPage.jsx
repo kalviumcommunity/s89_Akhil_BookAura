@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import EpubViewer from '../../components/EpubViewer';
+import SimpleEpubViewer from '../../components/SimpleEpubViewer';
 import ErrorBoundary from '../../components/ErrorBoundary';
 import { Book, Calendar, ArrowLeft, FileText } from 'lucide-react';
 import { SafeImage } from '../../utils/imageUtils';
@@ -16,6 +17,8 @@ const MyBooksPage = () => {
   const [error, setError] = useState(null);
   const [selectedBook, setSelectedBook] = useState(null);
   const [groupedBooks, setGroupedBooks] = useState([]);
+  const [useSimpleViewer, setUseSimpleViewer] = useState(false);
+  const [viewerError, setViewerError] = useState(false);
 
   // Fetch books inside useEffect directly
   useEffect(() => {
@@ -188,13 +191,16 @@ const MyBooksPage = () => {
                               className="read-button"
                               onClick={() => {
                                 if (book.url && book.url.startsWith('http')) {
-                                  // Check if it's an EPUB file
-                                  const isEpub = book.url.toLowerCase().endsWith('.epub');
+                                  // Check if it's an EPUB file by extension or content type
+                                  const isEpub = book.url.toLowerCase().endsWith('.epub') ||
+                                                book.url.toLowerCase().includes('epub');
 
                                   if (isEpub) {
+                                    console.log("Opening EPUB in viewer:", book.url);
                                     setSelectedBook(book.url);
                                   } else {
                                     // For non-EPUB files, open in a new tab
+                                    console.log("Opening non-EPUB in new tab:", book.url);
                                     window.open(book.url, '_blank');
                                   }
                                 } else {
@@ -203,7 +209,10 @@ const MyBooksPage = () => {
                                 }
                               }}
                             >
-                              <FileText size={16} /> Read Book
+                              <FileText size={16} />
+                              {book.url && (book.url.toLowerCase().endsWith('.epub') || book.url.toLowerCase().includes('epub'))
+                                ? 'Read EPUB'
+                                : 'Open Book'}
                             </button>
                           </div>
                         </div>
@@ -221,19 +230,59 @@ const MyBooksPage = () => {
             <div className="epub-viewer-wrapper">
               <div className="epub-viewer-header">
                 <h3>Reading EPUB Book</h3>
-                <button
-                  className="close-button"
-                  onClick={() => {
-                    setSelectedBook(null);
-                  }}
-                >
-                  Close
-                </button>
+                <div className="epub-viewer-actions">
+                  {viewerError && (
+                    <button
+                      className="switch-viewer-button"
+                      onClick={() => setUseSimpleViewer(!useSimpleViewer)}
+                      style={{
+                        marginRight: '10px',
+                        backgroundColor: '#845b32',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 12px',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Switch to {useSimpleViewer ? 'Advanced' : 'Simple'} Viewer
+                    </button>
+                  )}
+                  <button
+                    className="close-button"
+                    onClick={() => {
+                      setSelectedBook(null);
+                      setUseSimpleViewer(false);
+                      setViewerError(false);
+                    }}
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
               <div className="epub-viewer-content">
                 <div className="epub-viewer-container-wrapper">
-                  <ErrorBoundary showDetails={false}>
-                    <EpubViewer key={selectedBook} epubUrl={selectedBook} />
+                  <ErrorBoundary
+                    showDetails={false}
+                    onError={() => {
+                      console.error("Error in EpubViewer, switching to simple viewer");
+                      setViewerError(true);
+                      setUseSimpleViewer(true);
+                    }}
+                  >
+                    {useSimpleViewer ? (
+                      <SimpleEpubViewer key={`simple-${selectedBook}`} epubUrl={selectedBook} />
+                    ) : (
+                      <EpubViewer
+                        key={`full-${selectedBook}`}
+                        epubUrl={selectedBook}
+                        onError={() => {
+                          console.error("Error in EpubViewer component");
+                          setViewerError(true);
+                          setUseSimpleViewer(true);
+                        }}
+                      />
+                    )}
                   </ErrorBoundary>
                 </div>
               </div>

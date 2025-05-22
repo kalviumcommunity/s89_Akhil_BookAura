@@ -3,7 +3,7 @@ import ePub from 'epubjs';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, Minimize, Moon, Sun, Search, Bookmark, List } from 'lucide-react';
 import './EpubViewer.css';
 
-const EpubViewer = ({ epubUrl }) => {
+const EpubViewer = ({ epubUrl, onError }) => {
   const viewerRef = useRef(null);
   const [book, setBook] = useState(null);
   const [rendition, setRendition] = useState(null);
@@ -50,13 +50,56 @@ const EpubViewer = ({ epubUrl }) => {
     const fetchAndRender = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(epubUrl);
-        const blob = await response.blob();
+        console.log("Fetching EPUB from URL:", epubUrl);
 
-        const newBook = ePub(blob);
+        // Try different approaches to load the EPUB
+        let newBook;
+
+        try {
+          // First approach: Try loading directly from URL
+          newBook = ePub(epubUrl);
+          console.log("Loading EPUB directly from URL");
+        } catch (directLoadError) {
+          console.error("Direct loading failed, trying fetch approach:", directLoadError);
+
+          try {
+            // Second approach: Try fetching with CORS mode
+            const response = await fetch(epubUrl, {
+              mode: 'cors',
+              credentials: 'same-origin',
+              headers: {
+                'Accept': 'application/epub+zip'
+              }
+            });
+
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const blob = await response.blob();
+            newBook = ePub(blob);
+            console.log("EPUB loaded via fetch blob");
+          } catch (fetchError) {
+            console.error("Fetch approach failed:", fetchError);
+
+            // Third approach: Try with no-cors mode
+            const noCorsResponse = await fetch(epubUrl, {
+              mode: 'no-cors'
+            });
+            const noCorsBlob = await noCorsResponse.blob();
+            newBook = ePub(noCorsBlob);
+            console.log("EPUB loaded via no-cors fetch");
+          }
+        }
+
+        if (!newBook) {
+          throw new Error("Failed to load EPUB book");
+        }
+
         setBook(newBook);
         console.log("Book loaded:", newBook);
 
+        // Create a rendition
         const newRendition = newBook.renderTo(viewerRef.current, {
           width: '100%',
           height: '100%',
@@ -90,19 +133,35 @@ const EpubViewer = ({ epubUrl }) => {
         console.log('Book displayed');
 
         // Get the table of contents
-        const tocData = await newBook.loaded.navigation;
-        if (tocData && tocData.toc) {
-          setToc(tocData.toc);
+        try {
+          const tocData = await newBook.loaded.navigation;
+          if (tocData && tocData.toc) {
+            setToc(tocData.toc);
+          }
+        } catch (tocError) {
+          console.warn("Could not load table of contents:", tocError);
+          setToc([]);
         }
 
         // Set up locations for pagination
-        await newBook.locations.generate(1024);
-        setTotalPages(newBook.locations.total);
+        try {
+          await newBook.locations.generate(1024);
+          setTotalPages(newBook.locations.total);
+        } catch (locError) {
+          console.warn("Could not generate locations:", locError);
+          setTotalPages(0);
+        }
 
         // Set up event listeners for location changes
         newRendition.on('relocated', (location) => {
           setCurrentLocation(location.start.cfi);
-          setCurrentPage(newBook.locations.locationFromCfi(location.start.cfi) + 1);
+          try {
+            const pageNum = newBook.locations.locationFromCfi(location.start.cfi);
+            setCurrentPage(pageNum !== -1 ? pageNum + 1 : 1);
+          } catch (pageError) {
+            console.warn("Could not determine page number:", pageError);
+            setCurrentPage(1);
+          }
         });
 
         // Add keyboard event listeners
@@ -112,6 +171,13 @@ const EpubViewer = ({ epubUrl }) => {
       } catch (error) {
         console.error('EPUB rendering error:', error);
         setIsLoading(false);
+
+        // Call onError callback if provided
+        if (typeof onError === 'function') {
+          onError(error);
+        } else {
+          alert(`Error loading EPUB: ${error.message}. Please try again or contact support.`);
+        }
       }
     };
 
@@ -121,7 +187,11 @@ const EpubViewer = ({ epubUrl }) => {
     return () => {
       window.removeEventListener('keydown', handleKeyPress);
       if (book) {
-        book.destroy();
+        try {
+          book.destroy();
+        } catch (e) {
+          console.warn("Error destroying book:", e);
+        }
       }
     };
   }, [epubUrl, darkMode, handleKeyPress]);
@@ -315,7 +385,8 @@ const EpubViewer = ({ epubUrl }) => {
           {isLoading ? (
             <div className="epub-loading">
               <div className="loading-spinner"></div>
-              <p>Loading EPUB...</p>
+              <p>Loading EPUB book...</p>
+              <small>This may take a moment depending on the file size</small>
             </div>
           ) : (
             <>
