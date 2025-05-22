@@ -38,14 +38,14 @@ const MyBooksPage = () => {
           const bookMap = new Map();
           const processedBooks = [];
 
-          // Filter to only include epub books
+          // Process all books but prioritize epub format
           (response.data.purchasedBooks || []).forEach(book => {
             const bookId = book.bookId.toString();
             let processedBook = book;
 
-            // Check if the book is an epub file
-            if (book.url && book.url.toLowerCase().endsWith('.epub')) {
-              // This is an epub book, include it
+            // Check if the book has a URL
+            if (book.url) {
+              // Process the book regardless of format
               processedBook = { ...book };
 
               if (!bookMap.has(bookId)) {
@@ -53,7 +53,6 @@ const MyBooksPage = () => {
                 processedBooks.push(processedBook);
               }
             }
-            // Skip non-epub books
           });
 
           // Group by payment ID
@@ -120,8 +119,8 @@ const MyBooksPage = () => {
       <Navbar />
       <div className="my-books-page">
         <div className="my-books-header">
-          <h1 className="my-books-title">My eBooks</h1>
-          <p className="my-books-subtitle">Access your purchased EPUB books anytime, anywhere</p>
+          <h1 className="my-books-title">My Books</h1>
+          <p className="my-books-subtitle">Access your purchased books anytime, anywhere</p>
         </div>
 
         <div className="my-books-content">
@@ -150,10 +149,10 @@ const MyBooksPage = () => {
               <div className="empty-icon">
                 <Book size={64} />
               </div>
-              <h2>You don't have any EPUB books yet</h2>
-              <p>Explore our marketplace to find EPUB format books to read!</p>
+              <h2>You haven't purchased any books yet</h2>
+              <p>Explore our marketplace to find your next favorite read!</p>
               <Link to="/books" className="browse-books-btn">
-                Browse eBooks
+                Browse Books
               </Link>
             </div>
           ) : (
@@ -189,14 +188,22 @@ const MyBooksPage = () => {
                               className="read-button"
                               onClick={() => {
                                 if (book.url && book.url.startsWith('http')) {
-                                  setSelectedBook(book.url);
+                                  // Check if it's an EPUB file
+                                  const isEpub = book.url.toLowerCase().endsWith('.epub');
+
+                                  if (isEpub) {
+                                    setSelectedBook(book.url);
+                                  } else {
+                                    // For non-EPUB files, open in a new tab
+                                    window.open(book.url, '_blank');
+                                  }
                                 } else {
                                   // Skip books without valid URLs
                                   alert('This book does not have a valid URL');
                                 }
                               }}
                             >
-                              <FileText size={16} /> Read eBook
+                              <FileText size={16} /> Read Book
                             </button>
                           </div>
                         </div>
@@ -213,7 +220,7 @@ const MyBooksPage = () => {
           <div className="epub-viewer-overlay">
             <div className="epub-viewer-wrapper">
               <div className="epub-viewer-header">
-                <h3>Reading eBook</h3>
+                <h3>Reading EPUB Book</h3>
                 <button
                   className="close-button"
                   onClick={() => {
