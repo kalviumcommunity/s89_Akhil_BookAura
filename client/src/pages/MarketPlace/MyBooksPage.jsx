@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import BasicPdfViewer from '../../components/BasicPdfViewer';
 import EpubViewer from '../../components/EpubViewer';
 import ErrorBoundary from '../../components/ErrorBoundary';
 import { Book, Calendar, ArrowLeft, FileText } from 'lucide-react';
@@ -16,7 +15,6 @@ const MyBooksPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedBook, setSelectedBook] = useState(null);
-  const [selectedBookType, setSelectedBookType] = useState(null); // 'pdf' or 'epub'
   const [groupedBooks, setGroupedBooks] = useState([]);
 
   // Fetch books inside useEffect directly
@@ -40,30 +38,22 @@ const MyBooksPage = () => {
           const bookMap = new Map();
           const processedBooks = [];
 
+          // Filter to only include epub books
           (response.data.purchasedBooks || []).forEach(book => {
             const bookId = book.bookId.toString();
             let processedBook = book;
 
-            if (!book.url || book.url === 'placeholder' || book.url.includes('placeholder.url')) {
-              processedBook = { ...book, url: '/assets/better-placeholder.pdf' };
-            }
+            // Check if the book is an epub file
+            if (book.url && book.url.toLowerCase().endsWith('.epub')) {
+              // This is an epub book, include it
+              processedBook = { ...book };
 
-            // Determine file type based on URL extension
-            if (book.url) {
-              const url = book.url.toLowerCase();
-              if (url.endsWith('.epub')) {
-                processedBook = { ...processedBook, fileType: 'epub' };
-              } else {
-                processedBook = { ...processedBook, fileType: 'pdf' };
+              if (!bookMap.has(bookId)) {
+                bookMap.set(bookId, processedBook);
+                processedBooks.push(processedBook);
               }
-            } else {
-              processedBook = { ...processedBook, fileType: 'pdf' };
             }
-
-            if (!bookMap.has(bookId)) {
-              bookMap.set(bookId, processedBook);
-              processedBooks.push(processedBook);
-            }
+            // Skip non-epub books
           });
 
           // Group by payment ID
@@ -130,8 +120,8 @@ const MyBooksPage = () => {
       <Navbar />
       <div className="my-books-page">
         <div className="my-books-header">
-          <h1 className="my-books-title">My Books</h1>
-          <p className="my-books-subtitle">Access your purchased books anytime, anywhere</p>
+          <h1 className="my-books-title">My eBooks</h1>
+          <p className="my-books-subtitle">Access your purchased EPUB books anytime, anywhere</p>
         </div>
 
         <div className="my-books-content">
@@ -160,10 +150,10 @@ const MyBooksPage = () => {
               <div className="empty-icon">
                 <Book size={64} />
               </div>
-              <h2>You haven't purchased any books yet</h2>
-              <p>Explore our marketplace to find your next favorite read!</p>
+              <h2>You don't have any EPUB books yet</h2>
+              <p>Explore our marketplace to find EPUB format books to read!</p>
               <Link to="/books" className="browse-books-btn">
-                Browse Books
+                Browse eBooks
               </Link>
             </div>
           ) : (
@@ -200,14 +190,13 @@ const MyBooksPage = () => {
                               onClick={() => {
                                 if (book.url && book.url.startsWith('http')) {
                                   setSelectedBook(book.url);
-                                  setSelectedBookType(book.fileType || 'pdf');
                                 } else {
-                                  setSelectedBook('/assets/better-placeholder.pdf');
-                                  setSelectedBookType('pdf');
+                                  // Skip books without valid URLs
+                                  alert('This book does not have a valid URL');
                                 }
                               }}
                             >
-                              <FileText size={16} /> Read Now
+                              <FileText size={16} /> Read eBook
                             </button>
                           </div>
                         </div>
@@ -221,28 +210,23 @@ const MyBooksPage = () => {
         </div>
 
         {selectedBook && (
-          <div className="pdf-viewer-overlay">
-            <div className="pdf-viewer-wrapper">
-              <div className="pdf-viewer-header">
-                <h3>Reading Book</h3>
+          <div className="epub-viewer-overlay">
+            <div className="epub-viewer-wrapper">
+              <div className="epub-viewer-header">
+                <h3>Reading eBook</h3>
                 <button
                   className="close-button"
                   onClick={() => {
                     setSelectedBook(null);
-                    setSelectedBookType(null);
                   }}
                 >
                   Close
                 </button>
               </div>
-              <div className="pdf-viewer-content">
-                <div className="pdf-viewer-container-wrapper">
+              <div className="epub-viewer-content">
+                <div className="epub-viewer-container-wrapper">
                   <ErrorBoundary showDetails={false}>
-                    {selectedBookType === 'epub' ? (
-                      <EpubViewer key={selectedBook} epubUrl={selectedBook} />
-                    ) : (
-                      <BasicPdfViewer key={selectedBook} fileUrl={selectedBook} />
-                    )}
+                    <EpubViewer key={selectedBook} epubUrl={selectedBook} />
                   </ErrorBoundary>
                 </div>
               </div>
