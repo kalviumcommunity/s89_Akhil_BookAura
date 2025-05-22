@@ -27,6 +27,7 @@ const Navbar = () => {
       document.body.style.overflow = 'auto';
     }
   };
+  
 
   // Close mobile menu when navigating
   const handleNavigation = (path) => {
@@ -96,6 +97,9 @@ const Navbar = () => {
             setProfileImage(response.data.profileImage);
             setUserName(response.data.username);
           }
+          console.log('Profile image fetched successfully:', response.data.profileImage);
+          console.log('Username fetched successfully:', response.data.username);
+          console.log('Raw response data:', response.data);
         } catch (error) {
           // Only log the error if it's not a 401 Unauthorized (expected when not logged in)
           if (error.response && error.response.status !== 401) {

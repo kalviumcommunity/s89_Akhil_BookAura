@@ -23,6 +23,7 @@ import TestPdfJsViewer from './pages/TestPdfJsViewer';
 import TestSimplePdfViewer from './pages/TestSimplePdfViewer';
 import TestBasicPdfViewer from './pages/TestBasicPdfViewer';
 import TestPdfUpload from './pages/TestPdfUpload';
+import TestEpubViewer from './pages/TestEpubViewer';
 import GoogleAuthTest from './pages/GoogleAuthTest';
 import Flashcards from './pages/studyhub/Flashcards';
 
@@ -166,7 +167,11 @@ const AllRouting = () => {
         <Route
           path="/flashcards"
           element={<Flashcards />}
-        />  
+        />
+        <Route
+          path="/test-epub"
+          element={<TestEpubViewer />}
+        />
       </Routes>
     </AnimatePresence>
   );

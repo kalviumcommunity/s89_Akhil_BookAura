@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import BasicPdfViewer from '../../components/BasicPdfViewer';
+import EpubViewer from '../../components/EpubViewer';
 import ErrorBoundary from '../../components/ErrorBoundary';
 import { Book, Calendar, ArrowLeft, FileText } from 'lucide-react';
 import { SafeImage } from '../../utils/imageUtils';
@@ -12,10 +13,10 @@ import api from '../../services/api';
 
 const MyBooksPage = () => {
   const navigate = useNavigate();
-  const [purchasedBooks, setPurchasedBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedPdf, setSelectedPdf] = useState(null);
+  const [selectedBook, setSelectedBook] = useState(null);
+  const [selectedBookType, setSelectedBookType] = useState(null); // 'pdf' or 'epub'
   const [groupedBooks, setGroupedBooks] = useState([]);
 
   // Fetch books inside useEffect directly
@@ -47,13 +48,23 @@ const MyBooksPage = () => {
               processedBook = { ...book, url: '/assets/better-placeholder.pdf' };
             }
 
+            // Determine file type based on URL extension
+            if (book.url) {
+              const url = book.url.toLowerCase();
+              if (url.endsWith('.epub')) {
+                processedBook = { ...processedBook, fileType: 'epub' };
+              } else {
+                processedBook = { ...processedBook, fileType: 'pdf' };
+              }
+            } else {
+              processedBook = { ...processedBook, fileType: 'pdf' };
+            }
+
             if (!bookMap.has(bookId)) {
               bookMap.set(bookId, processedBook);
               processedBooks.push(processedBook);
             }
           });
-
-          setPurchasedBooks(processedBooks);
 
           // Group by payment ID
           const groupedByPaymentId = {};
@@ -188,9 +199,11 @@ const MyBooksPage = () => {
                               className="read-button"
                               onClick={() => {
                                 if (book.url && book.url.startsWith('http')) {
-                                  setSelectedPdf(book.url);
+                                  setSelectedBook(book.url);
+                                  setSelectedBookType(book.fileType || 'pdf');
                                 } else {
-                                  setSelectedPdf('/assets/better-placeholder.pdf');
+                                  setSelectedBook('/assets/better-placeholder.pdf');
+                                  setSelectedBookType('pdf');
                                 }
                               }}
                             >
@@ -207,14 +220,17 @@ const MyBooksPage = () => {
           )}
         </div>
 
-        {selectedPdf && (
+        {selectedBook && (
           <div className="pdf-viewer-overlay">
             <div className="pdf-viewer-wrapper">
               <div className="pdf-viewer-header">
                 <h3>Reading Book</h3>
                 <button
                   className="close-button"
-                  onClick={() => setSelectedPdf(null)}
+                  onClick={() => {
+                    setSelectedBook(null);
+                    setSelectedBookType(null);
+                  }}
                 >
                   Close
                 </button>
@@ -222,7 +238,11 @@ const MyBooksPage = () => {
               <div className="pdf-viewer-content">
                 <div className="pdf-viewer-container-wrapper">
                   <ErrorBoundary showDetails={false}>
-                    <BasicPdfViewer key={selectedPdf} fileUrl={selectedPdf} />
+                    {selectedBookType === 'epub' ? (
+                      <EpubViewer key={selectedBook} epubUrl={selectedBook} />
+                    ) : (
+                      <BasicPdfViewer key={selectedBook} fileUrl={selectedBook} />
+                    )}
                   </ErrorBoundary>
                 </div>
               </div>
