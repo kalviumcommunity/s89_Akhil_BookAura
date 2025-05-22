@@ -29,7 +29,11 @@ router.post('/signup', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 13);
     const user = new User({ username, email, password: hashedPassword });
     const savedUser = await user.save();
-    const token = jwt.sign({ id: savedUser._id, email: savedUser.email }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({
+      id: savedUser._id,
+      email: savedUser.email,
+      userType: savedUser.userType // Include userType in the token
+    }, JWT_SECRET, { expiresIn: '7d' });
 
     // Set both cookie names for better compatibility
     res.cookie('authToken', token, {
@@ -81,7 +85,11 @@ router.post('/login', async (req, res) => {
     if (!isPasswordCorrect) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
-    const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({
+      id: user._id,
+      email: user.email,
+      userType: user.userType // Include userType in the token
+    }, JWT_SECRET, { expiresIn: '7d' });
 
     // Set both cookie names for better compatibility
     res.cookie('authToken', token, {
@@ -277,7 +285,8 @@ router.get('/auth/google/callback',
       const token = jwt.sign({
         id: req.user._id,
         email: req.user.email,
-        username: req.user.username
+        username: req.user.username,
+        userType: req.user.userType // Include userType in the token
       }, JWT_SECRET, { expiresIn: '7d' });
 
       // Set both cookie names for better compatibility
@@ -396,7 +405,8 @@ router.put('/update-profile', verifyToken, async (req, res) => {
       const newToken = jwt.sign({
         id: updatedUser._id,
         email: updatedUser.email,
-        username: updatedUser.username
+        username: updatedUser.username,
+        userType: updatedUser.userType // Include userType in the token
       }, JWT_SECRET, { expiresIn: '7d' });
 
       // Update cookies
@@ -545,6 +555,32 @@ router.delete('/delete-account', verifyToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting account',
+      error: error.message
+    });
+  }
+});
+
+// Check if user is admin
+router.get('/check-admin', verifyToken, (req, res) => {
+  try {
+    // The verifyToken middleware already sets req.user
+    const isAdmin = req.user?.userType === 'admin';
+
+    res.status(200).json({
+      success: true,
+      isAdmin,
+      userType: req.user?.userType || 'user',
+      tokenInfo: {
+        id: req.user?.id,
+        email: req.user?.email,
+        // Don't include sensitive data
+      }
+    });
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check admin status',
       error: error.message
     });
   }

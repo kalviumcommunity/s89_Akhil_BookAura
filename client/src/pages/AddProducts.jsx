@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import './AddProducts.css';
 
 const AddProducts = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: '',
     author: '',
@@ -16,6 +18,47 @@ const AddProducts = () => {
   });
   const [coverImage, setCoverImage] = useState(null);
   const [bookFile, setBookFile] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Check if user is admin on component mount
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('authToken');
+
+        if (!token) {
+          setError('You must be logged in to access this page');
+          navigate('/login');
+          return;
+        }
+
+        const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/router/check-admin', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        if (response.data.isAdmin) {
+          setIsAdmin(true);
+        } else {
+          setError('You do not have admin privileges to access this page');
+          setTimeout(() => {
+            navigate('/');
+          }, 3000);
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        setError('Failed to verify admin status. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [navigate]);
 
   // Available categories
   const availableCategories = [
@@ -110,7 +153,17 @@ const AddProducts = () => {
   return (
     <div className="add-product-container">
       <h2>Add New Book</h2>
-      <form onSubmit={handleSubmit} className="add-product-form">
+
+      {loading ? (
+        <div className="loading-message">
+          <p>Verifying admin privileges...</p>
+        </div>
+      ) : error ? (
+        <div className="error-message">
+          <p>{error}</p>
+        </div>
+      ) : isAdmin ? (
+        <form onSubmit={handleSubmit} className="add-product-form">
         <div className="form-group">
           <label htmlFor="title">Book Title</label>
           <input
@@ -262,6 +315,11 @@ const AddProducts = () => {
 
         <button type="submit" className="submit-button">Upload Book</button>
       </form>
+      ) : (
+        <div className="unauthorized-message">
+          <p>You are not authorized to access this page.</p>
+        </div>
+      )}
     </div>
   );
 };

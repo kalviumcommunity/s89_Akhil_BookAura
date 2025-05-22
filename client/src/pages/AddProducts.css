@@ -122,17 +122,45 @@
   background-color: #f0e6dd;
 }
 
+/* Loading, error, and unauthorized messages */
+.loading-message,
+.error-message,
+.unauthorized-message {
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.loading-message {
+  background-color: #f0f9ff;
+  border: 1px solid #cce5ff;
+  color: #0066cc;
+}
+
+.error-message {
+  background-color: #fff5f5;
+  border: 1px solid #ffcccc;
+  color: #cc0000;
+}
+
+.unauthorized-message {
+  background-color: #fff9f0;
+  border: 1px solid #ffe0b2;
+  color: #e65100;
+}
+
 /* Responsive styles */
 @media (max-width: 768px) {
   .add-product-container {
     padding: 20px;
     margin: 20px;
   }
-  
+
   .categories-container {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   }
-  
+
   .status-options {
     flex-direction: column;
     gap: 10px;
