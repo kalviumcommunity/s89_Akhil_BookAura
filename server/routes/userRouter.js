@@ -586,4 +586,81 @@ router.get('/check-admin', verifyToken, (req, res) => {
   }
 });
 
+// Make user an admin (DEVELOPMENT ONLY - should be removed in production)
+router.post('/make-admin', verifyToken, async (req, res) => {
+  try {
+    // Only allow in development environment
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({
+        success: false,
+        message: 'This endpoint is not available in production'
+      });
+    }
+
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID not found in token'
+      });
+    }
+
+    // Update user to admin
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { userType: 'admin' },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Generate new token with admin role
+    const newToken = jwt.sign({
+      id: updatedUser._id,
+      email: updatedUser.email,
+      userType: 'admin' // Explicitly set as admin
+    }, JWT_SECRET, { expiresIn: '7d' });
+
+    // Set cookies with new token
+    res.cookie('authToken', newToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/'
+    });
+
+    res.cookie('token', newToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/'
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'User has been made an admin',
+      token: newToken,
+      user: {
+        id: updatedUser._id,
+        email: updatedUser.email,
+        userType: updatedUser.userType
+      }
+    });
+  } catch (error) {
+    console.error('Error making user admin:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update user role',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

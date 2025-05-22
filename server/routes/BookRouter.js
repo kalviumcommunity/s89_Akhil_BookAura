@@ -15,25 +15,41 @@ const upload = multer({
   storage,
   limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
   fileFilter: (req, file, cb) => {
+    console.log('File upload:', file.fieldname, file.mimetype);
+
     if (file.fieldname === 'coverImage' && !file.mimetype.startsWith('image/')) {
       return cb(new Error('Cover image must be an image'));
     }
-    if (file.fieldname === 'bookFile' && file.mimetype !== 'application/epub+zip') {
-      return cb(new Error('Book file must be an EPUB'));
+
+    if (file.fieldname === 'bookFile') {
+      // Accept both EPUB and PDF files
+      const acceptedTypes = ['application/epub+zip', 'application/pdf'];
+      if (!acceptedTypes.includes(file.mimetype)) {
+        return cb(new Error('Book file must be an EPUB or PDF'));
+      }
     }
+
     cb(null, true);
   }
 });
 
 // Cloudinary upload helper
 const uploadToCloudinary = (fileBuffer, folder, mimetype) => {
-  const isEpub = mimetype === 'application/epub+zip';
+  // Determine if the file is a raw type (EPUB or PDF)
+  const isRawType = mimetype === 'application/epub+zip' || mimetype === 'application/pdf';
   const timestamp = Date.now();
   const uniqueId = `${timestamp}_${Math.floor(Math.random() * 1000)}`;
 
+  console.log('Uploading to Cloudinary:', {
+    mimetype,
+    isRawType,
+    folder,
+    uniqueId
+  });
+
   const uploadOptions = {
     folder,
-    resource_type: isEpub ? 'raw' : 'image',
+    resource_type: isRawType ? 'raw' : 'image',
     public_id: uniqueId,
     use_filename: false,
     unique_filename: true
@@ -52,7 +68,15 @@ const uploadToCloudinary = (fileBuffer, folder, mimetype) => {
 // Upload route (EPUB only)
 router.post(
   '/uploadBook',
-  verifyAdmin,
+  verifyToken, // First verify the token
+  (req, _res, next) => {
+    // Debug middleware to check user info
+    console.log('User from token:', req.user);
+    console.log('User type:', req.user?.userType);
+    console.log('Is admin check:', req.user?.userType === 'admin');
+    next();
+  },
+  verifyAdmin, // Then check admin status
   upload.fields([
     { name: 'coverImage', maxCount: 1 },
     { name: 'bookFile', maxCount: 1 }
@@ -184,4 +208,3 @@ router.get('/newreleases', async (_, res) => {
 });
 
 module.exports = router;
- 

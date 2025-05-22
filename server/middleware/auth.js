@@ -101,10 +101,22 @@ const verifyToken = (req, res, next) => {
 
 // Middleware to verify admin role
 const verifyAdmin = (req, res, next) => {
-    if (req.user?.userType === 'admin') {
+    console.log('verifyAdmin middleware - User:', req.user);
+    console.log('verifyAdmin middleware - UserType:', req.user?.userType);
+
+    // Check if user exists and has admin role
+    if (req.user && req.user.userType === 'admin') {
+        console.log('Admin access granted for user:', req.user.id);
         return next();
     } else {
-        return res.status(403).json({ message: 'Access Denied. Admin access required' });
+        console.log('Admin access denied. User type:', req.user?.userType);
+        return res.status(403).json({
+            message: 'Access Denied. Admin access required',
+            userInfo: {
+                hasUser: !!req.user,
+                userType: req.user?.userType || 'none'
+            }
+        });
     }
 };
 const auth = (req, res, next) => {
