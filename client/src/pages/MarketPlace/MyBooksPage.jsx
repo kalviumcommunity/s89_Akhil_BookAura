@@ -4,6 +4,7 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import EpubViewer from '../../components/EpubViewer';
 import SimpleEpubViewer from '../../components/SimpleEpubViewer';
+import BasicEpubViewer from '../../components/BasicEpubViewer';
 import ErrorBoundary from '../../components/ErrorBoundary';
 import { Book, Calendar, ArrowLeft, FileText } from 'lucide-react';
 import { SafeImage } from '../../utils/imageUtils';
@@ -197,6 +198,9 @@ const MyBooksPage = () => {
 
                                   if (isEpub) {
                                     console.log("Opening EPUB in viewer:", book.url);
+                                    // Set viewerError to true to use BasicEpubViewer first
+                                    setViewerError(true);
+                                    setUseSimpleViewer(false);
                                     setSelectedBook(book.url);
                                   } else {
                                     // For non-EPUB files, open in a new tab
@@ -231,13 +235,16 @@ const MyBooksPage = () => {
               <div className="epub-viewer-header">
                 <h3>Reading EPUB Book</h3>
                 <div className="epub-viewer-actions">
-                  {viewerError && (
+                  <div className="viewer-buttons">
                     <button
                       className="switch-viewer-button"
-                      onClick={() => setUseSimpleViewer(!useSimpleViewer)}
+                      onClick={() => {
+                        setViewerError(false);
+                        setUseSimpleViewer(false);
+                      }}
                       style={{
                         marginRight: '10px',
-                        backgroundColor: '#845b32',
+                        backgroundColor: !viewerError && !useSimpleViewer ? '#A67C52' : '#845b32',
                         color: 'white',
                         border: 'none',
                         padding: '8px 12px',
@@ -245,9 +252,44 @@ const MyBooksPage = () => {
                         cursor: 'pointer'
                       }}
                     >
-                      Switch to {useSimpleViewer ? 'Advanced' : 'Simple'} Viewer
+                      Advanced Viewer
                     </button>
-                  )}
+                    <button
+                      className="switch-viewer-button"
+                      onClick={() => {
+                        setViewerError(true);
+                        setUseSimpleViewer(false);
+                      }}
+                      style={{
+                        marginRight: '10px',
+                        backgroundColor: viewerError && !useSimpleViewer ? '#A67C52' : '#845b32',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 12px',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Basic Viewer
+                    </button>
+                    <button
+                      className="switch-viewer-button"
+                      onClick={() => {
+                        setUseSimpleViewer(true);
+                      }}
+                      style={{
+                        marginRight: '10px',
+                        backgroundColor: useSimpleViewer ? '#A67C52' : '#845b32',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 12px',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Simple Viewer
+                    </button>
+                  </div>
                   <button
                     className="close-button"
                     onClick={() => {
@@ -272,6 +314,8 @@ const MyBooksPage = () => {
                   >
                     {useSimpleViewer ? (
                       <SimpleEpubViewer key={`simple-${selectedBook}`} epubUrl={selectedBook} />
+                    ) : viewerError ? (
+                      <BasicEpubViewer key={`basic-${selectedBook}`} epubUrl={selectedBook} />
                     ) : (
                       <EpubViewer
                         key={`full-${selectedBook}`}

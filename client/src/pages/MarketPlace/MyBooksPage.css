@@ -327,6 +327,24 @@
   font-family: 'MightySouly', serif;
 }
 
+.epub-viewer-actions {
+  display: flex;
+  align-items: center;
+}
+
+.viewer-buttons {
+  display: flex;
+  margin-right: 10px;
+}
+
+.switch-viewer-button {
+  transition: background-color 0.2s ease;
+}
+
+.switch-viewer-button:hover {
+  background-color: #A67C52 !important;
+}
+
 .close-button {
   background-color: #A67C52;
   color: white;
