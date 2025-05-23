@@ -10,151 +10,70 @@ const Book = loadModel('BookModel');
 const router = express.Router();
 
 // Multer memory storage
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage,
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
-  fileFilter: (req, file, cb) => {
-    console.log('File upload:', file.fieldname, file.mimetype);
-
-    if (file.fieldname === 'coverImage' && !file.mimetype.startsWith('image/')) {
-      return cb(new Error('Cover image must be an image'));
-    }
-
-    if (file.fieldname === 'bookFile') {
-      // Accept both EPUB and PDF files
-      const acceptedTypes = ['application/epub+zip', 'application/pdf'];
-      if (!acceptedTypes.includes(file.mimetype)) {
-        return cb(new Error('Book file must be an EPUB or PDF'));
-      }
-    }
-
-    cb(null, true);
-  }
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Cloudinary upload helper
-const uploadToCloudinary = (fileBuffer, folder, mimetype) => {
-  // Determine if the file is a raw type (EPUB or PDF)
-  const isRawType = mimetype === 'application/epub+zip' || mimetype === 'application/pdf';
-  const timestamp = Date.now();
-  const uniqueId = `${timestamp}_${Math.floor(Math.random() * 1000)}`;
+// Multer setup
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
-  console.log('Uploading to Cloudinary:', {
-    mimetype,
-    isRawType,
-    folder,
-    uniqueId
-  });
+// Upload route
+router.post('/upload', upload.fields([
+  { name: 'coverImage', maxCount: 1 },
+  { name: 'bookFile', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    if (!req.files?.coverImage || !req.files?.bookFile) {
+      return res.status(400).json({ error: 'Cover image and EPUB file are required' });
+    }
 
-  const uploadOptions = {
-    folder,
-    resource_type: isRawType ? 'raw' : 'image',
-    public_id: uniqueId,
-    use_filename: false,
-    unique_filename: true
-  };
+    const { title, author, description, genre, price, categories } = req.body;
 
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
-      if (error) return reject(error);
-      resolve(result);
+    // Helper to upload buffer to Cloudinary
+    const uploadBufferToCloudinary = (buffer, folder, resource_type) => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream({ folder, resource_type }, (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        });
+        streamifier.createReadStream(buffer).pipe(stream);
+      });
+    };
+
+    // Upload both files
+    const coverImageResult = await uploadBufferToCloudinary(req.files.coverImage[0].buffer, 'bookstore/coverImages', 'image');
+    const bookFileResult = await uploadBufferToCloudinary(req.files.bookFile[0].buffer, 'bookstore/bookFiles', 'raw');
+
+    // Parse categories
+    const parsedCategories = categories
+      ? typeof categories === 'string'
+        ? categories.split(',').map(c => c.trim())
+        : categories
+      : [];
+
+    // Save book to DB
+    const newBook = new Book({
+      title,
+      author,
+      description,
+      genre,
+      price,
+      coverimage: coverImageResult.secure_url,
+      url: bookFileResult.secure_url,
+      categories: parsedCategories,
     });
 
-    streamifier.createReadStream(fileBuffer).pipe(stream);
-  });
-};
+    await newBook.save();
+    res.status(201).json(newBook);
 
-// Upload route (EPUB only)
-router.post(
-  '/uploadBook',
-  verifyToken, // First verify the token
-  (req, _res, next) => {
-    // Debug middleware to check user info
-    console.log('User from token:', req.user);
-    console.log('User type:', req.user?.userType);
-    console.log('Is admin check:', req.user?.userType === 'admin');
-    next();
-  },
-  verifyAdmin, // Then check admin status
-  upload.fields([
-    { name: 'coverImage', maxCount: 1 },
-    { name: 'bookFile', maxCount: 1 }
-  ]),
-  async (req, res) => {
-    try {
-      const {
-        title,
-        author,
-        description,
-        genre,
-        price,
-        categories,
-        isBestSeller,
-        isFeatured,
-        isNewRelease
-      } = req.body;
-
-      if (!req.files?.coverImage || !req.files?.bookFile) {
-        return res.status(400).json({ success: false, message: 'Both cover image and EPUB file are required' });
-      }
-
-      // Upload cover image
-      const coverImageResult = await uploadToCloudinary(
-        req.files.coverImage[0].buffer,
-        'bookstore/coverImages',
-        req.files.coverImage[0].mimetype
-      );
-
-      // Upload EPUB file
-      const bookFileResult = await uploadToCloudinary(
-        req.files.bookFile[0].buffer,
-        'bookstore/bookFiles',
-        req.files.bookFile[0].mimetype
-      );
-
-      // Parse categories
-      let parsedCategories = [];
-      if (categories) {
-        try {
-          parsedCategories = typeof categories === 'string' ? JSON.parse(categories) : categories;
-        } catch {
-          parsedCategories = categories.split(',').map(c => c.trim());
-        }
-      }
-
-      // Save book
-      const newBook = new Book({
-        title,
-        author,
-        description,
-        genre,
-        price,
-        coverimage: coverImageResult.secure_url,
-        url: bookFileResult.secure_url,
-        categories: parsedCategories,
-        isBestSeller: isBestSeller === 'true' || isBestSeller === true,
-        isFeatured: isFeatured === 'true' || isFeatured === true,
-        isNewRelease: isNewRelease === 'true' || isNewRelease === true
-      });
-
-      await newBook.save();
-
-      res.status(201).json({
-        success: true,
-        message: 'Book uploaded successfully',
-        data: newBook
-      });
-    } catch (error) {
-      console.error('EPUB Upload Error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error uploading book',
-        error: error.message
-      });
-    }
+  } catch (err) {
+    console.error('Upload error:', err);
+    res.status(500).json({ error: err.message });
   }
-);
+});
 
 // Fetch books
 router.get('/getBooks', async (req, res) => {
@@ -178,6 +97,21 @@ router.get('/getBooks', async (req, res) => {
     res.status(500).json({ success: false, message: 'Error fetching books', error: error.message });
   }
 });
+
+// Fetch book by ID
+router.get('/getBook/:id', async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id);
+    if (!book) {
+      return res.status(404).json({ success: false, message: 'Book not found' });
+    }
+    res.status(200).json({ success: true, data: book });
+  } catch (error) {
+    console.error('Fetch book error:', error);
+    res.status(500).json({ success: false, message: 'Error fetching book', error: error.message });
+  }
+});
+
 
 // Additional filters
 router.get('/bestsellers', async (_, res) => {
