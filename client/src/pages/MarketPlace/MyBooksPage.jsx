@@ -187,10 +187,10 @@ const MyBooksPage = () => {
                                   className="read-button"
                                   onClick={() => {
                                     if (book.url && book.url.startsWith('http')) {
-                                      console.log("Opening EPUB in viewer:", book.url);
-                                      // Navigate to the EPUB viewer page with the encoded URL
+                                      console.log("Opening EPUB in custom viewer:", book.url);
+                                      // Navigate to our custom EPUB reader with the encoded URL
                                       const encodedUrl = encodeURIComponent(book.url);
-                                      navigate(`/read-epub/${encodedUrl}`);
+                                      navigate(`/epub-reader/${encodedUrl}`);
                                     } else {
                                       // Skip books without valid URLs
                                       alert('This book does not have a valid URL');

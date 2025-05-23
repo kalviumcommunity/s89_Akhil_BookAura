@@ -1,0 +1,137 @@
+.epub-viewer-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 400px;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #A67C52;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-container p {
+  margin-top: 15px;
+  font-size: 18px;
+  color: #845b32;
+}
+
+.loading-tip {
+  font-size: 14px !important;
+  color: #999 !important;
+  margin-top: 5px !important;
+}
+
+.error-container {
+  text-align: center;
+  padding: 40px;
+  background-color: #fff3f3;
+  border-radius: 8px;
+  margin: 20px;
+}
+
+.error-container h2 {
+  color: #d32f2f;
+  margin-bottom: 10px;
+}
+
+.epub-main-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 500px;
+}
+
+.epub-viewer {
+  flex: 1;
+  overflow: hidden;
+  background-color: white;
+  padding: 20px;
+}
+
+/* Style the epub.js elements */
+.epub-viewer iframe {
+  border: none !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.epub-viewer div {
+  max-width: 100% !important;
+}
+
+.epub-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #f0e6dd;
+  border-top: 1px solid #e0e0e0;
+}
+
+.nav-button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background-color: #A67C52;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.nav-button:hover:not(:disabled) {
+  background-color: #845b32;
+}
+
+.nav-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-weight: bold;
+  color: #845b32;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .epub-navigation {
+    flex-direction: column;
+    gap: 10px;
+    padding: 15px;
+  }
+  
+  .nav-button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .page-info {
+    margin: 10px 0;
+  }
+}
