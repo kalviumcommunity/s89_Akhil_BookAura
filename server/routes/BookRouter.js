@@ -105,7 +105,7 @@ const uploadToCloudinary = (fileBuffer, folder, mimetype) => {
 };
 
 // Upload Book
-router.post('/uploadBook', verifyAdmin, upload.fields([
+router.post('/uploadBook', verifyToken, verifyAdmin, upload.fields([
   { name: 'coverImage', maxCount: 1 },
   { name: 'bookFile', maxCount: 1 }
 ]), async (req, res) => {
@@ -245,7 +245,7 @@ router.get('/getBooks', async (req, res) => {
       success: false,
       message: 'Error fetching books',
       error: error.message
-    });
+    }); 1
   }
 });
 

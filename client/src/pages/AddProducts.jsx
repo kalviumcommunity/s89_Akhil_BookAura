@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import './AddProducts.css';
+import api from '../services/api';
 
 const AddProducts = () => {
   const navigate = useNavigate();
@@ -27,19 +27,9 @@ const AddProducts = () => {
     const checkAdminStatus = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('authToken');
 
-        if (!token) {
-          setError('You must be logged in to access this page');
-          navigate('/login');
-          return;
-        }
-
-        const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/router/check-admin', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        // Using api service which automatically handles tokens from both localStorage and cookies
+        const response = await api.get('/router/check-admin');
 
         if (response.data.isAdmin) {
           setIsAdmin(true);
@@ -51,7 +41,14 @@ const AddProducts = () => {
         }
       } catch (error) {
         console.error('Error checking admin status:', error);
-        setError('Failed to verify admin status. Please try again later.');
+
+        // Check if it's an authentication error
+        if (error.response && error.response.status === 401) {
+          setError('You must be logged in to access this page');
+          navigate('/login');
+        } else {
+          setError('Failed to verify admin status. Please try again later.');
+        }
       } finally {
         setLoading(false);
       }
@@ -117,17 +114,11 @@ const AddProducts = () => {
     uploadData.append('bookFile', bookFile);
 
     try {
-      const token = localStorage.getItem('authToken');
-      console.log('Token:', token);
-      if (!token) {
-        alert('No token found. Please log in again.');
-        return;
-      }
-
-      const res = await axios.post('https://s89-akhil-bookaura-3.onrender.com/router/uploadBook', uploadData, {
+      // Using api service which automatically handles tokens from both localStorage and cookies
+      // We need to override the Content-Type header for FormData
+      const res = await api.post('/router/uploadBook', uploadData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`
+          'Content-Type': 'multipart/form-data'
         }
       });
 
@@ -137,7 +128,16 @@ const AddProducts = () => {
       if (error.response) {
         // Server responded with a status other than 2xx
         console.error('Server Error:', error.response.data);
-        alert(`Error: ${error.response.data.message || 'Failed to upload book'}\nDetails: ${error.response.data.error || ''}`);
+
+        // Check if it's an authentication error
+        if (error.response.status === 401) {
+          alert('Authentication error. Please log in again.');
+          navigate('/login');
+        } else if (error.response.status === 403) {
+          alert('You do not have permission to upload books. Admin access required.');
+        } else {
+          alert(`Error: ${error.response.data.message || 'Failed to upload book'}\nDetails: ${error.response.data.error || ''}`);
+        }
       } else if (error.request) {
         // Request was made but no response received
         console.error('No Response:', error.request);
