@@ -6,6 +6,13 @@ const { loadModel } = require('../utils/modelLoader');
 const { verifyAdmin } = require('../middleware/auth');
 require('../utils/envConfig');
 const { verifyToken } = require('../middleware/auth');
+const cors = require('cors');
+
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://s89-akhil-bookaura-3.onrender.com'], // update this
+  credentials: true, // only if you're using cookies/sessions
+}));
+
 
 const Book = loadModel('BookModel');
 const router = express.Router();
@@ -112,6 +119,16 @@ router.get('/getBook/:id', async (req, res) => {
     res.status(500).json({ success: false, message: 'Error fetching book', error: error.message });
   }
 });
+
+app.get('/read/:bookId', async (req, res) => {
+  const book = await Book.findById(req.params.bookId);
+  const response = await fetch(book.url); // Cloudinary URL
+  const buffer = await response.buffer();
+
+  res.set('Content-Type', 'application/epub+zip');
+  res.send(buffer);
+});
+
 
 
 // Additional filters
