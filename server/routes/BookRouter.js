@@ -7,6 +7,8 @@ const { verifyAdmin } = require('../middleware/auth');
 require('../utils/envConfig');
 const { verifyToken } = require('../middleware/auth');
 const cors = require('cors');
+const app = express();
+
 
 app.use(cors({
   origin: ['http://localhost:5173', 'https://s89-akhil-bookaura-3.onrender.com'], // update this
