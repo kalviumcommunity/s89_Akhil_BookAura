@@ -3,8 +3,9 @@ const multer = require('multer');
 const streamifier = require('streamifier');
 const cloudinary = require('../cloudnary');
 const { loadModel } = require('../utils/modelLoader');
-const { verifyToken, verifyAdmin } = require('../middleware/auth');
+const { verifyAdmin } = require('../middleware/auth');
 require('../utils/envConfig');
+const { verifyToken } = require('../middleware/auth');
 
 const Book = loadModel('BookModel');
 const router = express.Router();
@@ -21,7 +22,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 // Upload route
-router.post('/upload', upload.fields([
+router.post('/upload', verifyAdmin, upload.fields([
   { name: 'coverImage', maxCount: 1 },
   { name: 'bookFile', maxCount: 1 }
 ]), async (req, res) => {
