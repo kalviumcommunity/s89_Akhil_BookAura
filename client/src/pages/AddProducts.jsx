@@ -117,72 +117,35 @@ const AddProducts = () => {
     uploadData.append('bookFile', bookFile);
 
     try {
-      setLoading(true);
       const token = localStorage.getItem('authToken');
       console.log('Token:', token);
       if (!token) {
-        setError('No token found. Please log in again.');
+        alert('No token found. Please log in again.');
         return;
       }
 
-      // First, check if user is admin
-      const adminCheckResponse = await axios.get('https://s89-akhil-bookaura-3.onrender.com/router/check-admin', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      console.log('Admin check response:', adminCheckResponse.data);
-
-      if (!adminCheckResponse.data.isAdmin) {
-        // If not admin, try to make user admin (development only)
-        try {
-          const makeAdminResponse = await axios.post('https://s89-akhil-bookaura-3.onrender.com/router/make-admin', {}, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-
-          console.log('Make admin response:', makeAdminResponse.data);
-
-          // Update token in localStorage
-          if (makeAdminResponse.data.token) {
-            localStorage.setItem('authToken', makeAdminResponse.data.token);
-            console.log('Updated token with admin privileges');
-          }
-
-          // Set isAdmin state
-          setIsAdmin(true);
-        } catch (adminError) {
-          console.error('Failed to make user admin:', adminError);
-        }
-      }
-
-      // Now try to upload the book
       const res = await axios.post('https://s89-akhil-bookaura-3.onrender.com/router/uploadBook', uploadData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${localStorage.getItem('authToken')}` // Use potentially updated token
+          Authorization: `Bearer ${token}`
         }
       });
 
       console.log(res.data);
       alert('Upload successful!');
-      setLoading(false);
     } catch (error) {
-      setLoading(false);
       if (error.response) {
         // Server responded with a status other than 2xx
         console.error('Server Error:', error.response.data);
-        setError(`Error: ${error.response.data.message || 'Failed to upload book'}\nDetails: ${JSON.stringify(error.response.data)}`);
+        alert(`Error: ${error.response.data.message || 'Failed to upload book'}\nDetails: ${error.response.data.error || ''}`);
       } else if (error.request) {
         // Request was made but no response received
         console.error('No Response:', error.request);
-        setError('No response from server. Please try again later.');
+        alert('No response from server. Please try again later.');
       } else {
         // Something else caused the error
         console.error('Error:', error.message);
-        setError('An error occurred. Please try again.');
+        alert('An error occurred. Please try again.');
       }
     }
   };
