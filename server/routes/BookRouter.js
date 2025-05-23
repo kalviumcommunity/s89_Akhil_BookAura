@@ -3,87 +3,134 @@ const multer = require('multer');
 const streamifier = require('streamifier');
 const cloudinary = require('../cloudnary');
 const { loadModel } = require('../utils/modelLoader');
-const { verifyAdmin } = require('../middleware/auth');
+const { verifyToken, verifyAdmin } = require('../middleware/auth');
 require('../utils/envConfig');
-const { verifyToken } = require('../middleware/auth');
-const cors = require('cors');
-const app = express();
-
-
-app.use(cors({
-  origin: ['http://localhost:5173', 'https://s89-akhil-bookaura-3.onrender.com'], // update this
-  credentials: true, // only if you're using cookies/sessions
-}));
-
 
 const Book = loadModel('BookModel');
 const router = express.Router();
 
 // Multer memory storage
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-// Multer setup
 const storage = multer.memoryStorage();
-const upload = multer({ storage });
-
-// Upload route
-router.post('/upload', verifyAdmin, upload.fields([
-  { name: 'coverImage', maxCount: 1 },
-  { name: 'bookFile', maxCount: 1 }
-]), async (req, res) => {
-  try {
-    if (!req.files?.coverImage || !req.files?.bookFile) {
-      return res.status(400).json({ error: 'Cover image and EPUB file are required' });
+const upload = multer({
+  storage,
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+  fileFilter: (req, file, cb) => {
+    if (file.fieldname === 'coverImage' && !file.mimetype.startsWith('image/')) {
+      return cb(new Error('Cover image must be an image'));
     }
-
-    const { title, author, description, genre, price, categories } = req.body;
-
-    // Helper to upload buffer to Cloudinary
-    const uploadBufferToCloudinary = (buffer, folder, resource_type) => {
-      return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream({ folder, resource_type }, (error, result) => {
-          if (error) return reject(error);
-          resolve(result);
-        });
-        streamifier.createReadStream(buffer).pipe(stream);
-      });
-    };
-
-    // Upload both files
-    const coverImageResult = await uploadBufferToCloudinary(req.files.coverImage[0].buffer, 'bookstore/coverImages', 'image');
-    const bookFileResult = await uploadBufferToCloudinary(req.files.bookFile[0].buffer, 'bookstore/bookFiles', 'raw');
-
-    // Parse categories
-    const parsedCategories = categories
-      ? typeof categories === 'string'
-        ? categories.split(',').map(c => c.trim())
-        : categories
-      : [];
-
-    // Save book to DB
-    const newBook = new Book({
-      title,
-      author,
-      description,
-      genre,
-      price,
-      coverimage: coverImageResult.secure_url,
-      url: bookFileResult.secure_url,
-      categories: parsedCategories,
-    });
-
-    await newBook.save();
-    res.status(201).json(newBook);
-
-  } catch (err) {
-    console.error('Upload error:', err);
-    res.status(500).json({ error: err.message });
+    if (file.fieldname === 'bookFile' && file.mimetype !== 'application/epub+zip') {
+      return cb(new Error('Book file must be an EPUB'));
+    }
+    cb(null, true);
   }
 });
+
+// Cloudinary upload helper
+const uploadToCloudinary = (fileBuffer, folder, mimetype) => {
+  const isEpub = mimetype === 'application/epub+zip';
+  const timestamp = Date.now();
+  const uniqueId = `${timestamp}_${Math.floor(Math.random() * 1000)}`;
+
+  const uploadOptions = {
+    folder,
+    resource_type: isEpub ? 'raw' : 'image',
+    public_id: uniqueId,
+    use_filename: false,
+    unique_filename: true
+  };
+
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
+      if (error) return reject(error);
+      resolve(result);
+    });
+
+    streamifier.createReadStream(fileBuffer).pipe(stream);
+  });
+};
+
+// Upload route (EPUB only)
+router.post(
+  '/uploadBook',
+  verifyAdmin,
+  upload.fields([
+    { name: 'coverImage', maxCount: 1 },
+    { name: 'bookFile', maxCount: 1 }
+  ]),
+  async (req, res) => {
+    try {
+      const {
+        title,
+        author,
+        description,
+        genre,
+        price,
+        categories,
+        isBestSeller,
+        isFeatured,
+        isNewRelease
+      } = req.body;
+
+      if (!req.files?.coverImage || !req.files?.bookFile) {
+        return res.status(400).json({ success: false, message: 'Both cover image and EPUB file are required' });
+      }
+
+      // Upload cover image
+      const coverImageResult = await uploadToCloudinary(
+        req.files.coverImage[0].buffer,
+        'bookstore/coverImages',
+        req.files.coverImage[0].mimetype
+      );
+
+      // Upload EPUB file
+      const bookFileResult = await uploadToCloudinary(
+        req.files.bookFile[0].buffer,
+        'bookstore/bookFiles',
+        req.files.bookFile[0].mimetype
+      );
+
+      // Parse categories
+      let parsedCategories = [];
+      if (categories) {
+        try {
+          parsedCategories = typeof categories === 'string' ? JSON.parse(categories) : categories;
+        } catch {
+          parsedCategories = categories.split(',').map(c => c.trim());
+        }
+      }
+
+      // Save book
+      const newBook = new Book({
+        title,
+        author,
+        description,
+        genre,
+        price,
+        coverimage: coverImageResult.secure_url,
+        url: bookFileResult.secure_url,
+        categories: parsedCategories,
+        isBestSeller: isBestSeller === 'true' || isBestSeller === true,
+        isFeatured: isFeatured === 'true' || isFeatured === true,
+        isNewRelease: isNewRelease === 'true' || isNewRelease === true
+      });
+
+      await newBook.save();
+
+      res.status(201).json({
+        success: true,
+        message: 'Book uploaded successfully',
+        data: newBook
+      });
+    } catch (error) {
+      console.error('EPUB Upload Error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error uploading book',
+        error: error.message
+      });
+    }
+  }
+);
 
 // Fetch books
 router.get('/getBooks', async (req, res) => {
@@ -107,31 +154,6 @@ router.get('/getBooks', async (req, res) => {
     res.status(500).json({ success: false, message: 'Error fetching books', error: error.message });
   }
 });
-
-// Fetch book by ID
-router.get('/getBook/:id', async (req, res) => {
-  try {
-    const book = await Book.findById(req.params.id);
-    if (!book) {
-      return res.status(404).json({ success: false, message: 'Book not found' });
-    }
-    res.status(200).json({ success: true, data: book });
-  } catch (error) {
-    console.error('Fetch book error:', error);
-    res.status(500).json({ success: false, message: 'Error fetching book', error: error.message });
-  }
-});
-
-app.get('/read/:bookId', async (req, res) => {
-  const book = await Book.findById(req.params.bookId);
-  const response = await fetch(book.url); // Cloudinary URL
-  const buffer = await response.buffer();
-
-  res.set('Content-Type', 'application/epub+zip');
-  res.send(buffer);
-});
-
-
 
 // Additional filters
 router.get('/bestsellers', async (_, res) => {
