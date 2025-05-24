@@ -1,26 +1,29 @@
-// src/pages/MyBooksPage.js
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import { Book, Calendar, ArrowLeft, FileText, ExternalLink } from 'lucide-react';
+import ErrorBoundary from '../../components/ErrorBoundary';
+import { Book, Calendar, ArrowLeft, FileText } from 'lucide-react';
 import { SafeImage } from '../../utils/imageUtils';
 import './MyBooksPage.css';
 import LoadingAnimation from '../../components/LoadingAnimation';
 import api from '../../services/api';
+import Viewer from '../../components/Viewer';
 
 const MyBooksPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedBook, setSelectedBook] = useState(null);
   const [groupedBooks, setGroupedBooks] = useState([]);
 
+  // Fetch books inside useEffect directly
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     const isLoggedIn = document.cookie.includes('isLoggedIn=true') || !!token;
 
     if (!isLoggedIn) {
-      console.log('User  is not logged in, redirecting to login page');
+      console.log('User is not logged in, redirecting to login page');
       navigate('/login');
       return;
     }
@@ -32,19 +35,41 @@ const MyBooksPage = () => {
         const response = await api.get('/api/payment/my-purchases');
 
         if (response.data.success) {
-          const processedBooks = response.data.purchasedBooks || [];
-          const groupedByPaymentId = {};
+          const bookMap = new Map();
+          const processedBooks = [];
 
+          // Process all books but prioritize epub format
+          (response.data.purchasedBooks || []).forEach(book => {
+            const bookId = book.bookId.toString();
+            let processedBook = book;
+
+            // Check if the book has a URL
+            if (book.url) {
+              // Process the book regardless of format
+              processedBook = { ...book };
+
+              if (!bookMap.has(bookId)) {
+                bookMap.set(bookId, processedBook);
+                processedBooks.push(processedBook);
+              }
+            }
+          });
+
+          // Group by payment ID
+          const groupedByPaymentId = {};
           processedBooks.forEach(book => {
             const paymentId = book.paymentId || 'unknown';
+            const purchaseDate = book.purchaseDate;
+
             if (!groupedByPaymentId[paymentId]) {
               groupedByPaymentId[paymentId] = {
                 _id: paymentId,
-                purchaseDate: book.purchaseDate,
+                purchaseDate,
                 books: [],
                 totalAmount: 0
               };
             }
+
             groupedByPaymentId[paymentId].books.push(book);
             groupedByPaymentId[paymentId].totalAmount += book.price;
           });
@@ -62,9 +87,13 @@ const MyBooksPage = () => {
           if (error.response.status === 401) {
             setError('Authentication error. Please log in again.');
             setTimeout(() => navigate('/login'), 2000);
+          } else if (error.response.status === 404) {
+            setError('No purchased books found.');
           } else {
-            setError(`Server error: ${error.response.data.message || 'An error occurred.'}`);
+            setError(`Server error (${error.response.status}): ${error.response.data.message || 'An error occurred.'}`);
           }
+        } else if (error.request) {
+          setError('Could not connect to server. Check your internet.');
         } else {
           setError('An error occurred while preparing your request.');
         }
@@ -155,32 +184,33 @@ const MyBooksPage = () => {
                           <h3 className="book-title">{book.title}</h3>
                           <p className="book-author">by {book.author}</p>
                           <div className="book-actions">
-                            {book.url && (book.url.toLowerCase().endsWith('.epub') || book.url.toLowerCase().includes('epub')) ? (
-                              <>
-                                <button
-                                  className="read-button"
-                                  onClick={() => {
-                                    const encodedUrl = encodeURIComponent(book.url);
-                                    navigate(`/epub-reader/${encodedUrl}`);
-                                  }}
-                                >
-                                  <FileText size={16} /> Read EPUB
-                                </button>
-                                <button
-                                  className="open-button"
-                                  onClick={() => window.open(book.url, '_blank')}
-                                >
-                                  <ExternalLink size={16} /> Open Directly
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                className="read-button"
-                                onClick={() => window.open(book.url, '_blank')}
-                              >
-                                <FileText size={16} /> Open Book
-                              </button>
-                            )}
+                            <button
+                              className="read-button"
+                              onClick={() => {
+                                if (book.url && book.url.startsWith('http')) {
+                                  // Check if it's an EPUB file by extension or content type
+                                  const isEpub = book.url.toLowerCase().endsWith('.epub') ||
+                                                book.url.toLowerCase().includes('epub');
+
+                                  if (isEpub) {
+                                    console.log("Opening EPUB in viewer:", book.url);
+                                    setSelectedBook(book.url);
+                                  } else {
+                                    // For non-EPUB files, open in a new tab
+                                    console.log("Opening non-EPUB in new tab:", book.url);
+                                    window.open(book.url, '_blank');
+                                  }
+                                } else {
+                                  // Skip books without valid URLs
+                                  alert('This book does not have a valid URL');
+                                }
+                              }}
+                            >
+                              <FileText size={16} />
+                              {book.url && (book.url.toLowerCase().endsWith('.epub') || book.url.toLowerCase().includes('epub'))
+                                ? 'Read EPUB'
+                                : 'Open Book'}
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -191,6 +221,31 @@ const MyBooksPage = () => {
             </div>
           )}
         </div>
+
+        {selectedBook && (
+          <div className="epub-viewer-overlay">
+            <div className="epub-viewer-wrapper">
+              <div className="epub-viewer-header">
+                <h3>Reading EPUB Book</h3>
+                <button
+                  className="close-button"
+                  onClick={() => {
+                    setSelectedBook(null);
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+              <div className="epub-viewer-content">
+                <div className="epub-viewer-container-wrapper">
+                  <ErrorBoundary showDetails={false}>
+                    <Viewer epubUrl={selectedBook} />
+                  </ErrorBoundary>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       <Footer />
     </>
