@@ -1,3 +1,4 @@
+// src/pages/MyBooksPage.js
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
@@ -14,13 +15,12 @@ const MyBooksPage = () => {
   const [error, setError] = useState(null);
   const [groupedBooks, setGroupedBooks] = useState([]);
 
-  // Fetch books inside useEffect directly
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     const isLoggedIn = document.cookie.includes('isLoggedIn=true') || !!token;
 
     if (!isLoggedIn) {
-      console.log('User is not logged in, redirecting to login page');
+      console.log('User  is not logged in, redirecting to login page');
       navigate('/login');
       return;
     }
@@ -32,41 +32,19 @@ const MyBooksPage = () => {
         const response = await api.get('/api/payment/my-purchases');
 
         if (response.data.success) {
-          const bookMap = new Map();
-          const processedBooks = [];
-
-          // Process all books but prioritize epub format
-          (response.data.purchasedBooks || []).forEach(book => {
-            const bookId = book.bookId.toString();
-            let processedBook = book;
-
-            // Check if the book has a URL
-            if (book.url) {
-              // Process the book regardless of format
-              processedBook = { ...book };
-
-              if (!bookMap.has(bookId)) {
-                bookMap.set(bookId, processedBook);
-                processedBooks.push(processedBook);
-              }
-            }
-          });
-
-          // Group by payment ID
+          const processedBooks = response.data.purchasedBooks || [];
           const groupedByPaymentId = {};
+
           processedBooks.forEach(book => {
             const paymentId = book.paymentId || 'unknown';
-            const purchaseDate = book.purchaseDate;
-
             if (!groupedByPaymentId[paymentId]) {
               groupedByPaymentId[paymentId] = {
                 _id: paymentId,
-                purchaseDate,
+                purchaseDate: book.purchaseDate,
                 books: [],
                 totalAmount: 0
               };
             }
-
             groupedByPaymentId[paymentId].books.push(book);
             groupedByPaymentId[paymentId].totalAmount += book.price;
           });
@@ -84,13 +62,9 @@ const MyBooksPage = () => {
           if (error.response.status === 401) {
             setError('Authentication error. Please log in again.');
             setTimeout(() => navigate('/login'), 2000);
-          } else if (error.response.status === 404) {
-            setError('No purchased books found.');
           } else {
-            setError(`Server error (${error.response.status}): ${error.response.data.message || 'An error occurred.'}`);
+            setError(`Server error: ${error.response.data.message || 'An error occurred.'}`);
           }
-        } else if (error.request) {
-          setError('Could not connect to server. Check your internet.');
         } else {
           setError('An error occurred while preparing your request.');
         }
@@ -186,29 +160,15 @@ const MyBooksPage = () => {
                                 <button
                                   className="read-button"
                                   onClick={() => {
-                                    if (book.url && book.url.startsWith('http')) {
-                                      console.log("Opening EPUB in custom viewer:", book.url);
-                                      // Navigate to our custom EPUB reader with the encoded URL
-                                      const encodedUrl = encodeURIComponent(book.url);
-                                      navigate(`/epub-reader/${encodedUrl}`);
-                                    } else {
-                                      // Skip books without valid URLs
-                                      alert('This book does not have a valid URL');
-                                    }
+                                    const encodedUrl = encodeURIComponent(book.url);
+                                    navigate(`/epub-reader/${encodedUrl}`);
                                   }}
                                 >
                                   <FileText size={16} /> Read EPUB
                                 </button>
                                 <button
                                   className="open-button"
-                                  onClick={() => {
-                                    if (book.url && book.url.startsWith('http')) {
-                                      console.log("Opening EPUB directly in new tab:", book.url);
-                                      window.open(book.url, '_blank');
-                                    } else {
-                                      alert('This book does not have a valid URL');
-                                    }
-                                  }}
+                                  onClick={() => window.open(book.url, '_blank')}
                                 >
                                   <ExternalLink size={16} /> Open Directly
                                 </button>
@@ -216,14 +176,7 @@ const MyBooksPage = () => {
                             ) : (
                               <button
                                 className="read-button"
-                                onClick={() => {
-                                  if (book.url && book.url.startsWith('http')) {
-                                    console.log("Opening non-EPUB in new tab:", book.url);
-                                    window.open(book.url, '_blank');
-                                  } else {
-                                    alert('This book does not have a valid URL');
-                                  }
-                                }}
+                                onClick={() => window.open(book.url, '_blank')}
                               >
                                 <FileText size={16} /> Open Book
                               </button>
@@ -238,8 +191,6 @@ const MyBooksPage = () => {
             </div>
           )}
         </div>
-
-
       </div>
       <Footer />
     </>
