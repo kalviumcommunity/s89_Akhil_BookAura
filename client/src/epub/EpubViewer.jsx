@@ -17,7 +17,12 @@ const EpubViewer = ({ epubUrl }) => {
     const fetchAndRender = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(epubUrl);
+        const response = await fetch(epubUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/epub+zip', // Set the correct MIME type
+          },
+        });
         if (!response.ok) {
           throw new Error(`Failed to fetch EPUB: ${response.status} ${response.statusText}`);
         }
