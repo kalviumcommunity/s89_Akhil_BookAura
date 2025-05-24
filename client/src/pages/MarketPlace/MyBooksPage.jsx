@@ -8,7 +8,7 @@ import { SafeImage } from '../../utils/imageUtils';
 import './MyBooksPage.css';
 import LoadingAnimation from '../../components/LoadingAnimation';
 import api from '../../services/api';
-import Viewer from '../../components/Viewer';
+import Viewer from '../../epub/Viewer';
 
 const MyBooksPage = () => {
   const navigate = useNavigate();
