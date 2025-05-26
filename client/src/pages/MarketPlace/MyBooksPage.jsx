@@ -197,11 +197,8 @@ const MyBooksPage = () => {
 
                                   if (isFromBookFiles) {
                                     console.log("Opening EPUB in viewer:", book.url);
-                                    // Use the EPUB proxy to avoid download issues
-                                    const baseUrl = import.meta.env.VITE_API_URL || 'https://s89-akhil-bookaura-3.onrender.com';
-                                    const proxyUrl = `${baseUrl}/api/pdf/fetch-epub?url=${encodeURIComponent(book.url)}`;
-                                    console.log("Proxy URL:", proxyUrl);
-                                    setSelectedBook(proxyUrl);
+                                    // Use the original URL directly - let the EPUB viewer handle it
+                                    setSelectedBook(book.url);
                                   } else {
                                     // For non-EPUB files, open in a new tab
                                     console.log("Opening non-EPUB in new tab:", book.url);

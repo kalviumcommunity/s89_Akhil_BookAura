@@ -16,22 +16,38 @@ const EpubViewer = ({ epubUrl }) => {
   useEffect(() => {
     const fetchAndRender = async () => {
       setIsLoading(true);
+      setError(null);
+
       try {
+        console.log("EpubViewer: Loading EPUB from URL:", epubUrl);
+
+        // Simple approach: fetch as blob and load with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
         const response = await fetch(epubUrl, {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/epub+zip', // Set the correct MIME type
-          },
+          mode: 'cors',
+          signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
+
         if (!response.ok) {
           throw new Error(`Failed to fetch EPUB: ${response.status} ${response.statusText}`);
         }
 
+        console.log("EpubViewer: EPUB fetched successfully, creating blob...");
         const blob = await response.blob();
+        console.log("EpubViewer: Blob created, size:", blob.size);
+
         const newBook = ePub(blob);
         setBook(newBook);
 
+        console.log("EpubViewer: Waiting for book to be ready...");
         await newBook.ready;
+        console.log("EpubViewer: Book is ready, creating rendition...");
+
         const newRendition = newBook.renderTo(viewerRef.current, {
           width: '100%',
           height: '100%',
@@ -40,10 +56,13 @@ const EpubViewer = ({ epubUrl }) => {
         });
 
         setRendition(newRendition);
+        console.log("EpubViewer: Displaying book...");
         await newRendition.display();
 
+        console.log("EpubViewer: Generating locations...");
         await newBook.locations.generate(1024);
         setTotalPages(newBook.locations.total);
+        console.log("EpubViewer: Book loaded successfully!");
 
         newRendition.on('relocated', (location) => {
           const pageNum = newBook.locations.locationFromCfi(location.start.cfi);
@@ -52,19 +71,25 @@ const EpubViewer = ({ epubUrl }) => {
 
         window.addEventListener('keydown', handleKeyPress);
       } catch (err) {
-        console.error("Error loading EPUB:", err);
-        setError(err.message || "Failed to load EPUB book");
+        console.error("EpubViewer: Error loading EPUB:", err);
+        setError(`Failed to load EPUB: ${err.message}`);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchAndRender();
+    if (epubUrl) {
+      fetchAndRender();
+    }
 
     return () => {
       window.removeEventListener('keydown', handleKeyPress);
       if (book) {
-        book.destroy();
+        try {
+          book.destroy();
+        } catch (e) {
+          console.warn("EpubViewer: Error destroying book:", e);
+        }
       }
     };
   }, [epubUrl]);
