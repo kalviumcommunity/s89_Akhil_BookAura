@@ -31,9 +31,19 @@ const FastEpubViewer = ({ epubUrl }) => {
           }
         });
 
-        rendition.display().then(() => {
-          console.log('🚀 Book displayed successfully!');
-        });
+        // Wait for book to be ready first, then display
+        await book.ready;
+        console.log('🚀 Book is ready, now displaying...');
+
+        // Try to display the first chapter/section
+        await rendition.display();
+        console.log('🚀 Book displayed successfully!');
+
+        // Force a resize to ensure proper rendering
+        setTimeout(() => {
+          rendition.resize();
+          console.log('🚀 Book resized for proper display');
+        }, 100);
 
       } catch (error) {
         console.error('EPUB rendering error:', error);
@@ -47,7 +57,6 @@ const FastEpubViewer = ({ epubUrl }) => {
 
   return (
     <div>
-      <h2>EPUB Viewer</h2>
       <div
         ref={viewerRef}
         style={{
