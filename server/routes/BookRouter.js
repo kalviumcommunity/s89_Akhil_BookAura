@@ -90,7 +90,7 @@ router.post('/uploadBook', verifyToken, verifyAdmin, upload.fields([
 
     const bookFileResult = await uploadToCloudinary(
       req.files.bookFile[0].buffer,
-      'bookstore/bookFiles',
+      'ebooks',
       req.files.bookFile[0].mimetype
     );
 

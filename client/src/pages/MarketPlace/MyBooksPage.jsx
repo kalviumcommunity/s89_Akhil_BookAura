@@ -8,7 +8,7 @@ import { SafeImage } from '../../utils/imageUtils';
 import './MyBooksPage.css';
 import LoadingAnimation from '../../components/LoadingAnimation';
 import api from '../../services/api';
-import EpubViewer from '../../epub/EpubViewer';
+import SimpleEpubViewer from '../../epub/SimpleEpubViewer';
 
 const MyBooksPage = () => {
   const navigate = useNavigate();
@@ -188,9 +188,11 @@ const MyBooksPage = () => {
                               className="read-button"
                               onClick={() => {
                                 if (book.url && book.url.startsWith('http')) {
-                                  // Since Cloudinary URLs don't have extensions, assume all books from bookFiles folder are EPUBs
+                                  // Since Cloudinary URLs don't have extensions, assume all books from book folders are EPUBs
                                   // This is safer since we're in the purchased books section
-                                  const isFromBookFiles = book.url.includes('/bookstore/bookFiles/') || book.url.includes('/bookFiles/');
+                                  const isFromBookFiles = book.url.includes('/bookstore/bookFiles/') ||
+                                                         book.url.includes('/bookFiles/') ||
+                                                         book.url.includes('/ebooks/');
 
                                   console.log("Book URL:", book.url);
                                   console.log("Is from bookFiles folder:", isFromBookFiles);
@@ -211,7 +213,7 @@ const MyBooksPage = () => {
                               }}
                             >
                               <FileText size={16} />
-                              {book.url && (book.url.includes('/bookstore/bookFiles/') || book.url.includes('/bookFiles/'))
+                              {book.url && (book.url.includes('/bookstore/bookFiles/') || book.url.includes('/bookFiles/') || book.url.includes('/ebooks/'))
                                 ? 'Read Book'
                                 : 'Open Book'}
                             </button>
@@ -243,7 +245,7 @@ const MyBooksPage = () => {
               <div className="epub-viewer-content">
                 <div className="epub-viewer-container-wrapper">
                   <ErrorBoundary showDetails={false}>
-                    <EpubViewer epubUrl={selectedBook} />
+                    <SimpleEpubViewer epubUrl={selectedBook} />
                   </ErrorBoundary>
                 </div>
               </div>
