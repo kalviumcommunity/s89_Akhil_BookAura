@@ -63,8 +63,23 @@ router.post('/uploadBook', verifyToken, verifyAdmin, upload.fields([
   { name: 'bookFile', maxCount: 1 }
 ]), async (req, res) => {
   try {
+    console.log('Upload request received:');
+    console.log('- Body:', req.body);
+    console.log('- Files:', req.files ? Object.keys(req.files) : 'No files');
+
+    // Validate files
     if (!req.files?.coverImage || !req.files?.bookFile) {
       return res.status(400).json({ success: false, message: 'Both cover image and book file are required' });
+    }
+
+    // Validate required fields
+    const { title, author, description, genre, price } = req.body;
+    if (!title || !author || !description || !genre || !price) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: title, author, description, genre, and price are all required',
+        received: { title: !!title, author: !!author, description: !!description, genre: !!genre, price: !!price }
+      });
     }
 
     const coverImageResult = await uploadToCloudinary(
@@ -79,12 +94,28 @@ router.post('/uploadBook', verifyToken, verifyAdmin, upload.fields([
       req.files.bookFile[0].mimetype
     );
 
+    // Parse categories if provided
+    let parsedCategories = [];
+    if (req.body.categories) {
+      try {
+        parsedCategories = typeof req.body.categories === 'string' ? JSON.parse(req.body.categories) : req.body.categories;
+      } catch {
+        parsedCategories = req.body.categories.split(',').map(c => c.trim());
+      }
+    }
+
     const newBook = new Book({
       title: req.body.title,
       author: req.body.author,
+      description: req.body.description,
+      genre: req.body.genre,
+      price: parseFloat(req.body.price),
       coverimage: coverImageResult.secure_url,
       url: bookFileResult.secure_url,
-      // Add other fields as necessary
+      categories: parsedCategories,
+      isBestSeller: req.body.isBestSeller === 'true' || req.body.isBestSeller === true,
+      isFeatured: req.body.isFeatured === 'true' || req.body.isFeatured === true,
+      isNewRelease: req.body.isNewRelease === 'true' || req.body.isNewRelease === true
     });
 
     await newBook.save();

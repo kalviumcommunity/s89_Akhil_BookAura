@@ -97,6 +97,22 @@ const AddProducts = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate required fields before submitting
+    if (!formData.title || !formData.author || !formData.description || !formData.genre || !formData.price) {
+      alert('Please fill in all required fields: Title, Author, Description, Genre, and Price');
+      return;
+    }
+
+    if (!coverImage || !bookFile) {
+      alert('Please select both cover image and book file');
+      return;
+    }
+
+    console.log('Form data before submission:', formData);
+    console.log('Cover image:', coverImage);
+    console.log('Book file:', bookFile);
+
     const uploadData = new FormData();
 
     // Add basic form fields
@@ -112,6 +128,12 @@ const AddProducts = () => {
     // Add files
     uploadData.append('coverImage', coverImage);
     uploadData.append('bookFile', bookFile);
+
+    // Log what's being sent
+    console.log('FormData contents:');
+    for (let [key, value] of uploadData.entries()) {
+      console.log(`${key}:`, value);
+    }
 
     try {
       // Using api service which automatically handles tokens from both localStorage and cookies
