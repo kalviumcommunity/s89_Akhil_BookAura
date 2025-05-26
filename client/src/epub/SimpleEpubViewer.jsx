@@ -35,10 +35,10 @@ const SimpleEpubViewer = ({ epubUrl }) => {
           }
         });
 
-        rendition.display().then(() => {
-          console.log('Book displayed');
-          setIsLoading(false);
-        });
+        // Force immediate display without waiting
+        rendition.display();
+        console.log('Book displayed');
+        setIsLoading(false);
 
       } catch (error) {
         console.error('❌ EPUB rendering error:', error);
