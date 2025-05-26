@@ -26,6 +26,7 @@ function Reader() {
           if (foundBook) {
             setBook(foundBook);
             console.log("📖 Book found:", foundBook);
+            console.log("📖 Book URL for EPUB viewer:", foundBook.url);
           }
         }
       } catch (error) {
