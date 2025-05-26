@@ -545,4 +545,59 @@ router.post('/upload-image', verifyToken, async (req, res) => {
   }
 });
 
+// EPUB proxy endpoint - no auth required for better compatibility
+router.get('/fetch-epub', async (req, res) => {
+  // Set CORS headers to allow specific origin
+  const origin = req.headers.origin || 'http://localhost:5173';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Credentials', 'false');
+
+  try {
+    const { url } = req.query;
+
+    if (!url) {
+      return res.status(400).json({ success: false, message: 'URL parameter is required' });
+    }
+
+    console.log('Fetching EPUB from Cloudinary:', url);
+
+    // Fetch the EPUB file from Cloudinary
+    const response = await axios.get(url, {
+      responseType: 'arraybuffer',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+
+    console.log('EPUB fetched successfully, size:', response.data.length);
+
+    // Set appropriate headers for EPUB
+    res.setHeader('Content-Type', 'application/epub+zip');
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+
+    // Send the EPUB data
+    res.send(response.data);
+  } catch (error) {
+    console.error('Error fetching EPUB:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch EPUB',
+      error: error.message
+    });
+  }
+});
+
+// Handle OPTIONS requests for CORS
+router.options('/fetch-epub', (req, res) => {
+  const origin = req.headers.origin || 'http://localhost:5173';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Credentials', 'false');
+  res.status(200).end();
+});
+
 module.exports = router;

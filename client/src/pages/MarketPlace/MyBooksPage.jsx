@@ -8,7 +8,7 @@ import { SafeImage } from '../../utils/imageUtils';
 import './MyBooksPage.css';
 import LoadingAnimation from '../../components/LoadingAnimation';
 import api from '../../services/api';
-import Viewer from '../../epub/Viewer';
+import EpubViewer from '../../epub/EpubViewer';
 
 const MyBooksPage = () => {
   const navigate = useNavigate();
@@ -194,7 +194,10 @@ const MyBooksPage = () => {
 
                                   if (isEpub) {
                                     console.log("Opening EPUB in viewer:", book.url);
-                                    setSelectedBook(book.url);
+                                    // Use the EPUB proxy to avoid download issues
+                                    const baseUrl = import.meta.env.VITE_API_URL || 'https://s89-akhil-bookaura-3.onrender.com';
+                                    const proxyUrl = `${baseUrl}/api/pdf/fetch-epub?url=${encodeURIComponent(book.url)}`;
+                                    setSelectedBook(proxyUrl);
                                   } else {
                                     // For non-EPUB files, open in a new tab
                                     console.log("Opening non-EPUB in new tab:", book.url);
@@ -239,7 +242,7 @@ const MyBooksPage = () => {
               <div className="epub-viewer-content">
                 <div className="epub-viewer-container-wrapper">
                   <ErrorBoundary showDetails={false}>
-                    <Viewer epubUrl={selectedBook} />
+                    <EpubViewer epubUrl={selectedBook} />
                   </ErrorBoundary>
                 </div>
               </div>
