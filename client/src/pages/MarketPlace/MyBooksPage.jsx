@@ -2,19 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import ErrorBoundary from '../../components/ErrorBoundary';
+
 import { Book, Calendar, ArrowLeft, FileText } from 'lucide-react';
 import { SafeImage } from '../../utils/imageUtils';
 import './MyBooksPage.css';
 import LoadingAnimation from '../../components/LoadingAnimation';
 import api from '../../services/api';
-import SimpleEpubViewer from '../../epub/SimpleEpubViewer';
+
 
 const MyBooksPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedBook, setSelectedBook] = useState(null);
+
   const [groupedBooks, setGroupedBooks] = useState([]);
 
   // Fetch books inside useEffect directly
@@ -198,9 +198,10 @@ const MyBooksPage = () => {
                                   console.log("Is from bookFiles folder:", isFromBookFiles);
 
                                   if (isFromBookFiles) {
-                                    console.log("Opening EPUB in viewer:", book.url);
-                                    // Use the original URL directly - let the EPUB viewer handle it
-                                    setSelectedBook(book.url);
+                                    console.log("Opening EPUB in reader page:", book.url);
+                                    // Navigate to the reader page with the book URL
+                                    const encodedUrl = encodeURIComponent(book.url);
+                                    navigate(`/reader/${encodedUrl}`);
                                   } else {
                                     // For non-EPUB files, open in a new tab
                                     console.log("Opening non-EPUB in new tab:", book.url);
@@ -228,30 +229,7 @@ const MyBooksPage = () => {
           )}
         </div>
 
-        {selectedBook && (
-          <div className="epub-viewer-overlay">
-            <div className="epub-viewer-wrapper">
-              <div className="epub-viewer-header">
-                <h3>Reading EPUB Book</h3>
-                <button
-                  className="close-button"
-                  onClick={() => {
-                    setSelectedBook(null);
-                  }}
-                >
-                  Close
-                </button>
-              </div>
-              <div className="epub-viewer-content">
-                <div className="epub-viewer-container-wrapper">
-                  <ErrorBoundary showDetails={false}>
-                    <SimpleEpubViewer epubUrl={selectedBook} />
-                  </ErrorBoundary>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+
       </div>
       <Footer />
     </>

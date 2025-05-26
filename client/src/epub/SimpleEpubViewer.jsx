@@ -9,20 +9,14 @@ const SimpleEpubViewer = ({ epubUrl }) => {
   useEffect(() => {
     const fetchAndRender = async () => {
       if (!epubUrl) return;
-      
-      setIsLoading(true);
-      setError(null);
 
       try {
         console.log("📚 Loading EPUB from:", epubUrl);
+        setIsLoading(true);
+        setError(null);
 
-        // Use your exact working method
+        // Your exact working method - simple and fast
         const response = await fetch(epubUrl);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch EPUB: ${response.status} ${response.statusText}`);
-        }
-
         const blob = await response.blob();
         console.log("📦 Blob created, size:", blob.size);
 
@@ -42,10 +36,10 @@ const SimpleEpubViewer = ({ epubUrl }) => {
           }
         });
 
-        await rendition.display();
-        console.log('✅ Book displayed successfully');
-
-        setIsLoading(false);
+        rendition.display().then(() => {
+          console.log('✅ Book displayed successfully');
+          setIsLoading(false);
+        });
 
       } catch (error) {
         console.error('❌ EPUB rendering error:', error);
@@ -99,8 +93,8 @@ const SimpleEpubViewer = ({ epubUrl }) => {
       }}>
         <h2 style={{ color: '#856404', marginBottom: '15px' }}>📚 Book Loading Issue</h2>
         <p style={{ color: '#856404', marginBottom: '20px' }}>{error}</p>
-        <button 
-          onClick={() => window.location.reload()} 
+        <button
+          onClick={() => window.location.reload()}
           style={{
             padding: '10px 20px',
             backgroundColor: '#007bff',
