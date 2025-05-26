@@ -18,17 +18,16 @@ const SimpleEpubViewer = ({ epubUrl }) => {
         // Your exact working method - simple and fast
         const response = await fetch(epubUrl);
         const blob = await response.blob();
-        console.log("📦 Blob created, size:", blob.size);
 
         const book = ePub(blob);
-        console.log("📖 Book loaded:", book);
+        console.log("Book loaded:", book);
 
         const rendition = book.renderTo(viewerRef.current, {
           width: '100%',
           height: '100%',
         });
 
-        // Fix sandbox issue (from your working code)
+        // Fix sandbox issue
         rendition.hooks.content.register((contents) => {
           const iframe = contents.iframe;
           if (iframe && iframe.sandbox) {
@@ -37,7 +36,7 @@ const SimpleEpubViewer = ({ epubUrl }) => {
         });
 
         rendition.display().then(() => {
-          console.log('✅ Book displayed successfully');
+          console.log('Book displayed');
           setIsLoading(false);
         });
 

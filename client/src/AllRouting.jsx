@@ -184,7 +184,7 @@ const AllRouting = () => {
           element={<Reader />}
         />
         <Route
-          path="/reader/:bookUrl"
+          path="/reader/:bookId"
           element={<BookReader />}
         />
       </Routes>

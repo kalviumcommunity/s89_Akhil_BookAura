@@ -1,36 +1,87 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import SimpleEpubViewer from '../../epub/SimpleEpubViewer';
+import api from '../../services/api';
 import './Reader.css';
 
 function Reader() {
-  const { bookUrl } = useParams();
+  const { bookId } = useParams();
   const navigate = useNavigate();
-  const [decodedUrl, setDecodedUrl] = useState('');
-  const [bookTitle, setBookTitle] = useState('Reading Book');
+  const [book, setBook] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  console.log("📖 Reader: Loading book with ID:", bookId);
 
   useEffect(() => {
-    if (bookUrl) {
-      // Decode the URL parameter
-      const decoded = decodeURIComponent(bookUrl);
-      setDecodedUrl(decoded);
-      console.log("📖 Reader: Loading book from URL:", decoded);
-      
-      // Extract book title from URL if possible
-      const urlParts = decoded.split('/');
-      const fileName = urlParts[urlParts.length - 1];
-      setBookTitle(`Reading: ${fileName}`);
+    const fetchBook = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch book data from your purchased books
+        const response = await api.get('/api/payment/my-purchases');
+
+        if (response.data.success) {
+          // Find the book with matching ID
+          const foundBook = response.data.purchasedBooks.find(book =>
+            book.bookId.toString() === bookId || book._id === bookId
+          );
+
+          if (foundBook) {
+            setBook(foundBook);
+            console.log("📖 Book found:", foundBook);
+          } else {
+            setError('Book not found in your purchases');
+          }
+        } else {
+          setError('Failed to fetch your books');
+        }
+      } catch (error) {
+        console.error('Error fetching book:', error);
+        setError('Failed to load book');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (bookId) {
+      fetchBook();
     }
-  }, [bookUrl]);
+  }, [bookId]);
 
   const handleGoBack = () => {
     navigate('/my-books');
   };
 
-  if (!decodedUrl) {
+  if (loading) {
     return (
       <div className="reader-loading">
         <p>Loading book...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="reader-container">
+        <div className="reader-header">
+          <button onClick={handleGoBack} className="back-button">
+            ← Back to My Books
+          </button>
+          <h1 className="reader-title">Error</h1>
+        </div>
+        <div className="reader-content">
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!book) {
+    return (
+      <div className="reader-loading">
+        <p>Book not found...</p>
       </div>
     );
   }
@@ -41,11 +92,11 @@ function Reader() {
         <button onClick={handleGoBack} className="back-button">
           ← Back to My Books
         </button>
-        <h1 className="reader-title">{bookTitle}</h1>
+        <h1 className="reader-title">{book.title} by {book.author}</h1>
       </div>
-      
+
       <div className="reader-content">
-        <SimpleEpubViewer epubUrl={decodedUrl} />
+        <SimpleEpubViewer epubUrl={book.url} />
       </div>
     </div>
   );

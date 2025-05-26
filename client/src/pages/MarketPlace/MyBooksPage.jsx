@@ -199,9 +199,10 @@ const MyBooksPage = () => {
 
                                   if (isFromBookFiles) {
                                     console.log("Opening EPUB in reader page:", book.url);
-                                    // Navigate to the reader page with the book URL
-                                    const encodedUrl = encodeURIComponent(book.url);
-                                    navigate(`/reader/${encodedUrl}`);
+                                    // Navigate to the reader page with the book ID (like your working code)
+                                    const bookId = book.bookId || book._id;
+                                    console.log("📖 Navigating to reader with book ID:", bookId);
+                                    navigate(`/reader/${bookId}`);
                                   } else {
                                     // For non-EPUB files, open in a new tab
                                     console.log("Opening non-EPUB in new tab:", book.url);
