@@ -188,15 +188,19 @@ const MyBooksPage = () => {
                               className="read-button"
                               onClick={() => {
                                 if (book.url && book.url.startsWith('http')) {
-                                  // Check if it's an EPUB file by extension or content type
-                                  const isEpub = book.url.toLowerCase().endsWith('.epub') ||
-                                                book.url.toLowerCase().includes('epub');
+                                  // Since Cloudinary URLs don't have extensions, assume all books from bookFiles folder are EPUBs
+                                  // This is safer since we're in the purchased books section
+                                  const isFromBookFiles = book.url.includes('/bookstore/bookFiles/') || book.url.includes('/bookFiles/');
 
-                                  if (isEpub) {
+                                  console.log("Book URL:", book.url);
+                                  console.log("Is from bookFiles folder:", isFromBookFiles);
+
+                                  if (isFromBookFiles) {
                                     console.log("Opening EPUB in viewer:", book.url);
                                     // Use the EPUB proxy to avoid download issues
                                     const baseUrl = import.meta.env.VITE_API_URL || 'https://s89-akhil-bookaura-3.onrender.com';
                                     const proxyUrl = `${baseUrl}/api/pdf/fetch-epub?url=${encodeURIComponent(book.url)}`;
+                                    console.log("Proxy URL:", proxyUrl);
                                     setSelectedBook(proxyUrl);
                                   } else {
                                     // For non-EPUB files, open in a new tab
@@ -210,8 +214,8 @@ const MyBooksPage = () => {
                               }}
                             >
                               <FileText size={16} />
-                              {book.url && (book.url.toLowerCase().endsWith('.epub') || book.url.toLowerCase().includes('epub'))
-                                ? 'Read EPUB'
+                              {book.url && (book.url.includes('/bookstore/bookFiles/') || book.url.includes('/bookFiles/'))
+                                ? 'Read Book'
                                 : 'Open Book'}
                             </button>
                           </div>

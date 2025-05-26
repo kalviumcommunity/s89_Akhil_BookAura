@@ -547,17 +547,27 @@ router.post('/upload-image', verifyToken, async (req, res) => {
 
 // EPUB proxy endpoint - no auth required for better compatibility
 router.get('/fetch-epub', async (req, res) => {
-  // Set CORS headers to allow specific origin
-  const origin = req.headers.origin || 'http://localhost:5173';
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Access-Control-Allow-Credentials', 'false');
+  // Set CORS headers to match main server configuration
+  const origin = req.headers.origin;
+
+  // Allow all origins for now (same as main server)
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Cache-Control, Pragma, Expires, Cookie');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Type, Set-Cookie');
 
   try {
     const { url } = req.query;
 
+    console.log('EPUB Proxy Request:');
+    console.log('- URL:', req.url);
+    console.log('- Query URL:', url);
+    console.log('- Origin:', req.headers.origin);
+    console.log('- User-Agent:', req.headers['user-agent']);
+
     if (!url) {
+      console.log('ERROR: No URL parameter provided');
       return res.status(400).json({ success: false, message: 'URL parameter is required' });
     }
 
@@ -567,36 +577,58 @@ router.get('/fetch-epub', async (req, res) => {
     const response = await axios.get(url, {
       responseType: 'arraybuffer',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      },
+      timeout: 30000 // 30 second timeout
     });
 
-    console.log('EPUB fetched successfully, size:', response.data.length);
+    console.log('EPUB fetched successfully:');
+    console.log('- Status:', response.status);
+    console.log('- Content-Type:', response.headers['content-type']);
+    console.log('- Size:', response.data.length, 'bytes');
 
     // Set appropriate headers for EPUB
     res.setHeader('Content-Type', 'application/epub+zip');
-    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Content-Disposition', 'inline; filename="book.epub"');
     res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+    res.setHeader('Content-Length', response.data.length);
+
+    console.log('Sending EPUB data to client...');
 
     // Send the EPUB data
     res.send(response.data);
   } catch (error) {
     console.error('Error fetching EPUB:', error);
+    console.error('Error details:', {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data
+    });
+
     res.status(500).json({
       success: false,
       message: 'Failed to fetch EPUB',
-      error: error.message
+      error: error.message,
+      details: error.response ? {
+        status: error.response.status,
+        statusText: error.response.statusText
+      } : null
     });
   }
 });
 
 // Handle OPTIONS requests for CORS
 router.options('/fetch-epub', (req, res) => {
-  const origin = req.headers.origin || 'http://localhost:5173';
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Access-Control-Allow-Credentials', 'false');
+  const origin = req.headers.origin;
+
+  // Match the main CORS configuration
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Cache-Control, Pragma, Expires, Cookie');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Type, Set-Cookie');
+  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
   res.status(200).end();
 });
 
