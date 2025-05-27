@@ -11,9 +11,55 @@ function Reader() {
 
   useEffect(() => {
     const fetchBook = async () => {
-      const baseUrl = import.meta.env.VITE_API_URL || 'https://s89-akhil-bookaura-3.onrender.com';
-      const res = await axios.get(`${baseUrl}/api/books/${id}`);
-      setBook(res.data);
+      try {
+        const baseUrl = import.meta.env.VITE_API_URL || 'https://s89-akhil-bookaura-3.onrender.com';
+
+        // First try to get from purchased books (where the data actually is)
+        try {
+          const response = await fetch(`${baseUrl}/api/payment/my-purchases`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              // Find the book with matching ID
+              const foundBook = data.purchasedBooks.find(book =>
+                book.bookId.toString() === id || book._id === id
+              );
+
+              if (foundBook) {
+                // Convert to simple format
+                setBook({
+                  _id: foundBook.bookId || foundBook._id,
+                  title: foundBook.title,
+                  author: foundBook.author,
+                  epubUrl: foundBook.epubUrl || foundBook.url
+                });
+                console.log("📖 Book found in purchases:", foundBook);
+                return;
+              }
+            }
+          }
+        } catch (purchaseError) {
+          console.log("Purchase API failed, trying direct book API...");
+        }
+
+        // Fallback: Try direct book API
+        try {
+          const res = await axios.get(`${baseUrl}/api/books/${id}`);
+          setBook(res.data);
+          console.log("📖 Book found via direct API:", res.data);
+        } catch (directError) {
+          console.log("Direct API also failed:", directError);
+        }
+
+      } catch (error) {
+        console.error('Error fetching book:', error);
+      }
     };
     fetchBook();
   }, [id]);
