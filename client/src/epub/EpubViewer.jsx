@@ -16,10 +16,8 @@ const EpubViewer = ({ epubUrl }) => {
         const book = ePub(blob);
         console.log("📖 Book loaded:", book);
 
-        // Wait for book to be ready
-        console.log("⏳ Waiting for book to be ready...");
-        await book.ready;
-        console.log("✅ Book is ready!");
+        // Skip waiting for book.ready and proceed directly
+        console.log("🚀 Proceeding without waiting for book.ready...");
 
         // Ensure the container has dimensions
         if (viewerRef.current) {
@@ -31,8 +29,8 @@ const EpubViewer = ({ epubUrl }) => {
 
         console.log("🎨 Creating rendition...");
         const rendition = book.renderTo(viewerRef.current, {
-          width: viewerRef.current?.offsetWidth || 800,
-          height: viewerRef.current?.offsetHeight || 600,
+          width: 800,
+          height: 600,
           flow: 'paginated',
           spread: 'none'
         });
