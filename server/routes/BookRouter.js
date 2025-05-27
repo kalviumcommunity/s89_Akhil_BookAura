@@ -241,7 +241,53 @@ router.get('/', async (req, res) => {
 // Fix PDF URLs (for older data)
 
 
-// Test PDF upload route
+// Test upload route without authentication
+router.post('/test-upload', upload.fields([
+  { name: 'coverImage', maxCount: 1 },
+  { name: 'bookFile', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    console.log('=== TEST UPLOAD DEBUG ===');
+    console.log('Body:', req.body);
+    console.log('Files:', req.files ? Object.keys(req.files) : 'No files');
+    console.log('Cover image:', req.files?.coverImage?.[0]?.originalname);
+    console.log('Book file:', req.files?.bookFile?.[0]?.originalname);
 
+    if (!req.files?.coverImage || !req.files?.bookFile) {
+      return res.status(400).json({
+        success: false,
+        message: 'Both cover image and book file are required',
+        received: {
+          coverImage: !!req.files?.coverImage,
+          bookFile: !!req.files?.bookFile
+        }
+      });
+    }
+
+    // Test Cloudinary upload
+    console.log('Testing Cloudinary upload...');
+    const bookFileResult = await uploadToCloudinary(
+      req.files.bookFile[0].buffer,
+      'ebooks',
+      req.files.bookFile[0].mimetype
+    );
+    console.log('Cloudinary upload successful:', bookFileResult.secure_url);
+
+    res.status(200).json({
+      success: true,
+      message: 'Test upload successful',
+      bookUrl: bookFileResult.secure_url
+    });
+
+  } catch (error) {
+    console.error('Test upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Test upload failed',
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
 
 module.exports = router;
