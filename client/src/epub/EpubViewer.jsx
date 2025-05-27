@@ -9,7 +9,11 @@ const EpubViewer = ({ epubUrl }) => {
       try {
         console.log("📚 Loading EPUB from:", epubUrl);
 
-        const response = await fetch(epubUrl);
+        // Test with hardcoded working EPUB URL
+        const testUrl = "https://res.cloudinary.com/dg3i8akzq/raw/upload/v1747996484/ebooks/nw2rvnd9c51be5zcifv5";
+        console.log("🧪 Using test EPUB URL:", testUrl);
+
+        const response = await fetch(testUrl);
         const blob = await response.blob();
         console.log("✅ EPUB blob fetched:", blob.type, blob.size, "bytes");
 
