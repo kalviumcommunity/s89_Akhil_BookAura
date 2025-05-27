@@ -16,11 +16,25 @@ const EpubViewer = ({ epubUrl }) => {
         const book = ePub(blob);
         console.log("📖 Book loaded:", book);
 
+        // Wait for book to be ready
+        console.log("⏳ Waiting for book to be ready...");
+        await book.ready;
+        console.log("✅ Book is ready!");
+
+        // Ensure the container has dimensions
+        if (viewerRef.current) {
+          console.log("📐 Container dimensions:", {
+            width: viewerRef.current.offsetWidth,
+            height: viewerRef.current.offsetHeight
+          });
+        }
+
         console.log("🎨 Creating rendition...");
         const rendition = book.renderTo(viewerRef.current, {
-          width: '100%',
-          height: '100%',
-          flow: 'paginated'
+          width: viewerRef.current?.offsetWidth || 800,
+          height: viewerRef.current?.offsetHeight || 600,
+          flow: 'paginated',
+          spread: 'none'
         });
         console.log("✅ Rendition created:", rendition);
 
@@ -39,25 +53,28 @@ const EpubViewer = ({ epubUrl }) => {
 
         console.log("📄 Starting display...");
 
-        // Try a more direct approach without async/await
-        try {
-          rendition.display();
-          console.log('🎉 Display command sent');
+        // Use the promise-based approach but with proper error handling
+        rendition.display().then(() => {
+          console.log('🎉 Book displayed successfully!');
 
-          // Add a timeout to check if it worked
+          // Check for iframes after successful display
           setTimeout(() => {
             const iframes = viewerRef.current?.querySelectorAll('iframe');
-            console.log('📊 Found iframes:', iframes?.length || 0);
-            if (iframes && iframes.length > 0) {
-              console.log('✅ EPUB content loaded successfully!');
-            } else {
-              console.log('⚠️ No iframes found - content may not have loaded');
-            }
-          }, 2000);
+            console.log('📊 Found iframes after display:', iframes?.length || 0);
+          }, 1000);
 
-        } catch (displayError) {
-          console.error('💥 Display error:', displayError);
-        }
+        }).catch((displayError) => {
+          console.error('💥 Display promise rejected:', displayError);
+
+          // Try alternative display method
+          console.log("🔄 Trying alternative display method...");
+          try {
+            rendition.display(0); // Display first chapter
+            console.log("✅ Alternative display method executed");
+          } catch (altError) {
+            console.error("💥 Alternative display also failed:", altError);
+          }
+        });
 
       } catch (error) {
         console.error('💥 EPUB rendering error:', error);
