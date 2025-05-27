@@ -181,11 +181,11 @@ const AllRouting = () => {
         />
         <Route
           path="/epub-reader/:encodedUrl"
-          element={<Reader />}
+          element={<EpubViewerPage />}
         />
         <Route
-          path="/reader/:bookId"
-          element={<BookReader />}
+          path="/reader/:id"
+          element={<Reader />}
         />
       </Routes>
     </AnimatePresence>

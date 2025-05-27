@@ -3,7 +3,6 @@ import ePub from 'epubjs';
 
 const FastEpubViewer = ({ epubUrl }) => {
   const viewerRef = useRef(null);
-
   useEffect(() => {
     const fetchAndRender = async () => {
       try {

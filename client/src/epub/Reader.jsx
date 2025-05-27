@@ -1,36 +1,29 @@
-// src/pages/Reader.jsx
-import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+// Reader.jsx
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import axios from 'axios';
 import EpubViewer from './EpubViewer';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import { ArrowLeft } from 'lucide-react';
-import '../pages/EpubViewerPage.css';
 
 function Reader() {
-  const { encodedUrl } = useParams();
-  const navigate = useNavigate();
+  const { id } = useParams();
+  const [book, setBook] = useState(null);
+  console.log("Loading book with ID:", id);
 
-  const epubUrl = decodeURIComponent(encodedUrl);
-  const goBack = () => {
-    navigate(-1);
-  };
+  useEffect(() => {
+    const fetchBook = async () => {
+      const baseUrl = import.meta.env.VITE_API_URL || 'https://s89-akhil-bookaura-3.onrender.com';
+      const res = await axios.get(`${baseUrl}/api/books/${id}`);
+      setBook(res.data);
+    };
+    fetchBook();
+  }, [id]);
+
+  if (!book) return <p>Loading...</p>;
 
   return (
-    <div className="epub-viewer-page">
-      <Navbar />
-      <div className="epub-viewer-container">
-        <div className="epub-header">
-          <button className="back-button" onClick={goBack}>
-            <ArrowLeft size={20} /> Back to My Books
-          </button>
-          <h1>EPUB Reader</h1>
-        </div>
-        <div className="epub-content">
-          <EpubViewer epubUrl={epubUrl} />
-        </div>
-      </div>
-      <Footer />
+    <div>
+      <h1>{book.title} by {book.author}</h1>
+      <EpubViewer epubUrl={book.epubUrl} />
     </div>
   );
 }
