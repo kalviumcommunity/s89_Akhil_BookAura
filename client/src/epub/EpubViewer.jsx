@@ -20,6 +20,7 @@ const EpubViewer = ({ epubUrl }) => {
         const rendition = book.renderTo(viewerRef.current, {
           width: '100%',
           height: '100%',
+          flow: 'paginated'
         });
         console.log("✅ Rendition created:", rendition);
 
@@ -37,11 +38,26 @@ const EpubViewer = ({ epubUrl }) => {
         });
 
         console.log("📄 Starting display...");
-        rendition.display().then(() => {
-          console.log('🎉 Book displayed successfully');
-        }).catch((displayError) => {
+
+        // Try a more direct approach without async/await
+        try {
+          rendition.display();
+          console.log('🎉 Display command sent');
+
+          // Add a timeout to check if it worked
+          setTimeout(() => {
+            const iframes = viewerRef.current?.querySelectorAll('iframe');
+            console.log('📊 Found iframes:', iframes?.length || 0);
+            if (iframes && iframes.length > 0) {
+              console.log('✅ EPUB content loaded successfully!');
+            } else {
+              console.log('⚠️ No iframes found - content may not have loaded');
+            }
+          }, 2000);
+
+        } catch (displayError) {
           console.error('💥 Display error:', displayError);
-        });
+        }
 
       } catch (error) {
         console.error('💥 EPUB rendering error:', error);
