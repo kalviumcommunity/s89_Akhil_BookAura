@@ -16,22 +16,31 @@ const EpubViewer = ({ epubUrl }) => {
         const book = ePub(blob);
         console.log("📖 Book loaded:", book);
 
+        console.log("🎨 Creating rendition...");
         const rendition = book.renderTo(viewerRef.current, {
           width: '100%',
           height: '100%',
         });
+        console.log("✅ Rendition created:", rendition);
 
-        // Fix sandbox issue
+        // Fix sandbox issue - register the hook first
+        console.log("🔧 Registering sandbox fix hook...");
         rendition.hooks.content.register((contents) => {
+          console.log("🔧 Hook triggered - applying sandbox fix");
           const iframe = contents.iframe;
           if (iframe && iframe.sandbox) {
-            console.log("🔧 Applying sandbox fix");
+            console.log("🔧 Sandbox found, applying fix");
             iframe.sandbox = 'allow-same-origin allow-scripts';
+          } else {
+            console.log("🔧 No sandbox found on iframe");
           }
         });
 
+        console.log("📄 Starting display...");
         rendition.display().then(() => {
           console.log('🎉 Book displayed successfully');
+        }).catch((displayError) => {
+          console.error('💥 Display error:', displayError);
         });
 
       } catch (error) {
