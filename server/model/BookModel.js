@@ -47,6 +47,10 @@ const bookSchema = mongoose.Schema({
         type:String,
         required:true,
     },
+    epubUrl:{
+        type:String,
+        // Not required for backward compatibility
+    },
     publishedDate: {
         type: Date,
         default: Date.now

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import FastEpubViewer from '../../epub/FastEpubViewer';
-import api from '../../services/api';
 import './Reader.css';
 
 function Reader() {
@@ -9,26 +8,68 @@ function Reader() {
   const navigate = useNavigate();
   const [book, setBook] = useState(null);
 
-  console.log("📖 Reader: Loading book with ID:", bookId);
+  console.log("Loading book with ID:", bookId);
 
   useEffect(() => {
     const fetchBook = async () => {
       try {
-        // Fetch book data from your purchased books
-        const response = await api.get('/api/payment/my-purchases');
+        // First try to get from purchased books (your current system)
+        const baseUrl = import.meta.env.VITE_API_URL || 'https://s89-akhil-bookaura-3.onrender.com';
 
-        if (response.data.success) {
-          // Find the book with matching ID
-          const foundBook = response.data.purchasedBooks.find(book =>
-            book.bookId.toString() === bookId || book._id === bookId
-          );
+        try {
+          const response = await fetch(`${baseUrl}/api/payment/my-purchases`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+              'Content-Type': 'application/json'
+            }
+          });
 
-          if (foundBook) {
-            setBook(foundBook);
-            console.log("📖 Book found:", foundBook);
-            console.log("📖 Book URL for EPUB viewer:", foundBook.url);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              // Find the book with matching ID
+              const foundBook = data.purchasedBooks.find(book =>
+                book.bookId.toString() === bookId || book._id === bookId
+              );
+
+              if (foundBook) {
+                // Convert to match your working code format
+                setBook({
+                  _id: foundBook.bookId || foundBook._id,
+                  title: foundBook.title,
+                  author: foundBook.author,
+                  epubUrl: foundBook.epubUrl || foundBook.url  // Use epubUrl if available, fallback to url
+                });
+                console.log("📖 Book found in purchases:", foundBook);
+                return;
+              }
+            }
           }
+        } catch (purchaseError) {
+          console.log("Purchase API failed, trying direct book API...");
         }
+
+        // Fallback: Try direct book API (like your working model)
+        try {
+          const directResponse = await fetch(`${baseUrl}/api/books/${bookId}`);
+          if (directResponse.ok) {
+            const bookData = await directResponse.json();
+            // Use epubUrl if available, otherwise use url
+            setBook({
+              _id: bookData._id,
+              title: bookData.title,
+              author: bookData.author,
+              epubUrl: bookData.epubUrl || bookData.url
+            });
+            console.log("📖 Book found via direct API:", bookData);
+            return;
+          }
+        } catch (directError) {
+          console.log("Direct API also failed:", directError);
+        }
+
+        console.log("❌ Book not found in any source");
+
       } catch (error) {
         console.error('Error fetching book:', error);
       }
@@ -61,7 +102,7 @@ function Reader() {
       </div>
 
       <div className="reader-content">
-        <FastEpubViewer epubUrl={book.url} />
+        <FastEpubViewer epubUrl={book.epubUrl} />
       </div>
     </div>
   );

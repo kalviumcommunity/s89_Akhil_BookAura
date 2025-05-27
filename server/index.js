@@ -167,6 +167,7 @@ app.use("/api/flashcards", flashcardRouter);
 
 app.use('/router', userRouter);
 app.use('/router', bookRouter);
+app.use('/api/books', bookRouter); // Add API route like your working model
 
 // Health check endpoint
 app.get('/health', (_, res) => {

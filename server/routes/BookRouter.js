@@ -112,6 +112,7 @@ router.post('/uploadBook', verifyToken, verifyAdmin, upload.fields([
       price: parseFloat(req.body.price),
       coverimage: coverImageResult.secure_url,
       url: bookFileResult.secure_url,
+      epubUrl: bookFileResult.secure_url, // Add epubUrl for compatibility
       categories: parsedCategories,
       isBestSeller: req.body.isBestSeller === 'true' || req.body.isBestSeller === true,
       isFeatured: req.body.isFeatured === 'true' || req.body.isFeatured === true,
@@ -211,6 +212,29 @@ router.get('/newreleases', async (req, res) => {
       message: 'Error fetching new release books',
       error: error.message
     });
+  }
+});
+
+// Get single book by ID (like your working model)
+router.get('/:id', async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id);
+    if (!book) {
+      return res.status(404).json({ message: 'Book not found' });
+    }
+    res.json(book);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get all books (like your working model)
+router.get('/', async (req, res) => {
+  try {
+    const books = await Book.find().sort({ createdAt: -1 });
+    res.json(books);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

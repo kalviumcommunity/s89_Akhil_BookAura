@@ -159,6 +159,7 @@ router.post("/save-purchase", verifyToken, async (req, res) => {
       coverimage: b.coverimage,
       price: b.price,
       url: b.url,
+      epubUrl: b.epubUrl || b.url, // Add epubUrl for compatibility
       purchaseDate: new Date(),
       paymentId: sessionId || 'dev-session'
     }));
@@ -175,7 +176,8 @@ router.post("/save-purchase", verifyToken, async (req, res) => {
         author: b.author,
         coverimage: b.coverimage,
         price: b.price,
-        url: b.url
+        url: b.url,
+        epubUrl: b.epubUrl || b.url // Add epubUrl for compatibility
       })),
       totalAmount,
       paymentId: sessionId || 'dev-session',
@@ -206,6 +208,7 @@ router.get("/my-purchases", verifyToken, async (req, res) => {
         coverimage: b.coverimage,
         price: b.price,
         url: b.url?.endsWith('.pdf') ? b.url.slice(0, -4) : b.url,
+        epubUrl: b.epubUrl || (b.url?.endsWith('.pdf') ? b.url.slice(0, -4) : b.url), // Add epubUrl
         purchaseDate: b.purchaseDate || purchase.purchaseDate,
         paymentId: purchase.paymentId
       })));

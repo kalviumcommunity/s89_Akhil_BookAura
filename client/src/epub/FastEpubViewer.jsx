@@ -7,16 +7,11 @@ const FastEpubViewer = ({ epubUrl }) => {
   useEffect(() => {
     const fetchAndRender = async () => {
       try {
-        console.log("🚀 FastEpubViewer received URL:", epubUrl);
-
         const response = await fetch(epubUrl);
-        console.log("🚀 Fetch response:", response.status, response.statusText);
-
         const blob = await response.blob();
-        console.log("🚀 Blob size:", blob.size);
 
         const book = ePub(blob);
-        console.log("🚀 Book loaded:", book);
+        console.log("Book loaded:", book);
 
         const rendition = book.renderTo(viewerRef.current, {
           width: '100%',
@@ -31,32 +26,21 @@ const FastEpubViewer = ({ epubUrl }) => {
           }
         });
 
-        // Wait for book to be ready first, then display
-        await book.ready;
-        console.log('🚀 Book is ready, now displaying...');
-
-        // Try to display the first chapter/section
-        await rendition.display();
-        console.log('🚀 Book displayed successfully!');
-
-        // Force a resize to ensure proper rendering
-        setTimeout(() => {
-          rendition.resize();
-          console.log('🚀 Book resized for proper display');
-        }, 100);
+        rendition.display().then(() => {
+          console.log('Book displayed');
+        });
 
       } catch (error) {
         console.error('EPUB rendering error:', error);
       }
     };
 
-    if (epubUrl) {
-      fetchAndRender();
-    }
+    fetchAndRender();
   }, [epubUrl]);
 
   return (
     <div>
+      <h2>EPUB Viewer</h2>
       <div
         ref={viewerRef}
         style={{
