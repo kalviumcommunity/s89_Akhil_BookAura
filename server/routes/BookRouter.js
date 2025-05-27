@@ -17,7 +17,7 @@ const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { fileSize: 100 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
     if (file.fieldname === 'coverImage' && !file.mimetype.startsWith('image/')) {
       return cb(new Error('Cover image must be an image'));
