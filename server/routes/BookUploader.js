@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
-const Book = require('../model/BookModel');
+const Book = require('../models/Book');
 const fs = require('fs');
 const dotenv = require('dotenv');
 dotenv.config();
@@ -23,18 +23,8 @@ cloudinary.config({
 });
 router.post('/upload', uploadFields, async (req, res) => {
   try {
-    console.log('=== BOOK UPLOAD REQUEST ===');
-    console.log('Body:', req.body);
-    console.log('Files:', req.files ? Object.keys(req.files) : 'No files');
-
     if (!req.files || !req.files.epub || !req.files.coverimage) {
-      return res.status(400).json({
-        error: 'Both EPUB file and cover image are required',
-        received: {
-          epub: !!req.files?.epub,
-          coverimage: !!req.files?.coverimage
-        }
-      });
+      return res.status(400).json({ error: 'Both EPUB file and cover image are required' });
     }
 
     // Extract all required fields from request body
@@ -43,7 +33,6 @@ router.post('/upload', uploadFields, async (req, res) => {
       author,
       description,
       genre,
-      price,
       categories,
       isBestSeller,
       isFeatured,
@@ -52,16 +41,9 @@ router.post('/upload', uploadFields, async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!title || !author || !description || !genre || !price) {
+    if (!title || !author || !description || !genre) {
       return res.status(400).json({
-        error: 'Missing required fields: title, author, description, genre, price',
-        received: {
-          title: !!title,
-          author: !!author,
-          description: !!description,
-          genre: !!genre,
-          price: !!price
-        }
+        error: 'Missing required fields: title, author, description, genre'
       });
     }
 
@@ -95,7 +77,6 @@ router.post('/upload', uploadFields, async (req, res) => {
       author,
       description,
       genre,
-      price: parseFloat(price), // Convert price to number
       coverimage: coverResult.secure_url,
       url: epubResult.secure_url, // The book URL is the EPUB file URL
       epubUrl: epubResult.secure_url // Keep for backward compatibility
@@ -120,21 +101,10 @@ router.post('/upload', uploadFields, async (req, res) => {
 
     const book = new Book(bookData);
     await book.save();
-
-    console.log('✅ Book saved successfully:', book._id);
-
-    res.status(201).json({
-      success: true,
-      message: 'Book uploaded successfully',
-      data: book
-    });
+    res.status(201).json(book);
   } catch (err) {
-    console.error('💥 Upload error:', err);
-    res.status(500).json({
-      success: false,
-      error: err.message,
-      message: 'Error uploading book'
-    });
+    console.error('Upload error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 // Express route example

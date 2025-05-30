@@ -48,7 +48,7 @@ const EpubViewer = ({ epubUrl }) => {
 
           // Fallback to working EPUB
           const testUrl = "https://res.cloudinary.com/dg3i8akzq/raw/upload/v1747996484/ebooks/nw2rvnd9c51be5zcifv5";
-          console.log("🎯 USING FALLBACK URL:", testUrl);
+          console.log("🎯 USING HARDCODED URL:", testUrl);
           const testResponse = await fetch(testUrl);
           const testBlob = await testResponse.blob();
           console.log("✅ Test EPUB blob fetched:", testBlob.type, testBlob.size, "bytes");

@@ -139,7 +139,7 @@ app.use(passport.session());
 
 // Routers
 const userRouter = require('./routes/userRouter');
-const bookUploader = require('./routes/BookUploader');
+const bookRouter = require('./routes/BookRouter');
 const paymentRoutes = require("./routes/Payment");
 const pdfProxyRoutes = require("./routes/PdfProxy");
 const cartRouter = require('./routes/CartRouter');
@@ -150,7 +150,7 @@ const flashcardRouter = require('./routes/FlashcardRouter');
 // Log loaded routers for debugging
 console.log('Loaded routers:');
 console.log('- userRouter:', typeof userRouter);
-console.log('- bookUploader:', typeof bookUploader);
+console.log('- bookRouter:', typeof bookRouter);
 console.log('- paymentRoutes:', typeof paymentRoutes);
 console.log('- pdfProxyRoutes:', typeof pdfProxyRoutes);
 console.log('- cartRouter:', typeof cartRouter);
@@ -166,8 +166,8 @@ app.use("/api/chat-history", chatHistoryRouter);
 app.use("/api/flashcards", flashcardRouter);
 
 app.use('/router', userRouter);
-app.use('/router', bookUploader);
-app.use('/api/books', bookUploader); // Add API route like your working model
+app.use('/router', bookRouter);
+app.use('/api/books', bookRouter); // Add API route like your working model
 
 // Health check endpoint
 app.get('/health', (_, res) => {
