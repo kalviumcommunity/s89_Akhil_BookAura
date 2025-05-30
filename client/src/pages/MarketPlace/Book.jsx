@@ -70,10 +70,10 @@ const Book = () => {
         }
 
         const queryString = params.toString();
-        const url = `https://s89-akhil-bookaura-3.onrender.com/router/getBooks${queryString ? `?${queryString}` : ''}`;
+        const url = `https://s89-akhil-bookaura-3.onrender.com/api/books${queryString ? `?${queryString}` : ''}`;
 
         const response = await axios.get(url);
-        setBooks(response.data.data);
+        setBooks(response.data); // Changed from response.data.data to response.data
         setLoading(false);
       } catch (error) {
         console.error('Failed to fetch books:', error);

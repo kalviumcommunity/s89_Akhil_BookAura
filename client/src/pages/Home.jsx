@@ -84,8 +84,9 @@ const Home = () => {
     // Fetch featured books
     const fetchBooks = async () => {
       try {
-        const featuredResponse = await axios.get('https://s89-akhil-bookaura-3.onrender.com/router/featured');
-        setFeaturedBooks(featuredResponse.data.data.slice(0, 4)); // Limit to 4 books
+        const allBooksResponse = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/books');
+        const allBooks = allBooksResponse.data;
+        setFeaturedBooks(allBooks.filter(book => book.isFeatured).slice(0, 4)); // Limit to 4 books
       } catch (error) {
         console.log('Failed to fetch featured books:', error);
         console.log(error)

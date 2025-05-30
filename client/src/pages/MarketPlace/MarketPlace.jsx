@@ -20,17 +20,14 @@ const Marketplace = () => {
       try {
         setLoading(true);
 
-        // Fetch featured books
-        const featuredResponse = await axios.get('https://s89-akhil-bookaura-3.onrender.com/router/featured');
-        setFeaturedBooks(featuredResponse.data.data.slice(0, 4)); // Limit to 4 books
+        // Fetch all books and filter them client-side
+        const allBooksResponse = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/books');
+        const allBooks = allBooksResponse.data;
 
-        // Fetch bestseller books
-        const bestsellerResponse = await axios.get('https://s89-akhil-bookaura-3.onrender.com/router/bestsellers');
-        setBestsellerBooks(bestsellerResponse.data.data.slice(0, 4)); // Limit to 4 books
-
-        // Fetch new release books
-        const newReleaseResponse = await axios.get('https://s89-akhil-bookaura-3.onrender.com/router/newreleases');
-        setNewReleaseBooks(newReleaseResponse.data.data.slice(0, 4)); // Limit to 4 books
+        // Filter books by categories
+        setFeaturedBooks(allBooks.filter(book => book.isFeatured).slice(0, 4));
+        setBestsellerBooks(allBooks.filter(book => book.isBestSeller).slice(0, 4));
+        setNewReleaseBooks(allBooks.filter(book => book.isNewRelease).slice(0, 4));
 
         setLoading(false);
       } catch (error) {

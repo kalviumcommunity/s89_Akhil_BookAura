@@ -125,9 +125,9 @@ const AddProducts = () => {
       }
     }
 
-    // Add files
-    uploadData.append('coverImage', coverImage);
-    uploadData.append('bookFile', bookFile);
+    // Add files with correct field names for new API
+    uploadData.append('coverimage', coverImage);  // Changed from 'coverImage' to 'coverimage'
+    uploadData.append('epub', bookFile);          // Changed from 'bookFile' to 'epub'
 
     // Log what's being sent
     console.log('FormData contents:');
@@ -136,9 +136,8 @@ const AddProducts = () => {
     }
 
     try {
-      // Using api service which automatically handles tokens from both localStorage and cookies
-      // We need to override the Content-Type header for FormData
-      const res = await api.post('/router/uploadBook', uploadData, {
+      // Using new API endpoint without authentication
+      const res = await api.post('/api/books/upload', uploadData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
