@@ -33,15 +33,36 @@ function Reader() {
               );
 
               if (foundBook) {
-                // Convert to match your working code format
+                console.log("📖 Book found in purchases:", foundBook);
+                console.log("📖 Purchase EPUB URL:", foundBook.epubUrl || foundBook.url);
+
+                // Always fetch fresh book data from database to get correct URLs
+                console.log("🔄 Fetching fresh book data from database...");
+                try {
+                  const freshBookResponse = await fetch(`${baseUrl}/api/books/${foundBook.bookId || foundBook._id}`);
+                  if (freshBookResponse.ok) {
+                    const freshBookData = await freshBookResponse.json();
+                    setBook({
+                      _id: freshBookData._id,
+                      title: freshBookData.title,
+                      author: freshBookData.author,
+                      epubUrl: freshBookData.epubUrl || freshBookData.url
+                    });
+                    console.log("✅ Fresh book data from database:", freshBookData);
+                    console.log("✅ Using fresh EPUB URL:", freshBookData.epubUrl || freshBookData.url);
+                    return;
+                  }
+                } catch (freshError) {
+                  console.log("❌ Failed to fetch fresh book data, using purchase data");
+                }
+
+                // Fallback to purchase data if fresh fetch fails
                 setBook({
                   _id: foundBook.bookId || foundBook._id,
                   title: foundBook.title,
                   author: foundBook.author,
-                  epubUrl: foundBook.epubUrl || foundBook.url  // Use epubUrl if available, fallback to url
+                  epubUrl: foundBook.epubUrl || foundBook.url
                 });
-                console.log("📖 Book found in purchases:", foundBook);
-                console.log("📖 Using EPUB URL:", foundBook.epubUrl || foundBook.url);
                 return;
               }
             }
