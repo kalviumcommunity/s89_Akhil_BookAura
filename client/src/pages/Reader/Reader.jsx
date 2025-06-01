@@ -41,6 +41,7 @@ function Reader() {
                   epubUrl: foundBook.epubUrl || foundBook.url  // Use epubUrl if available, fallback to url
                 });
                 console.log("📖 Book found in purchases:", foundBook);
+                console.log("📖 Using EPUB URL:", foundBook.epubUrl || foundBook.url);
                 return;
               }
             }
@@ -62,6 +63,7 @@ function Reader() {
               epubUrl: bookData.epubUrl || bookData.url
             });
             console.log("📖 Book found via direct API:", bookData);
+            console.log("📖 Direct API EPUB URL:", bookData.epubUrl || bookData.url);
             return;
           }
         } catch (directError) {

@@ -127,6 +127,14 @@ router.get('/:id', async (req, res) => {
     if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
+    console.log('Book retrieved from database:', {
+      _id: book._id,
+      title: book.title,
+      coverimage: book.coverimage,
+      url: book.url,
+      epubUrl: book.epubUrl,
+      price: book.price
+    });
     res.json(book);
   } catch (err) {
     res.status(500).json({ error: 'Failed to get book' });
