@@ -32,12 +32,18 @@ router.post('/upload', upload.fields([
       return res.status(400).json({ error: 'Please upload both EPUB and cover image' });
     }
 
-    const { title, author, description, genre, categories, isBestSeller, isFeatured, isNewRelease, publishedDate } = req.body;
+    const { title, author, description, genre, price, categories, isBestSeller, isFeatured, isNewRelease, publishedDate } = req.body;
 
     // Check required fields
     if (!title || !author || !description || !genre) {
       return res.status(400).json({ error: 'Title, author, description, and genre are required' });
     }
+
+    // Debug logging
+    console.log('Upload request body:', {
+      title, author, description, genre, price,
+      categories, isBestSeller, isFeatured, isNewRelease, publishedDate
+    });
 
     // Generate unique IDs for files
     const epubId = Date.now() + '_epub';
@@ -66,6 +72,7 @@ router.post('/upload', upload.fields([
       author,
       description,
       genre,
+      price: req.body.price ? parseFloat(req.body.price) : 0,
       categories: categories ? categories.split(',').map(cat => cat.trim()) : [],
       isBestSeller: isBestSeller === 'true',
       isFeatured: isFeatured === 'true',
@@ -77,6 +84,15 @@ router.post('/upload', upload.fields([
     });
 
     await book.save();
+    console.log('Book saved successfully:', {
+      _id: book._id,
+      title: book.title,
+      author: book.author,
+      price: book.price,
+      coverimage: book.coverimage,
+      url: book.url,
+      epubUrl: book.epubUrl
+    });
     res.json(book);
 
   } catch (err) {

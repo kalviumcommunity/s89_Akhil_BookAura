@@ -136,9 +136,29 @@ router.post("/save-purchase", verifyToken, async (req, res) => {
     const userId = req.user.id;
     const requiredFields = ['_id', 'title', 'author', 'coverimage', 'price'];
 
-    const processedBooks = books.map(book => {
-      const missing = requiredFields.filter(field => !book[field]);
-      if (missing.length) throw new Error(`Book is missing fields: ${missing.join(', ')}`);
+    const processedBooks = books.map((book, index) => {
+      console.log(`Processing book ${index + 1}:`, {
+        _id: book._id,
+        title: book.title,
+        author: book.author,
+        coverimage: book.coverimage,
+        price: book.price,
+        url: book.url,
+        epubUrl: book.epubUrl
+      });
+
+      const missing = requiredFields.filter(field => {
+        // Special handling for price field - 0 is a valid price
+        if (field === 'price') {
+          return book[field] === undefined || book[field] === null;
+        }
+        return !book[field];
+      });
+      if (missing.length) {
+        console.error(`Book ${index + 1} is missing fields:`, missing);
+        console.error('Book data:', book);
+        throw new Error(`Book "${book.title || 'Unknown'}" is missing fields: ${missing.join(', ')}`);
+      }
 
       let url = book.url || 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
       if (url.includes('cloudinary.com') && url.includes('raw') && url.endsWith('.pdf')) {

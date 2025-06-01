@@ -63,8 +63,17 @@ const SuccessPage = () => {
     try {
       const processedCartItems = cartItems.map(book => {
         const requiredFields = ['_id', 'title', 'author', 'coverimage', 'price'];
-        const missing = requiredFields.filter(field => !book[field]);
-        if (missing.length > 0) throw new Error('Missing book fields');
+        const missing = requiredFields.filter(field => {
+          // Special handling for price field - 0 is a valid price
+          if (field === 'price') {
+            return book[field] === undefined || book[field] === null;
+          }
+          return !book[field];
+        });
+        if (missing.length > 0) {
+          console.error('Missing book fields:', missing, 'Book:', book);
+          throw new Error(`Missing book fields: ${missing.join(', ')}`);
+        }
 
         return {
           ...book,
@@ -168,8 +177,17 @@ const SuccessPage = () => {
 
         const processedCartItems = cartItems.map(book => {
           const requiredFields = ['_id', 'title', 'author', 'coverimage', 'price'];
-          const missing = requiredFields.filter(field => !book[field]);
-          if (missing.length > 0) throw new Error('Missing book fields');
+          const missing = requiredFields.filter(field => {
+            // Special handling for price field - 0 is a valid price
+            if (field === 'price') {
+              return book[field] === undefined || book[field] === null;
+            }
+            return !book[field];
+          });
+          if (missing.length > 0) {
+            console.error('Missing book fields:', missing, 'Book:', book);
+            throw new Error(`Missing book fields: ${missing.join(', ')}`);
+          }
 
           return {
             ...book,
