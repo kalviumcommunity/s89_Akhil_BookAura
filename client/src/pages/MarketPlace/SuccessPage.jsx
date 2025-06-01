@@ -16,6 +16,8 @@ const SuccessPage = () => {
   const [orderDetails, setOrderDetails] = useState(null);
   const [hasProcessed, setHasProcessed] = useState(false);
   const [errorDetails, setErrorDetails] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [autoRetrying, setAutoRetrying] = useState(false);
 
   const queryParams = new URLSearchParams(location.search);
   const sessionId = queryParams.get('session_id');
@@ -49,10 +51,41 @@ const SuccessPage = () => {
       console.log('Purchase not found, will attempt to create it');
     }
 
-    // If we get here, the purchase doesn't exist and needs to be created
-    if (!cartItems || cartItems.length === 0) {
+    // Try to get cart items from multiple sources
+    let itemsToProcess = cartItems;
+
+    // If cart is empty, try to get from localStorage
+    if (!itemsToProcess || itemsToProcess.length === 0) {
+      console.log('Cart is empty, trying localStorage...');
+      try {
+        const savedCart = localStorage.getItem('cartItems');
+        if (savedCart) {
+          itemsToProcess = JSON.parse(savedCart);
+          console.log('Found cart items in localStorage:', itemsToProcess.length);
+        }
+      } catch (error) {
+        console.log('Failed to parse localStorage cart:', error);
+      }
+    }
+
+    // If still empty, try to fetch from server
+    if (!itemsToProcess || itemsToProcess.length === 0) {
+      console.log('Trying to fetch cart from server...');
+      try {
+        const cartResponse = await api.get('/api/cart');
+        if (cartResponse.data && cartResponse.data.length > 0) {
+          itemsToProcess = cartResponse.data;
+          console.log('Found cart items on server:', itemsToProcess.length);
+        }
+      } catch (error) {
+        console.log('Failed to fetch cart from server:', error);
+      }
+    }
+
+    if (!itemsToProcess || itemsToProcess.length === 0) {
       setErrorDetails({
         message: 'Cart is empty. Cannot recover purchase without cart data.',
+        suggestion: 'Please try purchasing again or contact support.',
         timestamp: new Date().toISOString()
       });
       setSaveStatus('error');
@@ -61,7 +94,7 @@ const SuccessPage = () => {
     }
 
     try {
-      const processedCartItems = cartItems.map(book => {
+      const processedCartItems = itemsToProcess.map(book => {
         const requiredFields = ['_id', 'title', 'author', 'coverimage', 'price'];
         const missing = requiredFields.filter(field => {
           // Special handling for price field - 0 is a valid price
@@ -165,17 +198,61 @@ const SuccessPage = () => {
           // Continue if purchase not found
         }
 
-        if (cartItems.length === 0) {
+        // Try to get cart items from multiple sources
+        let itemsToProcess = cartItems;
+
+        // If cart is empty, try to get from localStorage
+        if (!itemsToProcess || itemsToProcess.length === 0) {
+          console.log('Cart is empty, trying localStorage...');
+          try {
+            const savedCart = localStorage.getItem('cartItems');
+            if (savedCart) {
+              itemsToProcess = JSON.parse(savedCart);
+              console.log('Found cart items in localStorage:', itemsToProcess.length);
+            }
+          } catch (error) {
+            console.log('Failed to parse localStorage cart:', error);
+          }
+        }
+
+        // If still empty, try to fetch from server
+        if (!itemsToProcess || itemsToProcess.length === 0) {
+          console.log('Trying to fetch cart from server...');
+          try {
+            const cartResponse = await api.get('/api/cart');
+            if (cartResponse.data && cartResponse.data.length > 0) {
+              itemsToProcess = cartResponse.data;
+              console.log('Found cart items on server:', itemsToProcess.length);
+            }
+          } catch (error) {
+            console.log('Failed to fetch cart from server:', error);
+          }
+        }
+
+        if (!itemsToProcess || itemsToProcess.length === 0) {
+          // Auto-retry once after 2 seconds
+          if (retryCount === 0) {
+            console.log('Auto-retrying in 2 seconds...');
+            setRetryCount(1);
+            setAutoRetrying(true);
+            setTimeout(() => {
+              setAutoRetrying(false);
+              savePurchase();
+            }, 2000);
+            return;
+          }
+
           setSaveStatus('error');
           setErrorDetails({
             message: 'Cart is empty. Cannot save purchase without cart data.',
+            suggestion: 'Please try the "Try Again" button or contact support.',
             timestamp: new Date().toISOString()
           });
           setIsLoading(false);
           return;
         }
 
-        const processedCartItems = cartItems.map(book => {
+        const processedCartItems = itemsToProcess.map(book => {
           const requiredFields = ['_id', 'title', 'author', 'coverimage', 'price'];
           const missing = requiredFields.filter(field => {
             // Special handling for price field - 0 is a valid price
@@ -247,9 +324,14 @@ const SuccessPage = () => {
       <Navbar />
       <div className="success-page">
         <div className="success-container">
-          {isLoading ? (
+          {isLoading || autoRetrying ? (
             <div className="success-loading">
-              <LoadingAnimation text="Processing your purchase..." />
+              <LoadingAnimation text={autoRetrying ? "Auto-retrying purchase save..." : "Processing your purchase..."} />
+              {autoRetrying && (
+                <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
+                  Attempting to recover cart data and save your purchase...
+                </p>
+              )}
             </div>
           ) : (
             <>
