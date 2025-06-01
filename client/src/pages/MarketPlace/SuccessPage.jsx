@@ -283,8 +283,12 @@ const SuccessPage = () => {
         );
 
         if (response.data.success) {
+          console.log('✅ Purchase saved successfully:', response.data);
           setSaveStatus('success');
           clearCart();
+
+          // Force refresh of purchased books by clearing any cache
+          localStorage.removeItem('purchasedBooksCache');
         } else {
           setErrorDetails({
             message: 'Server returned error',

@@ -209,8 +209,21 @@ router.post("/save-purchase", verifyToken, async (req, res) => {
       paymentId: sessionId || 'dev-session'
     }));
 
+    console.log('📚 Adding books to user account:', {
+      userId: userId,
+      existingBooksCount: user.purchasedBooks?.length || 0,
+      newBooksCount: newBooks.length,
+      newBookTitles: newBooks.map(b => b.title)
+    });
+
     user.purchasedBooks = [...(user.purchasedBooks || []), ...newBooks];
     await user.save();
+
+    console.log('✅ User saved with purchased books:', {
+      userId: userId,
+      totalBooksCount: user.purchasedBooks.length,
+      lastBookAdded: user.purchasedBooks[user.purchasedBooks.length - 1]?.title
+    });
 
     const purchase = new Purchase({
       _id: purchaseId,
@@ -239,8 +252,21 @@ router.post("/save-purchase", verifyToken, async (req, res) => {
 // Fetch user purchases
 router.get("/my-purchases", verifyToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    const userId = req.user.id;
+    console.log('🔍 Fetching purchases for user:', userId);
+
+    const user = await User.findById(userId);
+    if (!user) {
+      console.log('❌ User not found:', userId);
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    console.log('📚 User found with purchased books:', {
+      userId: userId,
+      username: user.username,
+      purchasedBooksCount: user.purchasedBooks?.length || 0,
+      lastPurchaseDate: user.lastPurchaseDate
+    });
 
     if (!user.purchasedBooks?.length) {
       const purchases = await Purchase.find({ userId: req.user.id }).sort({ purchaseDate: -1 });
@@ -262,6 +288,12 @@ router.get("/my-purchases", verifyToken, async (req, res) => {
       user.lastPurchaseDate = purchases[0].purchaseDate;
       await user.save();
     }
+
+    console.log('📤 Sending purchased books response:', {
+      success: true,
+      booksCount: user.purchasedBooks?.length || 0,
+      bookTitles: user.purchasedBooks?.slice(0, 3).map(b => b.title) || []
+    });
 
     res.status(200).json({ success: true, purchasedBooks: user.purchasedBooks });
   } catch (error) {
@@ -338,6 +370,27 @@ router.get("/verify-session", verifyToken, async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: "Failed to verify session" });
+  }
+});
+
+// Debug endpoint to check user purchases
+router.get("/debug/user-purchases", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+    const purchases = await Purchase.find({ userId }).sort({ purchaseDate: -1 });
+
+    res.json({
+      userId: userId,
+      username: user?.username,
+      userPurchasedBooks: user?.purchasedBooks || [],
+      userPurchasedBooksCount: user?.purchasedBooks?.length || 0,
+      purchaseRecords: purchases,
+      purchaseRecordsCount: purchases.length,
+      lastPurchaseDate: user?.lastPurchaseDate
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

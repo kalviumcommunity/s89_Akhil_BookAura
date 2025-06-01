@@ -158,6 +158,21 @@ const MyBooksPage = () => {
                 <br/>• Upload them again using the "Add Products" page
                 <br/>• The system will work perfectly with newly uploaded books
                 <br/>• This is a temporary limitation of the current hosting setup
+                <br/><br/>
+                <strong>🔄 If books don't appear after purchase:</strong>
+                <br/>• <button
+                  onClick={() => window.location.reload()}
+                  style={{
+                    background: '#007bff',
+                    color: 'white',
+                    border: 'none',
+                    padding: '5px 10px',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Refresh Page
+                </button> to reload your books
               </div>
               <Link to="/books" className="browse-books-btn">
                 Browse Books
