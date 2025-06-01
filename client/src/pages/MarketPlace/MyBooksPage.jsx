@@ -158,21 +158,6 @@ const MyBooksPage = () => {
                 <br/>• Upload them again using the "Add Products" page
                 <br/>• The system will work perfectly with newly uploaded books
                 <br/>• This is a temporary limitation of the current hosting setup
-                <br/><br/>
-                <strong>🔄 If books don't appear after purchase:</strong>
-                <br/>• <button
-                  onClick={() => window.location.reload()}
-                  style={{
-                    background: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    padding: '5px 10px',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Refresh Page
-                </button> to reload your books
               </div>
               <Link to="/books" className="browse-books-btn">
                 Browse Books
@@ -209,50 +194,31 @@ const MyBooksPage = () => {
                           <div className="book-actions">
                             <button
                               className="read-button"
-                              onClick={async () => {
-                                const bookId = book.bookId || book._id;
-                                console.log("📖 Attempting to read book:", bookId);
-                                console.log("📖 Book URL:", book.url);
+                              onClick={() => {
+                                if (book.url && book.url.startsWith('http')) {
+                                  // Since Cloudinary URLs don't have extensions, assume all books from book folders are EPUBs
+                                  // This is safer since we're in the purchased books section
+                                  const isFromBookFiles = book.url.includes('/bookstore/bookFiles/') ||
+                                                         book.url.includes('/bookFiles/') ||
+                                                         book.url.includes('/ebooks/');
 
-                                // Check if it's an in-memory storage URL
-                                if (book.url?.includes('/api/books/file/')) {
-                                  console.log("🔍 Checking if file exists in memory...");
-                                  try {
-                                    const response = await fetch(book.url, { method: 'HEAD' });
-                                    if (response.ok) {
-                                      console.log("✅ File exists in memory, proceeding to reader");
-                                      navigate(`/reader/${bookId}`);
-                                    } else {
-                                      console.log("❌ File not found in memory");
-                                      const shouldProceed = window.confirm(
-                                        '⚠️ This book file is not available (server may have restarted). ' +
-                                        'Would you like to try reading it anyway? A sample book will be shown instead.'
-                                      );
-                                      if (shouldProceed) {
-                                        navigate(`/reader/${bookId}`);
-                                      }
-                                    }
-                                  } catch (error) {
-                                    console.log("❌ Error checking file:", error);
+                                  console.log("Book URL:", book.url);
+                                  console.log("Is from bookFiles folder:", isFromBookFiles);
+
+                                  if (isFromBookFiles) {
+                                    console.log("Opening EPUB in reader page:", book.url);
+                                    // Navigate to the reader page with the book ID (like your working code)
+                                    const bookId = book.bookId || book._id;
+                                    console.log("📖 Navigating to reader with book ID:", bookId);
                                     navigate(`/reader/${bookId}`);
+                                  } else {
+                                    // For non-EPUB files, open in a new tab
+                                    console.log("Opening non-EPUB in new tab:", book.url);
+                                    window.open(book.url, '_blank');
                                   }
                                 } else {
-                                  // For other URLs, proceed normally
-                                  if (book.url && book.url.startsWith('http')) {
-                                    const isFromBookFiles = book.url.includes('/bookstore/bookFiles/') ||
-                                                           book.url.includes('/bookFiles/') ||
-                                                           book.url.includes('/ebooks/');
-
-                                    if (isFromBookFiles) {
-                                      console.log("Opening EPUB in reader page:", book.url);
-                                      navigate(`/reader/${bookId}`);
-                                    } else {
-                                      console.log("Opening non-EPUB in new tab:", book.url);
-                                      window.open(book.url, '_blank');
-                                    }
-                                  } else {
-                                    alert('This book does not have a valid URL');
-                                  }
+                                  // Skip books without valid URLs
+                                  alert('This book does not have a valid URL');
                                 }
                               }}
                             >

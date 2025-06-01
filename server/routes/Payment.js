@@ -209,21 +209,8 @@ router.post("/save-purchase", verifyToken, async (req, res) => {
       paymentId: sessionId || 'dev-session'
     }));
 
-    console.log('📚 Adding books to user account:', {
-      userId: userId,
-      existingBooksCount: user.purchasedBooks?.length || 0,
-      newBooksCount: newBooks.length,
-      newBookTitles: newBooks.map(b => b.title)
-    });
-
     user.purchasedBooks = [...(user.purchasedBooks || []), ...newBooks];
     await user.save();
-
-    console.log('✅ User saved with purchased books:', {
-      userId: userId,
-      totalBooksCount: user.purchasedBooks.length,
-      lastBookAdded: user.purchasedBooks[user.purchasedBooks.length - 1]?.title
-    });
 
     const purchase = new Purchase({
       _id: purchaseId,
@@ -252,21 +239,8 @@ router.post("/save-purchase", verifyToken, async (req, res) => {
 // Fetch user purchases
 router.get("/my-purchases", verifyToken, async (req, res) => {
   try {
-    const userId = req.user.id;
-    console.log('🔍 Fetching purchases for user:', userId);
-
-    const user = await User.findById(userId);
-    if (!user) {
-      console.log('❌ User not found:', userId);
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    console.log('📚 User found with purchased books:', {
-      userId: userId,
-      username: user.username,
-      purchasedBooksCount: user.purchasedBooks?.length || 0,
-      lastPurchaseDate: user.lastPurchaseDate
-    });
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: "User not found" });
 
     if (!user.purchasedBooks?.length) {
       const purchases = await Purchase.find({ userId: req.user.id }).sort({ purchaseDate: -1 });
@@ -288,12 +262,6 @@ router.get("/my-purchases", verifyToken, async (req, res) => {
       user.lastPurchaseDate = purchases[0].purchaseDate;
       await user.save();
     }
-
-    console.log('📤 Sending purchased books response:', {
-      success: true,
-      booksCount: user.purchasedBooks?.length || 0,
-      bookTitles: user.purchasedBooks?.slice(0, 3).map(b => b.title) || []
-    });
 
     res.status(200).json({ success: true, purchasedBooks: user.purchasedBooks });
   } catch (error) {
@@ -357,50 +325,6 @@ router.get("/verify-session", verifyToken, async (req, res) => {
     const purchaseId = session.metadata?.purchaseId;
     if (!purchaseId) return res.status(400).json({ success: false, message: "Missing purchase ID" });
 
-    console.log('🔍 Verifying session and checking if purchase exists:', {
-      sessionId: session.id,
-      purchaseId: purchaseId,
-      paymentStatus: session.payment_status
-    });
-
-    // Check if purchase already exists
-    let existingPurchase = await Purchase.findById(purchaseId);
-
-    if (!existingPurchase) {
-      console.log('❌ Purchase not found, this means payment succeeded but purchase was never created');
-      console.log('🔄 Attempting to create purchase from session metadata...');
-
-      // Try to get cart data from session metadata or user's current cart
-      const userId = req.user.id;
-      const user = await User.findById(userId);
-
-      // Try to get cart items from user's current cart
-      let cartItems = [];
-      try {
-        // This is a fallback - in a real scenario, cart data should be in session metadata
-        console.log('⚠️ No cart data in session metadata, this is a system issue');
-        console.log('🔄 Trying to recover from user cart or recent activity...');
-
-        // For now, return success but indicate the issue
-        return res.status(200).json({
-          success: true,
-          message: "Session verified but purchase needs manual creation",
-          requiresManualPurchaseCreation: true,
-          session: {
-            id: session.id,
-            purchaseId,
-            amount: session.amount_total / 100,
-            paymentStatus: session.payment_status,
-            customerEmail: session.customer_details?.email
-          }
-        });
-      } catch (error) {
-        console.log('❌ Failed to recover cart data:', error);
-      }
-    } else {
-      console.log('✅ Purchase already exists:', existingPurchase._id);
-    }
-
     res.status(200).json({
       success: true,
       message: "Session verified",
@@ -414,27 +338,6 @@ router.get("/verify-session", verifyToken, async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: "Failed to verify session" });
-  }
-});
-
-// Debug endpoint to check user purchases
-router.get("/debug/user-purchases", verifyToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const user = await User.findById(userId);
-    const purchases = await Purchase.find({ userId }).sort({ purchaseDate: -1 });
-
-    res.json({
-      userId: userId,
-      username: user?.username,
-      userPurchasedBooks: user?.purchasedBooks || [],
-      userPurchasedBooksCount: user?.purchasedBooks?.length || 0,
-      purchaseRecords: purchases,
-      purchaseRecordsCount: purchases.length,
-      lastPurchaseDate: user?.lastPurchaseDate
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
   }
 });
 
