@@ -12,79 +12,23 @@ function Reader() {
   useEffect(() => {
     const fetchBook = async () => {
       try {
-        const baseUrl = import.meta.env.VITE_API_URL || 'https://s89-akhil-bookaura-3.onrender.com';
-
-        // First try to get from purchased books (where the data actually is)
-        try {
-          const response = await fetch(`${baseUrl}/api/payment/my-purchases`, {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-              'Content-Type': 'application/json'
-            }
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-              // Find the book with matching ID
-              const foundBook = data.purchasedBooks.find(book =>
-                book.bookId.toString() === id || book._id === id
-              );
-
-              if (foundBook) {
-                console.log("📖 Book found in purchases:", foundBook);
-                console.log("📖 Purchase EPUB URL:", foundBook.epubUrl || foundBook.url);
-
-                // Always fetch fresh book data from database to get correct URLs
-                console.log("🔄 Fetching fresh book data from database...");
-                try {
-                  const freshBookResponse = await fetch(`${baseUrl}/api/books/${foundBook.bookId || foundBook._id}`);
-                  if (freshBookResponse.ok) {
-                    const freshBookData = await freshBookResponse.json();
-                    setBook({
-                      _id: freshBookData._id,
-                      title: freshBookData.title,
-                      author: freshBookData.author,
-                      epubUrl: freshBookData.epubUrl || freshBookData.url
-                    });
-                    console.log("✅ Fresh book data from database:", freshBookData);
-                    console.log("✅ Using fresh EPUB URL:", freshBookData.epubUrl || freshBookData.url);
-                    return;
-                  }
-                } catch (freshError) {
-                  console.log("❌ Failed to fetch fresh book data, using purchase data");
-                }
-
-                // Fallback to purchase data if fresh fetch fails
-                setBook({
-                  _id: foundBook.bookId || foundBook._id,
-                  title: foundBook.title,
-                  author: foundBook.author,
-                  epubUrl: foundBook.epubUrl || foundBook.url
-                });
-                return;
-              }
-            }
-          }
-        } catch (purchaseError) {
-          console.log("Purchase API failed, trying direct book API...");
-        }
-
-        // Fallback: Try direct book API
-        try {
-          const res = await axios.get(`${baseUrl}/api/books/${id}`);
-          setBook({
-            _id: res.data._id,
-            title: res.data.title,
-            author: res.data.author,
-            epubUrl: res.data.epubUrl || res.data.url
-          });
-          console.log("📖 Book found via direct API:", res.data);
-          console.log("📖 Direct API EPUB URL:", res.data.epubUrl || res.data.url);
-        } catch (directError) {
-          console.log("Direct API also failed:", directError);
-        }
-
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const res = await axios.get(`${baseUrl}/api/books/${id}`);
+        setBook({
+          _id: res.data._id,
+          title: res.data.title,
+          author: res.data.author,
+          description: res.data.description,
+          genre: res.data.genre,
+          categories: res.data.categories,
+          isBestSeller: res.data.isBestSeller,
+          isFeatured: res.data.isFeatured,
+          isNewRelease: res.data.isNewRelease,
+          publishedDate: res.data.publishedDate,
+          coverimage: res.data.coverimage,
+          epubUrl: res.data.epubUrl || res.data.url
+        });
+        console.log("📖 Book loaded:", res.data);
       } catch (error) {
         console.error('Error fetching book:', error);
       }
@@ -95,9 +39,66 @@ function Reader() {
   if (!book) return <p>Loading...</p>;
 
   return (
-    <div>
-      <h1>{book.title} by {book.author}</h1>
-      <EpubViewer epubUrl={book.epubUrl} />
+    <div className="min-h-screen bg-gray-50">
+      {/* Book Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="flex items-start space-x-6">
+            {book.coverimage && (
+              <img
+                src={book.coverimage}
+                alt={book.title}
+                className="w-24 h-32 object-cover rounded-lg shadow-md"
+              />
+            )}
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">{book.title}</h1>
+              <p className="text-xl text-gray-600 mb-3">by {book.author}</p>
+
+              {book.description && (
+                <p className="text-gray-700 mb-4 max-w-3xl">{book.description}</p>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                {book.genre && (
+                  <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">{book.genre}</span>
+                )}
+                {book.isBestSeller && (
+                  <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm rounded-full">Best Seller</span>
+                )}
+                {book.isFeatured && (
+                  <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-full">Featured</span>
+                )}
+                {book.isNewRelease && (
+                  <span className="px-3 py-1 bg-red-100 text-red-800 text-sm rounded-full">New Release</span>
+                )}
+              </div>
+
+              {book.categories && book.categories.length > 0 && (
+                <div className="mt-3">
+                  <span className="text-sm text-gray-500">Categories: </span>
+                  {book.categories.map((category, index) => (
+                    <span key={index} className="text-sm text-gray-600">
+                      {category}{index < book.categories.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {book.publishedDate && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Published: {new Date(book.publishedDate).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* EPUB Viewer */}
+      <div className="flex-1 p-4">
+        <EpubViewer epubUrl={book.epubUrl} />
+      </div>
     </div>
   );
 }

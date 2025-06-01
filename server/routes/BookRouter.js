@@ -35,8 +35,8 @@ router.post('/upload', upload.fields([
     const { title, author, description, genre, price, categories, isBestSeller, isFeatured, isNewRelease, publishedDate } = req.body;
 
     // Check required fields
-    if (!title || !author || !description || !genre) {
-      return res.status(400).json({ error: 'Title, author, description, and genre are required' });
+    if (!title || !author || !description || !genre || !price) {
+      return res.status(400).json({ error: 'Title, author, description, genre, and price are required' });
     }
 
     // Debug logging
