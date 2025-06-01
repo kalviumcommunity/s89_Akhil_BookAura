@@ -12,25 +12,79 @@ function Reader() {
   useEffect(() => {
     const fetchBook = async () => {
       try {
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        const res = await axios.get(`${baseUrl}/api/books/${id}`);
-        setBook({
-          _id: res.data._id,
-          title: res.data.title,
-          author: res.data.author,
-          description: res.data.description,
-          genre: res.data.genre,
-          categories: res.data.categories,
-          isBestSeller: res.data.isBestSeller,
-          isFeatured: res.data.isFeatured,
-          isNewRelease: res.data.isNewRelease,
-          publishedDate: res.data.publishedDate,
-          coverimage: res.data.coverimage,
-          epubUrl: res.data.epubUrl || res.data.url
-        });
-        console.log("📖 Book loaded:", res.data);
+        const baseUrl = import.meta.env.VITE_API_URL || 'https://s89-akhil-bookaura-3.onrender.com';
+
+        // First try to get book from database
+        try {
+          const res = await axios.get(`${baseUrl}/api/books/${id}`);
+          setBook({
+            _id: res.data._id,
+            title: res.data.title,
+            author: res.data.author,
+            description: res.data.description,
+            genre: res.data.genre,
+            categories: res.data.categories,
+            isBestSeller: res.data.isBestSeller,
+            isFeatured: res.data.isFeatured,
+            isNewRelease: res.data.isNewRelease,
+            publishedDate: res.data.publishedDate,
+            coverimage: res.data.coverimage,
+            epubUrl: res.data.epubUrl || res.data.url
+          });
+          console.log("📖 Book loaded from database:", res.data);
+          return;
+        } catch (dbError) {
+          console.log("❌ Book not found in database, trying purchased books...");
+        }
+
+        // Fallback: Try to get from purchased books
+        try {
+          const response = await fetch(`${baseUrl}/api/payment/my-purchases`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              // Find the book with matching ID
+              const foundBook = data.purchasedBooks.find(book =>
+                book.bookId.toString() === id || book._id === id
+              );
+
+              if (foundBook) {
+                setBook({
+                  _id: foundBook.bookId || foundBook._id,
+                  title: foundBook.title,
+                  author: foundBook.author,
+                  description: foundBook.description || '',
+                  genre: foundBook.genre || '',
+                  categories: foundBook.categories || [],
+                  isBestSeller: foundBook.isBestSeller || false,
+                  isFeatured: foundBook.isFeatured || false,
+                  isNewRelease: foundBook.isNewRelease || false,
+                  publishedDate: foundBook.publishedDate,
+                  coverimage: foundBook.coverimage,
+                  epubUrl: foundBook.epubUrl || foundBook.url
+                });
+                console.log("📖 Book loaded from purchases:", foundBook);
+                return;
+              }
+            }
+          }
+        } catch (purchaseError) {
+          console.log("❌ Failed to fetch from purchases:", purchaseError);
+        }
+
+        // If all fails, show error
+        console.error('❌ Book not found anywhere');
+        alert('Book not found. It may have been removed or the server may have restarted.');
+
       } catch (error) {
-        console.error('Error fetching book:', error);
+        console.error('💥 Error fetching book:', error);
+        alert('Error loading book. Please try again.');
       }
     };
     fetchBook();

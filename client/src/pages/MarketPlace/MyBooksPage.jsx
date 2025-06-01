@@ -151,6 +151,10 @@ const MyBooksPage = () => {
               </div>
               <h2>You haven't purchased any books yet</h2>
               <p>Explore our marketplace to find your next favorite read!</p>
+              <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f0f8ff', borderRadius: '8px', fontSize: '14px' }}>
+                <strong>📚 Note about EPUB books:</strong> Due to server limitations, EPUB files are stored temporarily in memory.
+                If you experience issues reading books, please upload them again or contact support.
+              </div>
               <Link to="/books" className="browse-books-btn">
                 Browse Books
               </Link>
