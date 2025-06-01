@@ -136,7 +136,8 @@ router.post("/save-purchase", verifyToken, async (req, res) => {
     const userId = req.user.id;
     const requiredFields = ['_id', 'title', 'author', 'coverimage', 'price'];
 
-    const processedBooks = books.map((book, index) => {
+    // Fetch fresh book data from database to ensure correct URLs
+    const processedBooks = await Promise.all(books.map(async (book, index) => {
       console.log(`Processing book ${index + 1}:`, {
         _id: book._id,
         title: book.title,
@@ -147,25 +148,49 @@ router.post("/save-purchase", verifyToken, async (req, res) => {
         epubUrl: book.epubUrl
       });
 
+      // Try to fetch fresh book data from database
+      let freshBook = book;
+      try {
+        const Book = require('../models/Book');
+        const dbBook = await Book.findById(book._id);
+        if (dbBook) {
+          console.log(`✅ Found fresh book data for ${book.title}:`, {
+            url: dbBook.url,
+            epubUrl: dbBook.epubUrl,
+            coverimage: dbBook.coverimage
+          });
+          freshBook = {
+            ...book,
+            url: dbBook.url,
+            epubUrl: dbBook.epubUrl || dbBook.url,
+            coverimage: dbBook.coverimage
+          };
+        } else {
+          console.log(`❌ No fresh book data found for ${book.title}, using provided data`);
+        }
+      } catch (dbError) {
+        console.log(`❌ Error fetching fresh book data for ${book.title}:`, dbError.message);
+      }
+
       const missing = requiredFields.filter(field => {
         // Special handling for price field - 0 is a valid price
         if (field === 'price') {
-          return book[field] === undefined || book[field] === null;
+          return freshBook[field] === undefined || freshBook[field] === null;
         }
-        return !book[field];
+        return !freshBook[field];
       });
       if (missing.length) {
         console.error(`Book ${index + 1} is missing fields:`, missing);
-        console.error('Book data:', book);
-        throw new Error(`Book "${book.title || 'Unknown'}" is missing fields: ${missing.join(', ')}`);
+        console.error('Book data:', freshBook);
+        throw new Error(`Book "${freshBook.title || 'Unknown'}" is missing fields: ${missing.join(', ')}`);
       }
 
-      let url = book.url || 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
+      let url = freshBook.url || 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
       if (url.includes('cloudinary.com') && url.includes('raw') && url.endsWith('.pdf')) {
         url = url.slice(0, -4);
       }
-      return { ...book, url };
-    });
+      return { ...freshBook, url };
+    }));
 
     const totalAmount = processedBooks.reduce((sum, b) => sum + b.price, 0);
     const user = await User.findById(userId);

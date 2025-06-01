@@ -55,6 +55,40 @@ function Reader() {
               );
 
               if (foundBook) {
+                console.log("📖 Book found in purchases:", foundBook);
+                console.log("📖 Purchase EPUB URL:", foundBook.epubUrl || foundBook.url);
+
+                // ALWAYS fetch fresh book data from database to get correct URLs
+                console.log("🔄 Fetching fresh book data from database for correct URLs...");
+                try {
+                  const freshBookResponse = await fetch(`${baseUrl}/api/books/${foundBook.bookId || foundBook._id}`);
+                  if (freshBookResponse.ok) {
+                    const freshBookData = await freshBookResponse.json();
+                    setBook({
+                      _id: freshBookData._id,
+                      title: freshBookData.title,
+                      author: freshBookData.author,
+                      description: freshBookData.description,
+                      genre: freshBookData.genre,
+                      categories: freshBookData.categories,
+                      isBestSeller: freshBookData.isBestSeller,
+                      isFeatured: freshBookData.isFeatured,
+                      isNewRelease: freshBookData.isNewRelease,
+                      publishedDate: freshBookData.publishedDate,
+                      coverimage: freshBookData.coverimage,
+                      epubUrl: freshBookData.epubUrl || freshBookData.url
+                    });
+                    console.log("✅ Fresh book data from database:", freshBookData);
+                    console.log("✅ Using fresh EPUB URL:", freshBookData.epubUrl || freshBookData.url);
+                    return;
+                  } else {
+                    console.log("❌ Fresh book data not found, using purchase data");
+                  }
+                } catch (freshError) {
+                  console.log("❌ Failed to fetch fresh book data:", freshError);
+                }
+
+                // Fallback to purchase data if fresh fetch fails
                 setBook({
                   _id: foundBook.bookId || foundBook._id,
                   title: foundBook.title,
@@ -69,7 +103,7 @@ function Reader() {
                   coverimage: foundBook.coverimage,
                   epubUrl: foundBook.epubUrl || foundBook.url
                 });
-                console.log("📖 Book loaded from purchases:", foundBook);
+                console.log("📖 Using purchase data as fallback:", foundBook);
                 return;
               }
             }
