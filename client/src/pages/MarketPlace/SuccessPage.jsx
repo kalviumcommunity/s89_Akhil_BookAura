@@ -181,22 +181,32 @@ const SuccessPage = () => {
           return;
         }
 
-        // Check if purchase already exists
-        try {
-          const verifyResponse = await api.get(
-            `/api/payment/verify-purchase?purchaseId=${purchaseId}`
-          );
+        console.log('Session verified:', sessionResponse.data);
 
-          if (verifyResponse.data.success) {
-            setOrderDetails(verifyResponse.data.purchase);
-            setSaveStatus('success');
-            clearCart(); // ✅ Clear cart only after handling
-            setIsLoading(false);
-            return;
+        // Check if purchase needs manual creation
+        if (sessionResponse.data.requiresManualPurchaseCreation) {
+          console.log('🔄 Purchase needs manual creation, skipping verify step...');
+          // Skip the verify step and go directly to cart processing
+        } else {
+          // Normal flow - check if purchase already exists
+          try {
+            const verifyResponse = await api.get(
+              `/api/payment/verify-purchase?purchaseId=${purchaseId}`
+            );
+
+            if (verifyResponse.data.success) {
+              setOrderDetails(verifyResponse.data.purchase);
+              setSaveStatus('success');
+              clearCart(); // ✅ Clear cart only after handling
+              setIsLoading(false);
+              return;
+            }
+          } catch {
+            // Continue if purchase not found
           }
-        } catch {
-          // Continue if purchase not found
         }
+
+
 
         // Try to get cart items from multiple sources
         let itemsToProcess = cartItems;
