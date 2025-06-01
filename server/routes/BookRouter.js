@@ -106,9 +106,23 @@ router.get('/file/:id', (req, res) => {
   const fileId = req.params.id;
   const file = fileStorage.get(fileId);
 
+  console.log('📁 File request for ID:', fileId);
+  console.log('📁 File found in memory:', !!file);
+  console.log('📁 Total files in memory:', fileStorage.size);
+
   if (!file) {
-    return res.status(404).json({ error: 'File not found' });
+    console.log('❌ File not found in memory, server may have restarted');
+
+    // Return a helpful error response
+    return res.status(404).json({
+      error: 'File not found in memory',
+      message: 'The server may have restarted and cleared the in-memory files. Please upload the book again.',
+      fileId: fileId,
+      suggestion: 'Upload the book again to restore access'
+    });
   }
+
+  console.log('✅ Serving file from memory:', fileId);
 
   // Set appropriate headers
   res.set({
@@ -118,6 +132,16 @@ router.get('/file/:id', (req, res) => {
   });
 
   res.send(file.buffer);
+});
+
+// Debug endpoint to check memory status
+router.get('/debug/memory-status', (req, res) => {
+  const memoryFiles = Array.from(fileStorage.keys());
+  res.json({
+    totalFiles: fileStorage.size,
+    fileIds: memoryFiles,
+    message: fileStorage.size === 0 ? 'No files in memory - server may have restarted' : 'Files available in memory'
+  });
 });
 
 // Get single book

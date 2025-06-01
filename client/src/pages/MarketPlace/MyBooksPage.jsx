@@ -151,9 +151,13 @@ const MyBooksPage = () => {
               </div>
               <h2>You haven't purchased any books yet</h2>
               <p>Explore our marketplace to find your next favorite read!</p>
-              <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f0f8ff', borderRadius: '8px', fontSize: '14px' }}>
-                <strong>📚 Note about EPUB books:</strong> Due to server limitations, EPUB files are stored temporarily in memory.
-                If you experience issues reading books, please upload them again or contact support.
+              <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#fff3cd', borderRadius: '8px', fontSize: '14px', border: '1px solid #ffeaa7' }}>
+                <strong>⚠️ Important Notice:</strong> Due to server limitations, EPUB files are stored temporarily in memory and get cleared when the server restarts.
+                <br/><br/>
+                <strong>📚 If you can't read your books:</strong>
+                <br/>• Upload them again using the "Add Products" page
+                <br/>• The system will work perfectly with newly uploaded books
+                <br/>• This is a temporary limitation of the current hosting setup
               </div>
               <Link to="/books" className="browse-books-btn">
                 Browse Books
@@ -190,31 +194,50 @@ const MyBooksPage = () => {
                           <div className="book-actions">
                             <button
                               className="read-button"
-                              onClick={() => {
-                                if (book.url && book.url.startsWith('http')) {
-                                  // Since Cloudinary URLs don't have extensions, assume all books from book folders are EPUBs
-                                  // This is safer since we're in the purchased books section
-                                  const isFromBookFiles = book.url.includes('/bookstore/bookFiles/') ||
-                                                         book.url.includes('/bookFiles/') ||
-                                                         book.url.includes('/ebooks/');
+                              onClick={async () => {
+                                const bookId = book.bookId || book._id;
+                                console.log("📖 Attempting to read book:", bookId);
+                                console.log("📖 Book URL:", book.url);
 
-                                  console.log("Book URL:", book.url);
-                                  console.log("Is from bookFiles folder:", isFromBookFiles);
-
-                                  if (isFromBookFiles) {
-                                    console.log("Opening EPUB in reader page:", book.url);
-                                    // Navigate to the reader page with the book ID (like your working code)
-                                    const bookId = book.bookId || book._id;
-                                    console.log("📖 Navigating to reader with book ID:", bookId);
+                                // Check if it's an in-memory storage URL
+                                if (book.url?.includes('/api/books/file/')) {
+                                  console.log("🔍 Checking if file exists in memory...");
+                                  try {
+                                    const response = await fetch(book.url, { method: 'HEAD' });
+                                    if (response.ok) {
+                                      console.log("✅ File exists in memory, proceeding to reader");
+                                      navigate(`/reader/${bookId}`);
+                                    } else {
+                                      console.log("❌ File not found in memory");
+                                      const shouldProceed = window.confirm(
+                                        '⚠️ This book file is not available (server may have restarted). ' +
+                                        'Would you like to try reading it anyway? A sample book will be shown instead.'
+                                      );
+                                      if (shouldProceed) {
+                                        navigate(`/reader/${bookId}`);
+                                      }
+                                    }
+                                  } catch (error) {
+                                    console.log("❌ Error checking file:", error);
                                     navigate(`/reader/${bookId}`);
-                                  } else {
-                                    // For non-EPUB files, open in a new tab
-                                    console.log("Opening non-EPUB in new tab:", book.url);
-                                    window.open(book.url, '_blank');
                                   }
                                 } else {
-                                  // Skip books without valid URLs
-                                  alert('This book does not have a valid URL');
+                                  // For other URLs, proceed normally
+                                  if (book.url && book.url.startsWith('http')) {
+                                    const isFromBookFiles = book.url.includes('/bookstore/bookFiles/') ||
+                                                           book.url.includes('/bookFiles/') ||
+                                                           book.url.includes('/ebooks/');
+
+                                    if (isFromBookFiles) {
+                                      console.log("Opening EPUB in reader page:", book.url);
+                                      navigate(`/reader/${bookId}`);
+                                    } else {
+                                      console.log("Opening non-EPUB in new tab:", book.url);
+                                      window.open(book.url, '_blank');
+                                    }
+                                  } else {
+                                    alert('This book does not have a valid URL');
+                                  }
                                 }
                               }}
                             >
