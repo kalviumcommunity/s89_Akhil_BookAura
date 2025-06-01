@@ -10,6 +10,9 @@ const EpubViewer = ({ epubUrl }) => {
 
       try {
         console.log("📚 Loading EPUB from:", epubUrl);
+        console.log("🔍 URL analysis:");
+        console.log("- Is new in-memory storage URL:", epubUrl?.includes('/api/books/file/'));
+        console.log("- Is old Cloudinary URL:", epubUrl?.includes('cloudinary.com'));
 
         // Try the original URL first
         try {
@@ -44,27 +47,8 @@ const EpubViewer = ({ epubUrl }) => {
 
         } catch (originalError) {
           console.log("❌ Original EPUB failed:", originalError.message);
-          console.log("🔄 Falling back to working test EPUB...");
-
-          // Fallback to working EPUB
-          const testUrl = "https://res.cloudinary.com/dg3i8akzq/raw/upload/v1747996484/ebooks/nw2rvnd9c51be5zcifv5";
-          console.log("🎯 USING HARDCODED URL:", testUrl);
-          const testResponse = await fetch(testUrl);
-          const testBlob = await testResponse.blob();
-          console.log("✅ Test EPUB blob fetched:", testBlob.type, testBlob.size, "bytes");
-
-          book = ePub(testBlob);
-          console.log("📖 Test book loaded:", book);
-
-          rendition = book.renderTo(viewerRef.current, {
-            width: 800,
-            height: 600,
-            flow: 'paginated',
-            spread: 'none'
-          });
-
-          await rendition.display();
-          console.log("✅ Test EPUB displayed successfully!");
+          console.error("💥 EPUB rendering error:", originalError);
+          return; // Don't use fallback, just fail gracefully
         }
 
         // Skip waiting for book.ready and proceed directly

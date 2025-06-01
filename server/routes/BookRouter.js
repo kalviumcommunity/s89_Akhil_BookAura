@@ -21,7 +21,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Upload book (new endpoint)
+// Upload book
 router.post('/upload', upload.fields([
   { name: 'epub', maxCount: 1 },
   { name: 'coverimage', maxCount: 1 }
@@ -57,11 +57,8 @@ router.post('/upload', upload.fields([
     });
 
     // Create URLs for the files
-    const baseUrl = process.env.NODE_ENV === 'production'
-      ? 'https://s89-akhil-bookaura-3.onrender.com'
-      : 'http://localhost:5000';
-    const epubUrl = `${baseUrl}/api/books/file/${epubId}`;
-    const coverUrl = `${baseUrl}/api/books/file/${coverId}`;
+    const epubUrl = `https://s89-akhil-bookaura-3.onrender.com/api/books/file/${epubId}`;
+    const coverUrl = `https://s89-akhil-bookaura-3.onrender.com/api/books/file/${coverId}`;
 
     // Save book to database
     const book = new Book({
@@ -69,7 +66,6 @@ router.post('/upload', upload.fields([
       author,
       description,
       genre,
-      price: req.body.price ? parseFloat(req.body.price) : 0,
       categories: categories ? categories.split(',').map(cat => cat.trim()) : [],
       isBestSeller: isBestSeller === 'true',
       isFeatured: isFeatured === 'true',
@@ -88,8 +84,6 @@ router.post('/upload', upload.fields([
     res.status(500).json({ error: 'Upload failed' });
   }
 });
-
-
 
 // Serve files from memory
 router.get('/file/:id', (req, res) => {
