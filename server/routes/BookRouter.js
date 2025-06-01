@@ -21,7 +21,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Upload book
+// Upload book (new endpoint)
 router.post('/upload', upload.fields([
   { name: 'epub', maxCount: 1 },
   { name: 'coverimage', maxCount: 1 }
@@ -88,6 +88,8 @@ router.post('/upload', upload.fields([
     res.status(500).json({ error: 'Upload failed' });
   }
 });
+
+
 
 // Serve files from memory
 router.get('/file/:id', (req, res) => {

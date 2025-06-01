@@ -22,40 +22,11 @@ const AddProducts = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Check if user is admin on component mount
+  // No authentication required for new API
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      try {
-        setLoading(true);
-
-        // Using api service which automatically handles tokens from both localStorage and cookies
-        const response = await api.get('/router/check-admin');
-
-        if (response.data.isAdmin) {
-          setIsAdmin(true);
-        } else {
-          setError('You do not have admin privileges to access this page');
-          setTimeout(() => {
-            navigate('/');
-          }, 3000);
-        }
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-
-        // Check if it's an authentication error
-        if (error.response && error.response.status === 401) {
-          setError('You must be logged in to access this page');
-          navigate('/login');
-        } else {
-          setError('Failed to verify admin status. Please try again later.');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAdminStatus();
-  }, [navigate]);
+    setIsAdmin(true); // Allow access without admin check
+    setLoading(false);
+  }, []);
 
   // Available categories
   const availableCategories = [
@@ -145,20 +116,26 @@ const AddProducts = () => {
 
       console.log(res.data);
       alert('Upload successful!');
+
+      // Reset form after successful upload
+      setFormData({
+        title: '',
+        author: '',
+        description: '',
+        genre: '',
+        price: '',
+        categories: [],
+        isBestSeller: false,
+        isFeatured: false,
+        isNewRelease: false
+      });
+      setCoverImage(null);
+      setBookFile(null);
     } catch (error) {
       if (error.response) {
         // Server responded with a status other than 2xx
         console.error('Server Error:', error.response.data);
-
-        // Check if it's an authentication error
-        if (error.response.status === 401) {
-          alert('Authentication error. Please log in again.');
-          navigate('/login');
-        } else if (error.response.status === 403) {
-          alert('You do not have permission to upload books. Admin access required.');
-        } else {
-          alert(`Error: ${error.response.data.message || 'Failed to upload book'}\nDetails: ${error.response.data.error || ''}`);
-        }
+        alert(`Error: ${error.response.data.error || 'Failed to upload book'}`);
       } else if (error.request) {
         // Request was made but no response received
         console.error('No Response:', error.request);
