@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ReactReader } from 'react-reader';
 import { Sun, Moon, Settings, BookOpen, RotateCcw, ZoomIn, ZoomOut, Languages, Globe } from 'lucide-react';
+import translate from '@vitalets/google-translate-api';
 
 const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   const [location, setLocation] = useState(null);
@@ -21,16 +22,13 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   // Fallback EPUB URL for when books don't work - using the working URL from AllBooks
   const FALLBACK_EPUB_URL = 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748874237/ebooks/file_ifmsnc.epub';
 
-  // LibreTranslate configuration with working endpoints
-  const LIBRETRANSLATE_ENDPOINTS = [
-    'https://libretranslate.de/translate',      // German instance (most reliable)
-    'https://libretranslate.com/translate',     // Official instance
-    // Note: Some endpoints may require API keys or have CORS restrictions
-  ];
 
-  // Supported languages for translation
+
+  // Supported languages for translation with Google Translate API
   const SUPPORTED_LANGUAGES = [
     { code: 'original', name: 'Original', flag: '📖' },
+
+    // Major World Languages
     { code: 'en', name: 'English', flag: '🇺🇸' },
     { code: 'es', name: 'Spanish', flag: '🇪🇸' },
     { code: 'fr', name: 'French', flag: '🇫🇷' },
@@ -40,16 +38,46 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
     { code: 'ru', name: 'Russian', flag: '🇷🇺' },
     { code: 'ja', name: 'Japanese', flag: '🇯🇵' },
     { code: 'ko', name: 'Korean', flag: '🇰🇷' },
-    { code: 'zh', name: 'Chinese', flag: '🇨🇳' },
+    { code: 'zh', name: 'Chinese (Simplified)', flag: '🇨🇳' },
+    { code: 'zh-tw', name: 'Chinese (Traditional)', flag: '🇹🇼' },
     { code: 'ar', name: 'Arabic', flag: '🇸🇦' },
+
+    // Indian Languages
     { code: 'hi', name: 'Hindi', flag: '🇮🇳' },
+    { code: 'te', name: 'Telugu', flag: '🇮🇳' },
+    { code: 'ta', name: 'Tamil', flag: '🇮🇳' },
+    { code: 'ml', name: 'Malayalam', flag: '🇮🇳' },
+    { code: 'kn', name: 'Kannada', flag: '🇮🇳' },
+    { code: 'bn', name: 'Bengali', flag: '🇮🇳' },
+    { code: 'gu', name: 'Gujarati', flag: '🇮🇳' },
+    { code: 'mr', name: 'Marathi', flag: '🇮🇳' },
+    { code: 'pa', name: 'Punjabi', flag: '🇮🇳' },
+    { code: 'or', name: 'Odia', flag: '🇮🇳' },
+    { code: 'as', name: 'Assamese', flag: '🇮🇳' },
+    { code: 'ur', name: 'Urdu', flag: '🇵🇰' },
+
+    // European Languages
     { code: 'nl', name: 'Dutch', flag: '🇳🇱' },
     { code: 'sv', name: 'Swedish', flag: '🇸🇪' },
     { code: 'da', name: 'Danish', flag: '🇩🇰' },
     { code: 'no', name: 'Norwegian', flag: '🇳🇴' },
     { code: 'fi', name: 'Finnish', flag: '🇫🇮' },
     { code: 'pl', name: 'Polish', flag: '🇵🇱' },
-    { code: 'tr', name: 'Turkish', flag: '🇹🇷' }
+    { code: 'tr', name: 'Turkish', flag: '🇹🇷' },
+    { code: 'el', name: 'Greek', flag: '🇬🇷' },
+    { code: 'cs', name: 'Czech', flag: '🇨🇿' },
+    { code: 'hu', name: 'Hungarian', flag: '🇭🇺' },
+    { code: 'ro', name: 'Romanian', flag: '🇷🇴' },
+
+    // Other Major Languages
+    { code: 'th', name: 'Thai', flag: '🇹🇭' },
+    { code: 'vi', name: 'Vietnamese', flag: '🇻🇳' },
+    { code: 'id', name: 'Indonesian', flag: '🇮🇩' },
+    { code: 'ms', name: 'Malay', flag: '🇲🇾' },
+    { code: 'tl', name: 'Filipino', flag: '🇵🇭' },
+    { code: 'sw', name: 'Swahili', flag: '🇰🇪' },
+    { code: 'he', name: 'Hebrew', flag: '🇮🇱' },
+    { code: 'fa', name: 'Persian', flag: '🇮🇷' }
   ];
 
   // Keyboard event handler
@@ -244,7 +272,7 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
     }
   };
 
-  // Translation functions with robust error handling
+  // Google Translate API function
   const translateText = async (text, targetLanguage) => {
     if (!text || text.trim().length === 0) return text;
 
@@ -256,8 +284,8 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
       cleanText = cleanText.substring(0, 5000);
     }
 
-    // Validate target language
-    const validLanguages = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh', 'ar', 'hi', 'nl', 'sv', 'da', 'no', 'fi', 'pl', 'tr'];
+    // Get valid language codes from our supported languages
+    const validLanguages = SUPPORTED_LANGUAGES.map(lang => lang.code).filter(code => code !== 'original');
     if (!validLanguages.includes(targetLanguage)) {
       console.error(`Invalid target language: ${targetLanguage}`);
       return text;
@@ -266,106 +294,49 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
     // Check cache first
     const cacheKey = `${cleanText}_${targetLanguage}`;
     if (translationCache[cacheKey]) {
+      console.log(`📋 Using cached translation for: ${cleanText.substring(0, 50)}...`);
       return translationCache[cacheKey];
     }
 
-    // Try each endpoint until one works
-    for (let i = 0; i < LIBRETRANSLATE_ENDPOINTS.length; i++) {
-      const endpoint = LIBRETRANSLATE_ENDPOINTS[i];
+    try {
+      console.log(`🌍 Translating to ${targetLanguage}: ${cleanText.substring(0, 50)}...`);
 
-      try {
-        console.log(`🌍 Trying translation endpoint ${i + 1}/${LIBRETRANSLATE_ENDPOINTS.length}: ${endpoint}`);
+      // Use Google Translate API
+      const result = await translate(cleanText, { to: targetLanguage });
 
-        // Create AbortController for timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
-        // Prepare request body with proper validation
-        const requestBody = {
-          q: cleanText,
-          source: 'auto', // Auto-detect source language
-          target: targetLanguage,
-          format: 'text'
-        };
-
-        // Log the request for debugging
-        console.log(`📤 Request to ${endpoint}:`, requestBody);
-
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: JSON.stringify(requestBody),
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        // Log response for debugging
-        console.log(`📥 Response status: ${response.status} ${response.statusText}`);
-
-        if (!response.ok) {
-          // Try to get error details from response
-          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-          try {
-            const errorData = await response.json();
-            if (errorData.error) {
-              errorMessage += ` - ${errorData.error}`;
-            }
-            console.log(`📥 Error response:`, errorData);
-          } catch (e) {
-            // Response might not be JSON
-            const errorText = await response.text();
-            if (errorText) {
-              errorMessage += ` - ${errorText}`;
-            }
-            console.log(`📥 Error text:`, errorText);
-          }
-          throw new Error(errorMessage);
-        }
-
-        const data = await response.json();
-        console.log(`📥 Success response:`, data);
-
-        if (!data.translatedText) {
-          throw new Error('No translated text in response');
-        }
-
-        const translatedText = data.translatedText;
-
-        // Cache the translation
-        setTranslationCache(prev => ({
-          ...prev,
-          [cacheKey]: translatedText
-        }));
-
-        console.log(`✅ Translation successful using endpoint: ${endpoint}`);
-        return translatedText;
-
-      } catch (error) {
-        console.warn(`❌ Translation failed with endpoint ${endpoint}:`, error.message);
-
-        // If this was the last endpoint, return original text
-        if (i === LIBRETRANSLATE_ENDPOINTS.length - 1) {
-          console.error('🚫 All translation endpoints failed, returning original text');
-          return text;
-        }
-
-        // Otherwise, try the next endpoint
-        continue;
+      if (!result || !result.text) {
+        throw new Error('No translation result received');
       }
-    }
 
-    // Final fallback - return original text
-    console.error('🚫 All translation endpoints failed');
-    return text;
+      const translatedText = result.text;
+      console.log(`✅ Translation successful: ${translatedText.substring(0, 50)}...`);
+
+      // Cache the translation
+      setTranslationCache(prev => ({
+        ...prev,
+        [cacheKey]: translatedText
+      }));
+
+      return translatedText;
+
+    } catch (error) {
+      console.error(`❌ Google Translate failed:`, error.message);
+
+      // Return mock translation as fallback
+      const mockTranslated = mockTranslateText(cleanText, targetLanguage);
+      if (mockTranslated !== cleanText) {
+        console.log(`🎭 Using mock translation as fallback`);
+        return mockTranslated;
+      }
+
+      return text; // Final fallback - return original text
+    }
   };
 
   // Mock translation function for testing (when APIs are down)
   const mockTranslateText = (text, targetLanguage) => {
     const mockTranslations = {
+      // Major World Languages
       'es': text => `[ES] ${text}`,
       'fr': text => `[FR] ${text}`,
       'de': text => `[DE] ${text}`,
@@ -375,15 +346,45 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
       'ja': text => `[JA] ${text}`,
       'ko': text => `[KO] ${text}`,
       'zh': text => `[ZH] ${text}`,
+      'zh-tw': text => `[ZH-TW] ${text}`,
       'ar': text => `[AR] ${text}`,
-      'hi': text => `[HI] ${text}`,
+
+      // Indian Languages
+      'hi': text => `[हिंदी] ${text}`,
+      'te': text => `[తెలుగు] ${text}`,
+      'ta': text => `[தமிழ்] ${text}`,
+      'ml': text => `[മലയാളം] ${text}`,
+      'kn': text => `[ಕನ್ನಡ] ${text}`,
+      'bn': text => `[বাংলা] ${text}`,
+      'gu': text => `[ગુજરાતી] ${text}`,
+      'mr': text => `[मराठी] ${text}`,
+      'pa': text => `[ਪੰਜਾਬੀ] ${text}`,
+      'or': text => `[ଓଡ଼ିଆ] ${text}`,
+      'as': text => `[অসমীয়া] ${text}`,
+      'ur': text => `[اردو] ${text}`,
+
+      // European Languages
       'nl': text => `[NL] ${text}`,
       'sv': text => `[SV] ${text}`,
       'da': text => `[DA] ${text}`,
       'no': text => `[NO] ${text}`,
       'fi': text => `[FI] ${text}`,
       'pl': text => `[PL] ${text}`,
-      'tr': text => `[TR] ${text}`
+      'tr': text => `[TR] ${text}`,
+      'el': text => `[EL] ${text}`,
+      'cs': text => `[CS] ${text}`,
+      'hu': text => `[HU] ${text}`,
+      'ro': text => `[RO] ${text}`,
+
+      // Other Major Languages
+      'th': text => `[TH] ${text}`,
+      'vi': text => `[VI] ${text}`,
+      'id': text => `[ID] ${text}`,
+      'ms': text => `[MS] ${text}`,
+      'tl': text => `[TL] ${text}`,
+      'sw': text => `[SW] ${text}`,
+      'he': text => `[HE] ${text}`,
+      'fa': text => `[FA] ${text}`
     };
 
     const translator = mockTranslations[targetLanguage];
@@ -1002,12 +1003,12 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
             <div style={{ marginBottom: '4px' }}>
               <strong>💡 Translation Tips:</strong>
             </div>
-            <div>• Powered by LibreTranslate (multiple servers)</div>
+            <div>• Powered by Google Translate API</div>
             <div>• Press 'L' for quick access</div>
+            <div>• Supports 40+ languages including Indian languages</div>
             <div>• Translations are cached for speed</div>
             <div>• Select 'Original' to restore</div>
-            <div>• Auto-retries if service is busy</div>
-            <div>• Demo mode available if APIs are down</div>
+            <div>• Demo mode available if API is down</div>
             <div>• Works offline with cached content</div>
           </div>
         </div>
