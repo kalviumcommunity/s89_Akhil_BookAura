@@ -106,8 +106,25 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   };
 
   const handleRenditionReady = (renditionInstance) => {
+    console.log('📖 Rendition ready, setting up EPUB viewer...');
+    console.log('🔍 Rendition instance:', renditionInstance);
+    console.log('🔍 Rendition book:', renditionInstance?.book);
+    console.log('🔍 Rendition manager:', renditionInstance?.manager);
+
     setRendition(renditionInstance);
     applyTheme(renditionInstance);
+
+    // Force display the first page
+    setTimeout(() => {
+      console.log('🚀 Attempting to display first page...');
+      if (renditionInstance && renditionInstance.display) {
+        renditionInstance.display().then(() => {
+          console.log('✅ Successfully displayed EPUB content');
+        }).catch((error) => {
+          console.error('❌ Error displaying EPUB content:', error);
+        });
+      }
+    }, 500);
   };
 
   const toggleDarkMode = () => {
@@ -1044,8 +1061,12 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
 
       {/* EPUB Reader */}
       <div style={{
-        height: 'calc(100% - 100vh)',
-        backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff'
+        flex: 1,
+        minHeight: '400px',
+        height: 'calc(100vh - 140px)',
+        backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff',
+        position: 'relative',
+        overflow: 'hidden'
       }}>
         {error ? (
           <div style={{
@@ -1088,26 +1109,51 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
             </button>
           </div>
         ) : (
-          <ReactReader
-            url={urlToUse}
-            location={location}
-            locationChanged={handleLocationChanged}
-            epubInitOptions={{
-              openAs: 'epub',
-              allowScriptedContent: false
-            }}
-            epubOptions={{
-              flow: 'paginated',
-              manager: 'default',
-              spread: 'none',
-              minSpreadWidth: 800,
-              gap: 'none'
-            }}
-            getRendition={handleRenditionReady}
-            onError={handleError}
-            showToc={false}
-            swipeable={false}
-          />
+          <div style={{
+            width: '100%',
+            height: '100%',
+            position: 'relative',
+            border: '2px solid red' // Debug border to see container
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: '10px',
+              left: '10px',
+              background: 'rgba(0,0,0,0.8)',
+              color: 'white',
+              padding: '8px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              zIndex: 1000
+            }}>
+              📊 ReactReader Debug: URL={urlToUse ? 'Valid' : 'Invalid'} | Container: {window.innerHeight}px
+            </div>
+
+            <ReactReader
+              url={urlToUse}
+              location={location}
+              locationChanged={handleLocationChanged}
+              epubInitOptions={{
+                openAs: 'epub',
+                allowScriptedContent: false
+              }}
+              epubOptions={{
+                flow: 'paginated',
+                manager: 'default',
+                spread: 'none',
+                minSpreadWidth: 600,
+                gap: 'none'
+              }}
+              getRendition={handleRenditionReady}
+              onError={handleError}
+              showToc={false}
+              swipeable={false}
+              readerStyles={{
+                backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff',
+                color: isDarkMode ? '#e0e0e0' : '#333333'
+              }}
+            />
+          </div>
         )}
       </div>
 
