@@ -8,6 +8,9 @@ function Reader() {
   const navigate = useNavigate();
   const [book, setBook] = useState(null);
 
+  // Fallback EPUB URL for when books don't work
+  const FALLBACK_EPUB_URL = 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748511974/ebooks/inzg33a5nsxjff2i2kyn';
+
   console.log("Loading book with ID:", bookId);
 
   useEffect(() => {
@@ -60,22 +63,11 @@ function Reader() {
                 console.log("❌ Fresh book data not found, using purchase data");
                 console.log("📖 Using purchase data as fallback:", foundBook);
 
-                // Check if the URL is from the new in-memory system or old Cloudinary
-                const epubUrl = foundBook.epubUrl || foundBook.url;
-                const isNewInMemoryUrl = epubUrl && (epubUrl.includes('/api/books/file/') || epubUrl.includes('s89-akhil-bookaura-3.onrender.com/api/books/file/'));
-                const isOldCloudinaryUrl = epubUrl && epubUrl.includes('cloudinary.com');
-
-                if (isOldCloudinaryUrl && !isNewInMemoryUrl) {
-                  console.log("⚠️ This book uses old Cloudinary storage and may not work");
-                  console.log("💡 Please re-upload this book for the best experience");
-                }
-
                 setBook({
                   _id: foundBook.bookId || foundBook._id,
                   title: foundBook.title,
                   author: foundBook.author,
-                  epubUrl: epubUrl,
-                  isOldUrl: isOldCloudinaryUrl && !isNewInMemoryUrl
+                  epubUrl: foundBook.epubUrl || foundBook.url || FALLBACK_EPUB_URL
                 });
                 return;
               }
@@ -95,7 +87,7 @@ function Reader() {
               _id: bookData._id,
               title: bookData.title,
               author: bookData.author,
-              epubUrl: bookData.epubUrl || bookData.url
+              epubUrl: bookData.epubUrl || bookData.url || FALLBACK_EPUB_URL
             });
             console.log("📖 Book found via direct API:", bookData);
             console.log("📖 Direct API EPUB URL:", bookData.epubUrl || bookData.url);
@@ -136,21 +128,6 @@ function Reader() {
           ← Back to My Books
         </button>
         <h1 className="reader-title">{book.title} by {book.author}</h1>
-
-        {book.isOldUrl && (
-          <div style={{
-            backgroundColor: '#fff3cd',
-            border: '1px solid #ffeaa7',
-            borderRadius: '8px',
-            padding: '12px',
-            margin: '10px 0',
-            fontSize: '14px'
-          }}>
-            <strong>⚠️ Notice:</strong> This book uses old storage and may not load properly.
-            <br />
-            <strong>💡 Solution:</strong> Please re-upload this book using the "Add Products" page for the best experience.
-          </div>
-        )}
       </div>
 
       <div className="reader-content">

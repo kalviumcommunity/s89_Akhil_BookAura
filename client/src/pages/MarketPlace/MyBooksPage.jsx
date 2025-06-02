@@ -14,69 +14,10 @@ const MyBooksPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [cleanupLoading, setCleanupLoading] = useState(false);
-
   const [groupedBooks, setGroupedBooks] = useState([]);
 
-  // Utility function to detect URL types
-  const detectUrlType = (url) => {
-    if (!url || !url.startsWith('http')) {
-      console.log('🔍 URL Detection: Invalid URL -', url);
-      return 'invalid';
-    }
-
-    // New in-memory system URLs (both localhost and production)
-    if (url.includes('/api/books/file/')) {
-      console.log('🔍 URL Detection: New in-memory URL -', url);
-      return 'new';
-    }
-
-    // Old Cloudinary URLs
-    if (url.includes('/bookstore/bookFiles/') ||
-        url.includes('/bookFiles/') ||
-        url.includes('/ebooks/')) {
-      console.log('🔍 URL Detection: Old Cloudinary URL -', url);
-      return 'old';
-    }
-
-    // Other URLs
-    console.log('🔍 URL Detection: Other URL type -', url);
-    return 'other';
-  };
-
-  // Function to clean up old books
-  const cleanupOldBooks = async () => {
-    if (!window.confirm(
-      '🧹 Clean Up Old Books\n\n' +
-      'This will remove all books with old Cloudinary URLs that no longer work.\n\n' +
-      '⚠️ Warning: This action cannot be undone!\n\n' +
-      'Books with working URLs (new in-memory system) will be kept.\n\n' +
-      'Continue with cleanup?'
-    )) {
-      return;
-    }
-
-    try {
-      setCleanupLoading(true);
-      const response = await api.post('/api/payment/admin/cleanup-old-books');
-
-      if (response.data.success) {
-        alert(
-          `✅ Cleanup Complete!\n\n` +
-          `${response.data.stats.booksRemoved} old books removed from ${response.data.stats.usersAffected} users.\n\n` +
-          `The page will now refresh to show your updated library.`
-        );
-        window.location.reload();
-      } else {
-        alert('❌ Cleanup failed. Please try again.');
-      }
-    } catch (error) {
-      console.error('Cleanup error:', error);
-      alert('❌ Error during cleanup. Please try again or contact support.');
-    } finally {
-      setCleanupLoading(false);
-    }
-  };
+  // Fallback EPUB URL for when books don't work
+  const FALLBACK_EPUB_URL = 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748511974/ebooks/inzg33a5nsxjff2i2kyn';
 
   // Fetch books inside useEffect directly
   useEffect(() => {
@@ -180,30 +121,8 @@ const MyBooksPage = () => {
       <Navbar />
       <div className="my-books-page">
         <div className="my-books-header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-            <div>
-              <h1 className="my-books-title">My Books</h1>
-              <p className="my-books-subtitle">Access your purchased books anytime, anywhere</p>
-            </div>
-            <button
-              onClick={cleanupOldBooks}
-              disabled={cleanupLoading}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: cleanupLoading ? '#ccc' : '#ff6b6b',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: cleanupLoading ? 'not-allowed' : 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-                transition: 'background-color 0.2s'
-              }}
-              title="Remove books with broken old URLs"
-            >
-              {cleanupLoading ? '🧹 Cleaning...' : '🧹 Clean Old Books'}
-            </button>
-          </div>
+          <h1 className="my-books-title">My Books</h1>
+          <p className="my-books-subtitle">Access your purchased books anytime, anywhere</p>
         </div>
 
         <div className="my-books-content">
@@ -278,59 +197,15 @@ const MyBooksPage = () => {
                             <button
                               className="read-button"
                               onClick={() => {
-                                const urlType = detectUrlType(book.url);
-                                console.log("Book URL:", book.url);
-                                console.log("URL Type:", urlType);
-
-                                switch (urlType) {
-                                  case 'new':
-                                    // New system - navigate to reader with book ID
-                                    const bookId = book.bookId || book._id;
-                                    console.log("📖 Navigating to reader with book ID:", bookId);
-                                    navigate(`/reader/${bookId}`);
-                                    break;
-
-                                  case 'old':
-                                    // Old Cloudinary system - show warning and try direct URL
-                                    console.log("⚠️ Old Cloudinary EPUB detected:", book.url);
-                                    const shouldTryAnyway = window.confirm(
-                                      `⚠️ This book uses old storage and may not work properly.\n\n` +
-                                      `Book: "${book.title}" by ${book.author}\n\n` +
-                                      `Options:\n` +
-                                      `• Click "OK" to try opening it anyway (may fail)\n` +
-                                      `• Click "Cancel" and re-upload this book for best experience\n\n` +
-                                      `💡 Tip: Use "Add Products" page to re-upload this book.`
-                                    );
-
-                                    if (shouldTryAnyway) {
-                                      // Try to open the old URL directly
-                                      window.open(book.url, '_blank');
-                                    }
-                                    break;
-
-                                  case 'other':
-                                    // For non-EPUB files, open in a new tab
-                                    console.log("Opening non-EPUB in new tab:", book.url);
-                                    window.open(book.url, '_blank');
-                                    break;
-
-                                  default:
-                                    // Invalid or missing URL
-                                    alert('This book does not have a valid URL');
-                                    break;
-                                }
+                                // Always navigate to reader - let the reader handle URL issues
+                                const bookId = book.bookId || book._id;
+                                console.log("📖 Navigating to reader with book ID:", bookId);
+                                console.log("📖 Book URL:", book.url);
+                                navigate(`/reader/${bookId}`);
                               }}
                             >
                               <FileText size={16} />
-                              {(() => {
-                                const urlType = detectUrlType(book.url);
-                                switch (urlType) {
-                                  case 'new': return 'Read Book';
-                                  case 'old': return '⚠️ Read (Old)';
-                                  case 'other': return 'Open Book';
-                                  default: return 'Invalid URL';
-                                }
-                              })()}
+                              Read Book
                             </button>
                           </div>
                         </div>

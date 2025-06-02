@@ -21,6 +21,10 @@ const FastEpubViewer = ({ epubUrl }) => {
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [viewMode, setViewMode] = useState('scrolled-doc'); // 'scrolled-doc' or 'paginated'
   const [progress, setProgress] = useState(0);
+  const [currentEpubUrl, setCurrentEpubUrl] = useState(epubUrl);
+
+  // Fallback EPUB URL for when books don't work
+  const FALLBACK_EPUB_URL = 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748511974/ebooks/inzg33a5nsxjff2i2kyn';
 
   // Button styles
   const buttonStyle = {
@@ -241,15 +245,21 @@ const FastEpubViewer = ({ epubUrl }) => {
   }, [nextPage, prevPage, showSearch, showToc, addBookmark, toggleTheme, increaseFontSize, decreaseFontSize]);
 
   useEffect(() => {
-    const fetchAndRender = async () => {
+    const fetchAndRender = async (urlToTry = currentEpubUrl) => {
       try {
         setLoading(true);
         setError(null);
-        console.log("📚 Loading EPUB from:", epubUrl);
+        console.log("📚 Loading EPUB from:", urlToTry);
 
-        const response = await fetch(epubUrl);
+        const response = await fetch(urlToTry);
 
         if (!response.ok) {
+          // If the original URL fails and we haven't tried the fallback yet
+          if (urlToTry !== FALLBACK_EPUB_URL) {
+            console.log("❌ Original URL failed, trying fallback EPUB...");
+            setCurrentEpubUrl(FALLBACK_EPUB_URL);
+            return fetchAndRender(FALLBACK_EPUB_URL);
+          }
           throw new Error(`Failed to fetch EPUB: ${response.status} ${response.statusText}`);
         }
 
@@ -320,6 +330,14 @@ const FastEpubViewer = ({ epubUrl }) => {
 
       } catch (error) {
         console.error('💥 EPUB rendering error:', error);
+
+        // If the original URL failed and we haven't tried the fallback yet
+        if (urlToTry !== FALLBACK_EPUB_URL) {
+          console.log("❌ Original URL failed, trying fallback EPUB...");
+          setCurrentEpubUrl(FALLBACK_EPUB_URL);
+          return fetchAndRender(FALLBACK_EPUB_URL);
+        }
+
         setError(error.message);
         setLoading(false);
 
@@ -333,11 +351,11 @@ const FastEpubViewer = ({ epubUrl }) => {
                 <strong>💡 This usually happens because:</strong>
                 <ul style="text-align: left; margin: 10px 0;">
                   <li>The book file is no longer available (server restart)</li>
-                  <li>The book uses old storage that's been cleared</li>
                   <li>Network connectivity issues</li>
+                  <li>The fallback book also failed to load</li>
                 </ul>
                 <strong>🔧 To fix this:</strong>
-                <br/>Please re-upload this book using the "Add Products" page.
+                <br/>Please try refreshing the page or check your internet connection.
               </div>
             </div>
           `;
@@ -346,7 +364,8 @@ const FastEpubViewer = ({ epubUrl }) => {
     };
 
     if (epubUrl) {
-      fetchAndRender();
+      setCurrentEpubUrl(epubUrl);
+      fetchAndRender(epubUrl);
     }
 
     // Cleanup
