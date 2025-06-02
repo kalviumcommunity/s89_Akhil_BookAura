@@ -136,6 +136,21 @@ function Reader() {
           ← Back to My Books
         </button>
         <h1 className="reader-title">{book.title} by {book.author}</h1>
+
+        {book.isOldUrl && (
+          <div style={{
+            backgroundColor: '#fff3cd',
+            border: '1px solid #ffeaa7',
+            borderRadius: '8px',
+            padding: '12px',
+            margin: '10px 0',
+            fontSize: '14px'
+          }}>
+            <strong>⚠️ Notice:</strong> This book uses old storage and may not load properly.
+            <br />
+            <strong>💡 Solution:</strong> Please re-upload this book using the "Add Products" page for the best experience.
+          </div>
+        )}
       </div>
 
       <div className="reader-content">
