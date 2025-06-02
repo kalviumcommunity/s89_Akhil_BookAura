@@ -128,13 +128,16 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
 // Save purchase after payment success
 router.post("/save-purchase", verifyToken, async (req, res) => {
   try {
+    console.log('💰 Starting save-purchase process...');
     const { sessionId, purchaseId, books } = req.body;
     if (!req.user?.id || !purchaseId || !Array.isArray(books) || books.length === 0) {
+      console.log('💰 Invalid request data:', { userId: req.user?.id, purchaseId, booksCount: books?.length });
       return res.status(400).json({ error: "Invalid request" });
     }
 
     const userId = req.user.id;
     const requiredFields = ['_id', 'title', 'author', 'coverimage', 'price'];
+    console.log(`💰 Processing purchase for user ${userId}, ${books.length} books`);
 
     // Fetch fresh book data from database to ensure correct URLs
     const processedBooks = await Promise.all(books.map(async (book, index) => {
@@ -155,21 +158,43 @@ router.post("/save-purchase", verifyToken, async (req, res) => {
         const dbBook = await Book.findById(book._id);
         if (dbBook) {
           console.log(`✅ Found fresh book data for ${book.title}:`, {
+            _id: dbBook._id,
             url: dbBook.url,
             epubUrl: dbBook.epubUrl,
-            coverimage: dbBook.coverimage
+            coverimage: dbBook.coverimage,
+            price: dbBook.price
           });
           freshBook = {
-            ...book,
+            _id: dbBook._id,
+            title: dbBook.title,
+            author: dbBook.author,
+            description: dbBook.description,
+            genre: dbBook.genre,
+            price: dbBook.price,
+            coverimage: dbBook.coverimage,
             url: dbBook.url,
-            epubUrl: dbBook.epubUrl || dbBook.url,
-            coverimage: dbBook.coverimage
+            epubUrl: dbBook.epubUrl || dbBook.url, // Ensure epubUrl is set
+            categories: dbBook.categories,
+            isBestSeller: dbBook.isBestSeller,
+            isFeatured: dbBook.isFeatured,
+            isNewRelease: dbBook.isNewRelease,
+            publishedDate: dbBook.publishedDate
           };
         } else {
-          console.log(`❌ No fresh book data found for ${book.title}, using provided data`);
+          console.log(`❌ No fresh book data found for ${book.title} (ID: ${book._id}), using provided data`);
+          // Ensure epubUrl is set even for provided data
+          freshBook = {
+            ...book,
+            epubUrl: book.epubUrl || book.url
+          };
         }
       } catch (dbError) {
         console.log(`❌ Error fetching fresh book data for ${book.title}:`, dbError.message);
+        // Ensure epubUrl is set even on error
+        freshBook = {
+          ...book,
+          epubUrl: book.epubUrl || book.url
+        };
       }
 
       const missing = requiredFields.filter(field => {
@@ -230,8 +255,17 @@ router.post("/save-purchase", verifyToken, async (req, res) => {
     });
 
     await purchase.save();
+
+    console.log('💰 Purchase saved successfully!');
+    console.log('💰 Sample book in user purchased books:', {
+      title: newBooks[0]?.title,
+      url: newBooks[0]?.url,
+      epubUrl: newBooks[0]?.epubUrl
+    });
+
     res.status(201).json({ success: true, message: "Purchase saved", purchaseId });
   } catch (error) {
+    console.error('💰 Error saving purchase:', error);
     res.status(500).json({ error: "Failed to save purchase", message: error.message });
   }
 });
@@ -239,13 +273,19 @@ router.post("/save-purchase", verifyToken, async (req, res) => {
 // Fetch user purchases
 router.get("/my-purchases", verifyToken, async (req, res) => {
   try {
+    console.log('📚 Fetching purchased books for user:', req.user.id);
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: "User not found" });
 
     if (!user.purchasedBooks?.length) {
+      console.log('📚 No purchased books in user model, checking Purchase collection...');
       const purchases = await Purchase.find({ userId: req.user.id }).sort({ purchaseDate: -1 });
-      if (!purchases.length) return res.status(200).json({ success: true, purchasedBooks: [] });
+      if (!purchases.length) {
+        console.log('📚 No purchases found in Purchase collection');
+        return res.status(200).json({ success: true, purchasedBooks: [] });
+      }
 
+      console.log(`📚 Found ${purchases.length} purchases, migrating to user model...`);
       const migratedBooks = purchases.flatMap(purchase => purchase.books.map(b => ({
         bookId: b.bookId,
         title: b.title,
@@ -261,10 +301,22 @@ router.get("/my-purchases", verifyToken, async (req, res) => {
       user.purchasedBooks = migratedBooks;
       user.lastPurchaseDate = purchases[0].purchaseDate;
       await user.save();
+      console.log(`📚 Migrated ${migratedBooks.length} books to user model`);
+    }
+
+    console.log(`📚 Returning ${user.purchasedBooks.length} purchased books`);
+    // Log first book for debugging
+    if (user.purchasedBooks.length > 0) {
+      console.log('📚 Sample purchased book:', {
+        title: user.purchasedBooks[0].title,
+        url: user.purchasedBooks[0].url,
+        epubUrl: user.purchasedBooks[0].epubUrl
+      });
     }
 
     res.status(200).json({ success: true, purchasedBooks: user.purchasedBooks });
   } catch (error) {
+    console.error('📚 Error fetching purchased books:', error);
     res.status(500).json({ error: "Failed to fetch purchased books" });
   }
 });

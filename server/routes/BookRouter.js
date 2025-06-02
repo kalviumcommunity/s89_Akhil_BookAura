@@ -15,7 +15,12 @@ const fileStorage = new Map();
 router.get('/', async (req, res) => {
   try {
     const books = await Book.find();
-    res.json(books);
+    // Ensure all books have epubUrl set
+    const booksWithEpubUrl = books.map(book => ({
+      ...book.toObject(),
+      epubUrl: book.epubUrl || book.url
+    }));
+    res.json(booksWithEpubUrl);
   } catch (err) {
     res.status(500).json({ error: 'Failed to get books' });
   }
@@ -129,15 +134,22 @@ router.get('/:id', async (req, res) => {
       console.log('❌ Book not found in database:', req.params.id);
       return res.status(404).json({ error: 'Book not found' });
     }
+
+    // Ensure epubUrl is always set
+    const bookData = {
+      ...book.toObject(),
+      epubUrl: book.epubUrl || book.url
+    };
+
     console.log('✅ Book retrieved from database:', {
-      _id: book._id,
-      title: book.title,
-      coverimage: book.coverimage,
-      url: book.url,
-      epubUrl: book.epubUrl,
-      price: book.price
+      _id: bookData._id,
+      title: bookData.title,
+      coverimage: bookData.coverimage,
+      url: bookData.url,
+      epubUrl: bookData.epubUrl,
+      price: bookData.price
     });
-    res.json(book);
+    res.json(bookData);
   } catch (err) {
     console.error('💥 Error fetching book:', err);
     res.status(500).json({ error: 'Failed to get book' });
