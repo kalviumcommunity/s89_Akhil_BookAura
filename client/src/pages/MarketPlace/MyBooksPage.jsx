@@ -18,9 +18,6 @@ const MyBooksPage = () => {
   const [groupedBooks, setGroupedBooks] = useState([]);
   const [selectedBook, setSelectedBook] = useState(null);
 
-  // Fallback EPUB URL for when books don't work
-  const FALLBACK_EPUB_URL = 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748511974/ebooks/inzg33a5nsxjff2i2kyn';
-
   // Fetch books inside useEffect directly
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -118,21 +115,53 @@ const MyBooksPage = () => {
     });
   };
 
-  const handleReadBook = (book) => {
+  const handleReadBook = async (book) => {
     console.log('📖 Opening book:', book.title);
-    console.log('📖 EPUB URL:', book.epubUrl || book.url);
+    console.log('📖 Original EPUB URL:', book.epubUrl || book.url);
+
+    // Try to fetch fresh book data from the database
+    let bookToRead = book;
+    try {
+      console.log('🔄 Fetching fresh book data from database...');
+      const response = await api.get(`/api/books`);
+      const allBooks = response.data || [];
+
+      // Find the book by ID or title
+      const freshBook = allBooks.find(dbBook =>
+        (dbBook._id === book.bookId) ||
+        (dbBook._id === book._id) ||
+        (dbBook.title === book.title && dbBook.author === book.author)
+      );
+
+      if (freshBook) {
+        console.log('✅ Found fresh book data:', freshBook.title);
+        console.log('📖 Fresh EPUB URL:', freshBook.epubUrl || freshBook.url);
+        bookToRead = {
+          ...book,
+          epubUrl: freshBook.epubUrl || freshBook.url,
+          url: freshBook.url,
+          _id: freshBook._id
+        };
+      } else {
+        console.log('⚠️ Could not find fresh book data, using original');
+      }
+    } catch (error) {
+      console.log('⚠️ Error fetching fresh book data:', error.message);
+    }
 
     // Check URL type for logging
-    const epubUrl = book.epubUrl || book.url;
+    const epubUrl = bookToRead.epubUrl || bookToRead.url;
     if (epubUrl && epubUrl.includes('res.cloudinary.com') && epubUrl.includes('/ebooks/')) {
       console.log('✅ Direct Cloudinary URL detected - should work perfectly');
     } else if (epubUrl && epubUrl.includes('/api/books/file/')) {
       console.log('⚠️ In-memory storage URL detected - may not work after server restart');
+    } else if (epubUrl && epubUrl.includes('bookstore/bookFiles')) {
+      console.log('⚠️ Old broken Cloudinary URL detected - will use fallback');
     } else {
       console.log('❓ Unknown URL type:', epubUrl);
     }
 
-    setSelectedBook(book);
+    setSelectedBook(bookToRead);
   };
 
   const handleCloseReader = () => {

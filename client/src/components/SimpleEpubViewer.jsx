@@ -5,8 +5,8 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   const [location, setLocation] = useState(null);
   const [error, setError] = useState(null);
 
-  // Fallback EPUB URL for when books don't work
-  const FALLBACK_EPUB_URL = 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748511974/ebooks/inzg33a5nsxjff2i2kyn';
+  // Fallback EPUB URL for when books don't work - using the working URL from AllBooks
+  const FALLBACK_EPUB_URL = 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748874237/ebooks/file_ifmsnc.epub';
 
   const handleLocationChanged = (epubcifi) => {
     setLocation(epubcifi);

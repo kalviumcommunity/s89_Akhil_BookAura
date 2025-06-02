@@ -64,7 +64,7 @@ function Reader() {
                   isNewRelease: foundBook.isNewRelease,
                   publishedDate: foundBook.publishedDate,
                   coverimage: foundBook.coverimage,
-                  epubUrl: 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748511974/ebooks/inzg33a5nsxjff2i2kyn', // Working fallback
+                  epubUrl: 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748874237/ebooks/file_ifmsnc.epub', // Working fallback
                   isRestored: true // Flag to show notice
                 });
               } else if (isDirectCloudinaryUrl) {
@@ -112,7 +112,7 @@ function Reader() {
                 title: "Restored Book",
                 author: "Unknown Author",
                 description: "This book was restored from old storage. The original content may not be available, but you can read this sample book.",
-                epubUrl: 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748511974/ebooks/inzg33a5nsxjff2i2kyn'
+                epubUrl: 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748874237/ebooks/file_ifmsnc.epub'
               });
             }
           }
@@ -124,7 +124,7 @@ function Reader() {
             title: "Sample Book",
             author: "BookAura",
             description: "This is a sample book provided when the original book cannot be loaded.",
-            epubUrl: 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748511974/ebooks/inzg33a5nsxjff2i2kyn'
+            epubUrl: 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748874237/ebooks/file_ifmsnc.epub'
           });
         }
       }
