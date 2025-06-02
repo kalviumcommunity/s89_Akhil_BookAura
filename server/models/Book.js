@@ -66,6 +66,7 @@ const bookSchema = mongoose.Schema({
     }
 }, { timestamps: true })
 
-const Book = mongoose.model('Book',bookSchema);
+// Check if model already exists to prevent overwrite error
+const Book = mongoose.models.Book || mongoose.model('Book', bookSchema);
 
 module.exports = Book;

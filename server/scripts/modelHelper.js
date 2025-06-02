@@ -15,25 +15,56 @@ const mongoose = require('mongoose');
  * @returns {Object} The loaded model
  */
 const loadModel = (modelName) => {
+  // Special case for BookModel - use Book.js from models directory
+  if (modelName === 'BookModel') {
+    const bookPaths = [
+      path.join(__dirname, '..', 'models', 'Book.js'),
+      path.join(process.cwd(), 'server', 'models', 'Book.js'),
+      `/opt/render/project/src/server/models/Book.js`
+    ];
+
+    for (const bookPath of bookPaths) {
+      try {
+        const model = require(bookPath);
+        console.log(`Successfully loaded BookModel from: ${bookPath}`);
+        return model;
+      } catch (err) {
+        // Continue to next path
+      }
+    }
+  }
+
   // Define all possible paths where the model could be located
   const possiblePaths = [
-    // Direct paths
+    // Try models directory first (new location)
+    path.join(process.cwd(), 'models', `${modelName}`),
+    path.join(process.cwd(), 'server', 'models', `${modelName}`),
+    path.join(__dirname, '..', 'models', `${modelName}`),
+    path.join(__dirname, '..', '..', 'models', `${modelName}`),
+
+    // Try model directory (old location)
     path.join(process.cwd(), 'model', `${modelName}`),
     path.join(process.cwd(), 'server', 'model', `${modelName}`),
-    
-    // Relative paths from different starting points
     path.join(__dirname, '..', 'model', `${modelName}`),
     path.join(__dirname, '..', '..', 'model', `${modelName}`),
-    
+
     // Absolute paths for Render
+    `/opt/render/project/src/models/${modelName}`,
+    `/opt/render/project/src/server/models/${modelName}`,
     `/opt/render/project/src/model/${modelName}`,
     `/opt/render/project/src/server/model/${modelName}`,
-    
+
     // Additional paths with .js extension
+    path.join(process.cwd(), 'models', `${modelName}.js`),
+    path.join(process.cwd(), 'server', 'models', `${modelName}.js`),
     path.join(process.cwd(), 'model', `${modelName}.js`),
     path.join(process.cwd(), 'server', 'model', `${modelName}.js`),
+    path.join(__dirname, '..', 'models', `${modelName}.js`),
     path.join(__dirname, '..', 'model', `${modelName}.js`),
+    path.join(__dirname, '..', '..', 'models', `${modelName}.js`),
     path.join(__dirname, '..', '..', 'model', `${modelName}.js`),
+    `/opt/render/project/src/models/${modelName}.js`,
+    `/opt/render/project/src/server/models/${modelName}.js`,
     `/opt/render/project/src/model/${modelName}.js`,
     `/opt/render/project/src/server/model/${modelName}.js`
   ];
