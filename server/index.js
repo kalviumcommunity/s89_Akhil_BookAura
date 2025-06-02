@@ -12,6 +12,8 @@ const cors = require('cors');
 const session = require('express-session');
 const passport = require('passport');
 const cookieParser = require('cookie-parser');
+//using cronjob to keep the site active because i have deployed in render free version 
+require('./CronJob');
 
 // Set global module paths for easier imports
 global.__basedir = __dirname;

@@ -15,12 +15,19 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   const [translationCache, setTranslationCache] = useState({});
   const [isTranslating, setIsTranslating] = useState(false);
   const [originalContent, setOriginalContent] = useState(null);
+  const [translationError, setTranslationError] = useState(null);
+  const [translationProgress, setTranslationProgress] = useState({ current: 0, total: 0 });
 
   // Fallback EPUB URL for when books don't work - using the working URL from AllBooks
   const FALLBACK_EPUB_URL = 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748874237/ebooks/file_ifmsnc.epub';
 
-  // LibreTranslate configuration
-  const LIBRETRANSLATE_API = 'https://libretranslate.de/translate'; // Free public instance
+  // LibreTranslate configuration with multiple fallback endpoints
+  const LIBRETRANSLATE_ENDPOINTS = [
+    'https://libretranslate.com/translate',     // Official instance
+    'https://translate.argosopentech.com/translate', // Argos Open Tech
+    'https://libretranslate.de/translate',      // German instance
+    'https://translate.terraprint.co/translate' // Alternative instance
+  ];
 
   // Supported languages for translation
   const SUPPORTED_LANGUAGES = [
@@ -175,7 +182,7 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
     }
   };
 
-  // Translation functions
+  // Translation functions with robust error handling
   const translateText = async (text, targetLanguage) => {
     if (!text || text.trim().length === 0) return text;
 
@@ -185,38 +192,69 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
       return translationCache[cacheKey];
     }
 
-    try {
-      const response = await fetch(LIBRETRANSLATE_API, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          q: text,
-          source: 'auto', // Auto-detect source language
-          target: targetLanguage,
-          format: 'text'
-        })
-      });
+    // Try each endpoint until one works
+    for (let i = 0; i < LIBRETRANSLATE_ENDPOINTS.length; i++) {
+      const endpoint = LIBRETRANSLATE_ENDPOINTS[i];
 
-      if (!response.ok) {
-        throw new Error(`Translation failed: ${response.status}`);
+      try {
+        console.log(`🌍 Trying translation endpoint ${i + 1}/${LIBRETRANSLATE_ENDPOINTS.length}: ${endpoint}`);
+
+        // Create AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            q: text,
+            source: 'auto', // Auto-detect source language
+            target: targetLanguage,
+            format: 'text'
+          }),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.translatedText) {
+          throw new Error('No translated text in response');
+        }
+
+        const translatedText = data.translatedText;
+
+        // Cache the translation
+        setTranslationCache(prev => ({
+          ...prev,
+          [cacheKey]: translatedText
+        }));
+
+        console.log(`✅ Translation successful using endpoint: ${endpoint}`);
+        return translatedText;
+
+      } catch (error) {
+        console.warn(`❌ Translation failed with endpoint ${endpoint}:`, error.message);
+
+        // If this was the last endpoint, return original text
+        if (i === LIBRETRANSLATE_ENDPOINTS.length - 1) {
+          console.error('🚫 All translation endpoints failed, returning original text');
+          return text;
+        }
+
+        // Otherwise, try the next endpoint
+        continue;
       }
-
-      const data = await response.json();
-      const translatedText = data.translatedText;
-
-      // Cache the translation
-      setTranslationCache(prev => ({
-        ...prev,
-        [cacheKey]: translatedText
-      }));
-
-      return translatedText;
-    } catch (error) {
-      console.error('Translation error:', error);
-      return text; // Return original text if translation fails
     }
+
+    return text; // Fallback
   };
 
   const translateEpubContent = async (targetLanguage) => {
@@ -229,13 +267,14 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
     }
 
     setIsTranslating(true);
+    setTranslationError(null);
+    setTranslationProgress({ current: 0, total: 0 });
 
     try {
       // Get all text nodes in the current view
       const iframe = rendition.manager.container.querySelector('iframe');
       if (!iframe || !iframe.contentDocument) {
-        console.error('Cannot access EPUB content');
-        return;
+        throw new Error('Cannot access EPUB content - iframe not found');
       }
 
       const doc = iframe.contentDocument;
@@ -268,29 +307,64 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
         textNodes.push(node);
       }
 
+      if (textNodes.length === 0) {
+        throw new Error('No text content found to translate');
+      }
+
+      console.log(`📝 Found ${textNodes.length} text nodes to translate`);
+      setTranslationProgress({ current: 0, total: textNodes.length });
+
       // Translate text nodes in batches
-      const batchSize = 5; // Translate 5 nodes at a time to avoid overwhelming the API
+      const batchSize = 3; // Reduced batch size for better reliability
+      let translatedCount = 0;
+      let failedCount = 0;
+
       for (let i = 0; i < textNodes.length; i += batchSize) {
         const batch = textNodes.slice(i, i + batchSize);
 
-        await Promise.all(batch.map(async (textNode) => {
+        const batchResults = await Promise.allSettled(batch.map(async (textNode) => {
           const originalText = textNode.textContent.trim();
           if (originalText.length > 0) {
             const translatedText = await translateText(originalText, targetLanguage);
-            textNode.textContent = translatedText;
+            if (translatedText !== originalText) {
+              textNode.textContent = translatedText;
+              return 'success';
+            }
           }
+          return 'skipped';
         }));
+
+        // Count results
+        batchResults.forEach(result => {
+          if (result.status === 'fulfilled' && result.value === 'success') {
+            translatedCount++;
+          } else if (result.status === 'rejected') {
+            failedCount++;
+          }
+        });
+
+        // Update progress
+        const processedCount = Math.min(i + batchSize, textNodes.length);
+        setTranslationProgress({ current: processedCount, total: textNodes.length });
 
         // Small delay between batches to be respectful to the API
         if (i + batchSize < textNodes.length) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
+      }
+
+      console.log(`✅ Translation complete: ${translatedCount} translated, ${failedCount} failed`);
+
+      if (translatedCount === 0 && failedCount > 0) {
+        setTranslationError('Translation service unavailable. Please try again later.');
       }
 
     } catch (error) {
       console.error('Error translating EPUB content:', error);
+      setTranslationError(error.message || 'Translation failed. Please try again.');
     } finally {
       setIsTranslating(false);
+      setTranslationProgress({ current: 0, total: 0 });
     }
   };
 
@@ -652,10 +726,64 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
                 color: '#28a745',
                 fontWeight: 'normal'
               }}>
-                (Translating...)
+                {translationProgress.total > 0
+                  ? `(${translationProgress.current}/${translationProgress.total})`
+                  : '(Translating...)'
+                }
               </span>
             )}
           </h4>
+
+          {/* Translation Error Display */}
+          {translationError && (
+            <div style={{
+              marginBottom: '12px',
+              padding: '8px',
+              backgroundColor: '#fee',
+              border: '1px solid #fcc',
+              borderRadius: '4px',
+              fontSize: '12px',
+              color: '#c33'
+            }}>
+              <strong>⚠️ Translation Error:</strong><br />
+              {translationError}
+            </div>
+          )}
+
+          {/* Progress Bar */}
+          {isTranslating && translationProgress.total > 0 && (
+            <div style={{
+              marginBottom: '12px',
+              padding: '8px',
+              backgroundColor: isDarkMode ? '#1a1a1a' : '#f0f8ff',
+              borderRadius: '4px',
+              fontSize: '12px'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginBottom: '4px',
+                color: isDarkMode ? '#cccccc' : '#666'
+              }}>
+                <span>Translating...</span>
+                <span>{Math.round((translationProgress.current / translationProgress.total) * 100)}%</span>
+              </div>
+              <div style={{
+                width: '100%',
+                height: '4px',
+                backgroundColor: isDarkMode ? '#444' : '#ddd',
+                borderRadius: '2px',
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  width: `${(translationProgress.current / translationProgress.total) * 100}%`,
+                  height: '100%',
+                  backgroundColor: '#28a745',
+                  transition: 'width 0.3s ease'
+                }} />
+              </div>
+            </div>
+          )}
 
           <div style={{
             display: 'grid',
@@ -715,10 +843,12 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
             <div style={{ marginBottom: '4px' }}>
               <strong>💡 Translation Tips:</strong>
             </div>
-            <div>• Powered by LibreTranslate</div>
+            <div>• Powered by LibreTranslate (multiple servers)</div>
             <div>• Press 'L' for quick access</div>
-            <div>• Translations are cached</div>
+            <div>• Translations are cached for speed</div>
             <div>• Select 'Original' to restore</div>
+            <div>• Auto-retries if service is busy</div>
+            <div>• Works offline with cached content</div>
           </div>
         </div>
       )}

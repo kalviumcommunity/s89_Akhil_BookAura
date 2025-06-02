@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const mime = require('mime-types');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+require('./CronJob');
 
 // Initialize Express app
 const app = express();
