@@ -15,12 +15,7 @@ const fileStorage = new Map();
 router.get('/', async (req, res) => {
   try {
     const books = await Book.find();
-    // Ensure all books have epubUrl set
-    const booksWithEpubUrl = books.map(book => ({
-      ...book.toObject(),
-      epubUrl: book.epubUrl || book.url
-    }));
-    res.json(booksWithEpubUrl);
+    res.json(books);
   } catch (err) {
     res.status(500).json({ error: 'Failed to get books' });
   }
@@ -37,18 +32,12 @@ router.post('/upload', upload.fields([
       return res.status(400).json({ error: 'Please upload both EPUB and cover image' });
     }
 
-    const { title, author, description, genre, price, categories, isBestSeller, isFeatured, isNewRelease, publishedDate } = req.body;
+    const { title, author, description, genre, price, categories, isBestSeller, isFeatured, isNewRelease } = req.body;
 
     // Check required fields
     if (!title || !author || !description || !genre || !price) {
       return res.status(400).json({ error: 'Title, author, description, genre, and price are required' });
     }
-
-    // Debug logging
-    console.log('Upload request body:', {
-      title, author, description, genre, price,
-      categories, isBestSeller, isFeatured, isNewRelease, publishedDate
-    });
 
     // Generate unique IDs for files
     const epubId = Date.now() + '_epub';
@@ -77,27 +66,17 @@ router.post('/upload', upload.fields([
       author,
       description,
       genre,
-      price: req.body.price ? parseFloat(req.body.price) : 0,
+      price: parseFloat(price),
       categories: categories ? categories.split(',').map(cat => cat.trim()) : [],
       isBestSeller: isBestSeller === 'true',
       isFeatured: isFeatured === 'true',
       isNewRelease: isNewRelease === 'true',
-      publishedDate: publishedDate ? new Date(publishedDate) : new Date(),
       coverimage: coverUrl,
       url: epubUrl, // This is the main URL field that the model expects
       epubUrl: epubUrl // Keep this for backward compatibility
     });
 
     await book.save();
-    console.log('Book saved successfully:', {
-      _id: book._id,
-      title: book.title,
-      author: book.author,
-      price: book.price,
-      coverimage: book.coverimage,
-      url: book.url,
-      epubUrl: book.epubUrl
-    });
     res.json(book);
 
   } catch (err) {
@@ -128,30 +107,12 @@ router.get('/file/:id', (req, res) => {
 // Get single book
 router.get('/:id', async (req, res) => {
   try {
-    console.log('🔍 Looking for book with ID:', req.params.id);
     const book = await Book.findById(req.params.id);
     if (!book) {
-      console.log('❌ Book not found in database:', req.params.id);
       return res.status(404).json({ error: 'Book not found' });
     }
-
-    // Ensure epubUrl is always set
-    const bookData = {
-      ...book.toObject(),
-      epubUrl: book.epubUrl || book.url
-    };
-
-    console.log('✅ Book retrieved from database:', {
-      _id: bookData._id,
-      title: bookData.title,
-      coverimage: bookData.coverimage,
-      url: bookData.url,
-      epubUrl: bookData.epubUrl,
-      price: bookData.price
-    });
-    res.json(bookData);
+    res.json(book);
   } catch (err) {
-    console.error('💥 Error fetching book:', err);
     res.status(500).json({ error: 'Failed to get book' });
   }
 });

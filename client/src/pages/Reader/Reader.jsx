@@ -57,11 +57,25 @@ function Reader() {
                 }
 
                 // Fallback to purchase data if fresh fetch fails
+                console.log("❌ Fresh book data not found, using purchase data");
+                console.log("📖 Using purchase data as fallback:", foundBook);
+
+                // Check if the URL is from the new in-memory system or old Cloudinary
+                const epubUrl = foundBook.epubUrl || foundBook.url;
+                const isNewInMemoryUrl = epubUrl && epubUrl.includes('/api/books/file/');
+                const isOldCloudinaryUrl = epubUrl && epubUrl.includes('cloudinary.com');
+
+                if (isOldCloudinaryUrl && !isNewInMemoryUrl) {
+                  console.log("⚠️ This book uses old Cloudinary storage and may not work");
+                  console.log("💡 Please re-upload this book for the best experience");
+                }
+
                 setBook({
                   _id: foundBook.bookId || foundBook._id,
                   title: foundBook.title,
                   author: foundBook.author,
-                  epubUrl: foundBook.epubUrl || foundBook.url
+                  epubUrl: epubUrl,
+                  isOldUrl: isOldCloudinaryUrl && !isNewInMemoryUrl
                 });
                 return;
               }
