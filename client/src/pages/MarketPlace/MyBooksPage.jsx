@@ -18,6 +18,32 @@ const MyBooksPage = () => {
 
   const [groupedBooks, setGroupedBooks] = useState([]);
 
+  // Utility function to detect URL types
+  const detectUrlType = (url) => {
+    if (!url || !url.startsWith('http')) {
+      console.log('🔍 URL Detection: Invalid URL -', url);
+      return 'invalid';
+    }
+
+    // New in-memory system URLs (both localhost and production)
+    if (url.includes('/api/books/file/')) {
+      console.log('🔍 URL Detection: New in-memory URL -', url);
+      return 'new';
+    }
+
+    // Old Cloudinary URLs
+    if (url.includes('/bookstore/bookFiles/') ||
+        url.includes('/bookFiles/') ||
+        url.includes('/ebooks/')) {
+      console.log('🔍 URL Detection: Old Cloudinary URL -', url);
+      return 'old';
+    }
+
+    // Other URLs
+    console.log('🔍 URL Detection: Other URL type -', url);
+    return 'other';
+  };
+
   // Function to clean up old books
   const cleanupOldBooks = async () => {
     if (!window.confirm(
@@ -252,23 +278,19 @@ const MyBooksPage = () => {
                             <button
                               className="read-button"
                               onClick={() => {
-                                if (book.url && book.url.startsWith('http')) {
-                                  const isFromBookFiles = book.url.includes('/bookstore/bookFiles/') ||
-                                                         book.url.includes('/bookFiles/') ||
-                                                         book.url.includes('/ebooks/');
+                                const urlType = detectUrlType(book.url);
+                                console.log("Book URL:", book.url);
+                                console.log("URL Type:", urlType);
 
-                                  const isNewInMemoryUrl = book.url.includes('/api/books/file/');
-
-                                  console.log("Book URL:", book.url);
-                                  console.log("Is from bookFiles folder:", isFromBookFiles);
-                                  console.log("Is new in-memory URL:", isNewInMemoryUrl);
-
-                                  if (isNewInMemoryUrl) {
+                                switch (urlType) {
+                                  case 'new':
                                     // New system - navigate to reader with book ID
                                     const bookId = book.bookId || book._id;
                                     console.log("📖 Navigating to reader with book ID:", bookId);
                                     navigate(`/reader/${bookId}`);
-                                  } else if (isFromBookFiles) {
+                                    break;
+
+                                  case 'old':
                                     // Old Cloudinary system - show warning and try direct URL
                                     console.log("⚠️ Old Cloudinary EPUB detected:", book.url);
                                     const shouldTryAnyway = window.confirm(
@@ -284,23 +306,31 @@ const MyBooksPage = () => {
                                       // Try to open the old URL directly
                                       window.open(book.url, '_blank');
                                     }
-                                  } else {
+                                    break;
+
+                                  case 'other':
                                     // For non-EPUB files, open in a new tab
                                     console.log("Opening non-EPUB in new tab:", book.url);
                                     window.open(book.url, '_blank');
-                                  }
-                                } else {
-                                  // Skip books without valid URLs
-                                  alert('This book does not have a valid URL');
+                                    break;
+
+                                  default:
+                                    // Invalid or missing URL
+                                    alert('This book does not have a valid URL');
+                                    break;
                                 }
                               }}
                             >
                               <FileText size={16} />
-                              {book.url && book.url.includes('/api/books/file/')
-                                ? 'Read Book'
-                                : book.url && (book.url.includes('/bookstore/bookFiles/') || book.url.includes('/bookFiles/') || book.url.includes('/ebooks/'))
-                                ? '⚠️ Read (Old)'
-                                : 'Open Book'}
+                              {(() => {
+                                const urlType = detectUrlType(book.url);
+                                switch (urlType) {
+                                  case 'new': return 'Read Book';
+                                  case 'old': return '⚠️ Read (Old)';
+                                  case 'other': return 'Open Book';
+                                  default: return 'Invalid URL';
+                                }
+                              })()}
                             </button>
                           </div>
                         </div>

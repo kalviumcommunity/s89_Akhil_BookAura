@@ -62,7 +62,7 @@ function Reader() {
 
                 // Check if the URL is from the new in-memory system or old Cloudinary
                 const epubUrl = foundBook.epubUrl || foundBook.url;
-                const isNewInMemoryUrl = epubUrl && epubUrl.includes('/api/books/file/');
+                const isNewInMemoryUrl = epubUrl && (epubUrl.includes('/api/books/file/') || epubUrl.includes('s89-akhil-bookaura-3.onrender.com/api/books/file/'));
                 const isOldCloudinaryUrl = epubUrl && epubUrl.includes('cloudinary.com');
 
                 if (isOldCloudinaryUrl && !isNewInMemoryUrl) {

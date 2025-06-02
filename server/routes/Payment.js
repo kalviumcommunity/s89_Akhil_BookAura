@@ -414,7 +414,7 @@ router.post("/admin/cleanup-old-books", verifyToken, async (req, res) => {
           book.url.includes('/bookstore/bookFiles/') ||
           book.url.includes('/bookFiles/') ||
           book.url.includes('/ebooks/')
-        ) && !book.url.includes('/api/books/file/');
+        ) && !book.url.includes('/api/books/file/') && !book.url.includes('s89-akhil-bookaura-3.onrender.com/api/books/file/');
 
         if (hasOldCloudinaryUrl) {
           console.log(`🗑️ Removing old book: "${book.title}" by ${book.author} (URL: ${book.url})`);
