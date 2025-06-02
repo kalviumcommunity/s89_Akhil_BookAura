@@ -300,8 +300,13 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
       console.log(`🌍 Translating to ${targetLanguage}: ${cleanText.substring(0, 50)}...`);
 
       // Use MyMemory Translation API (free, browser-compatible)
+      // MyMemory doesn't support 'auto', so we'll assume English as source for most content
       const encodedText = encodeURIComponent(cleanText);
-      const apiUrl = `https://api.mymemory.translated.net/get?q=${encodedText}&langpair=auto|${targetLanguage}`;
+      const sourceLanguage = 'en'; // Assume English source for most EPUB content
+
+      // Log the API call for debugging
+      console.log(`📡 API call: langpair=${sourceLanguage}|${targetLanguage}`);
+      const apiUrl = `https://api.mymemory.translated.net/get?q=${encodedText}&langpair=${sourceLanguage}|${targetLanguage}`;
 
       const response = await fetch(apiUrl, {
         method: 'GET',
@@ -315,12 +320,21 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
       }
 
       const data = await response.json();
+      console.log(`📥 API response:`, data);
 
       if (!data.responseData || !data.responseData.translatedText) {
-        throw new Error('No translation result received');
+        // Log the full response for debugging
+        console.error('❌ Invalid API response structure:', data);
+        throw new Error(`No translation result received. API response: ${JSON.stringify(data)}`);
       }
 
       const translatedText = data.responseData.translatedText;
+
+      // Check if translation actually happened (not just echoed back)
+      if (translatedText === cleanText) {
+        console.warn(`⚠️ Translation returned same text - may not support ${targetLanguage}`);
+      }
+
       console.log(`✅ Translation successful: ${translatedText.substring(0, 50)}...`);
 
       // Cache the translation
@@ -333,15 +347,18 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
 
     } catch (error) {
       console.error(`❌ Translation API failed:`, error.message);
+      console.log(`🎭 Using mock translation as fallback for: ${cleanText.substring(0, 30)}...`);
 
-      // Return mock translation as fallback
+      // Always use mock translation as fallback - provides visual feedback
       const mockTranslated = mockTranslateText(cleanText, targetLanguage);
-      if (mockTranslated !== cleanText) {
-        console.log(`🎭 Using mock translation as fallback`);
-        return mockTranslated;
-      }
 
-      return text; // Final fallback - return original text
+      // Cache the mock translation too
+      setTranslationCache(prev => ({
+        ...prev,
+        [cacheKey]: mockTranslated
+      }));
+
+      return mockTranslated;
     }
   };
 
@@ -1070,8 +1087,9 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
             allowScriptedContent: true
           }}
           epubOptions={{
-            flow: 'scrolled',
-            manager: 'default'
+            flow: 'paginated',
+            manager: 'default',
+            spread: 'none'
           }}
           getRendition={handleRenditionReady}
           onError={handleError}
@@ -1090,16 +1108,28 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
           100% { opacity: 1; transform: scale(1); }
         }
 
-        /* Ensure EPUB viewer takes full space */
+        /* Ensure EPUB viewer takes full space and allows navigation */
         .react-reader {
           height: 100% !important;
           width: 100% !important;
+          position: relative !important;
         }
 
         .react-reader iframe {
           height: 100% !important;
           width: 100% !important;
           border: none !important;
+          overflow: auto !important;
+        }
+
+        /* Enable EPUB navigation controls */
+        .react-reader .epub-container {
+          height: 100% !important;
+          overflow: visible !important;
+        }
+
+        .react-reader .epub-view {
+          height: 100% !important;
         }
 
         /* Dark mode scrollbar */
