@@ -272,7 +272,6 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
     }
   };
 
-  // Google Translate API function
   const translateText = async (text, targetLanguage) => {
     if (!text || text.trim().length === 0) return text;
 
