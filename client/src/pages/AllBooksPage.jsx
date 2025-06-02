@@ -53,6 +53,18 @@ const AllBooksPage = () => {
     setSelectedBook(null);
   };
 
+  // Listen for ESC key event from EPUB viewer
+  useEffect(() => {
+    const handleCloseEvent = () => {
+      setSelectedBook(null);
+    };
+
+    window.addEventListener('closeEpubReader', handleCloseEvent);
+    return () => {
+      window.removeEventListener('closeEpubReader', handleCloseEvent);
+    };
+  }, []);
+
   // If a book is selected, show the reader
   if (selectedBook) {
     return (

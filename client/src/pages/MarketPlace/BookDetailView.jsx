@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './BookDetailView.css';
 import Navbar from '../../components/Navbar';
 import { ArrowLeft, ShoppingCart, Check, FileText } from 'lucide-react';
@@ -29,6 +29,18 @@ const BookDetailView = ({ book, onClose }) => {
   const handleCloseReader = () => {
     setShowReader(false);
   };
+
+  // Listen for ESC key event from EPUB viewer
+  useEffect(() => {
+    const handleCloseEvent = () => {
+      setShowReader(false);
+    };
+
+    window.addEventListener('closeEpubReader', handleCloseEvent);
+    return () => {
+      window.removeEventListener('closeEpubReader', handleCloseEvent);
+    };
+  }, []);
 
   const handleBuy = async() => {
     try {
