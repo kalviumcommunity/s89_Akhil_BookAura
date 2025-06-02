@@ -139,25 +139,24 @@ app.use(passport.session());
 
 // Routers
 const userRouter = require('./routes/userRouter');
-const bookRouter = require('./routes/BookRouter');
 const paymentRoutes = require("./routes/Payment");
 const pdfProxyRoutes = require("./routes/PdfProxy");
 const cartRouter = require('./routes/CartRouter');
 const eventRouter = require('./routes/EventRouter');
 const chatHistoryRouter = require('./routes/ChatHistoryRouter');
 const flashcardRouter = require('./routes/FlashcardRouter');
-const simpleBookRouter = require('./routes/SimpleBookRouter');
+const simpleBookRouter = require('./routes/SimpleBookRouter'); // Only Cloudinary-based book router
 
 // Log loaded routers for debugging
 console.log('Loaded routers:');
 console.log('- userRouter:', typeof userRouter);
-console.log('- bookRouter:', typeof bookRouter);
 console.log('- paymentRoutes:', typeof paymentRoutes);
 console.log('- pdfProxyRoutes:', typeof pdfProxyRoutes);
 console.log('- cartRouter:', typeof cartRouter);
 console.log('- eventRouter:', typeof eventRouter);
 console.log('- chatHistoryRouter:', typeof chatHistoryRouter);
 console.log('- flashcardRouter:', typeof flashcardRouter);
+console.log('- simpleBookRouter:', typeof simpleBookRouter);
 
 app.use("/api/payment", paymentRoutes);
 app.use("/api/pdf", pdfProxyRoutes);
@@ -167,9 +166,8 @@ app.use("/api/chat-history", chatHistoryRouter);
 app.use("/api/flashcards", flashcardRouter);
 
 app.use('/router', userRouter);
-app.use('/router', bookRouter);
-app.use('/api/books', bookRouter); // Add API route like your working model
-app.use('/api/simple-books', simpleBookRouter); // Simple working EPUB system
+app.use('/api/books', simpleBookRouter); // Main book API - now using Cloudinary
+app.use('/api/simple-books', simpleBookRouter); // Alias for compatibility
 
 // Health check endpoint
 app.get('/health', (_, res) => {

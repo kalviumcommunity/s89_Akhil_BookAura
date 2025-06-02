@@ -172,7 +172,7 @@ const AddProducts = () => {
         `Title: ${res.data.title}\n` +
         `Author: ${res.data.author}\n` +
         `Price: ₹${res.data.price}\n\n` +
-        `Your book is now available in the marketplace with the new in-memory storage system!`
+        `Your book is now available in the marketplace with direct Cloudinary storage for optimal performance!`
       );
 
       // Reset form after successful upload

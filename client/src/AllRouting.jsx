@@ -30,6 +30,7 @@ import TestEpubViewer from './pages/TestEpubViewer';
 import GoogleAuthTest from './pages/GoogleAuthTest';
 import Flashcards from './pages/studyhub/Flashcards';
 import WorkingEpubTest from './pages/WorkingEpubTest';
+import AllBooksPage from './pages/AllBooksPage';
 
 const pageTransition = {
   initial: { opacity: 0, x: -100 },
@@ -179,6 +180,10 @@ const AllRouting = () => {
         <Route
           path="/working-epub"
           element={<WorkingEpubTest />}
+        />
+        <Route
+          path="/all-books"
+          element={<AllBooksPage />}
         />
         <Route
           path="/read-epub/:encodedUrl"

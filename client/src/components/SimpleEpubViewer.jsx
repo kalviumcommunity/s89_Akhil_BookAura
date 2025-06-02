@@ -21,19 +21,26 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   // Check if URL is broken and use fallback immediately
   const isOldBrokenUrl = epubUrl && (
     epubUrl.includes('bookstore/bookFiles') ||
-    epubUrl.includes('s89-akhil-bookaura-3.onrender.com/api/books/file/')
+    epubUrl.includes('s89-akhil-bookaura-3.onrender.com/api/books/file/') ||
+    epubUrl.includes('/api/books/file/') // Any in-memory storage URL
   );
+
+  // Check if it's a direct Cloudinary URL (new system)
+  const isDirectCloudinaryUrl = epubUrl && epubUrl.includes('res.cloudinary.com') && epubUrl.includes('/ebooks/');
 
   const urlToUse = isOldBrokenUrl ? FALLBACK_EPUB_URL : (epubUrl || FALLBACK_EPUB_URL);
 
   console.log('📚 EPUB Viewer URL decision:');
   console.log('Original URL:', epubUrl);
   console.log('Is old broken URL:', isOldBrokenUrl);
+  console.log('Is direct Cloudinary URL:', isDirectCloudinaryUrl);
   console.log('URL to use:', urlToUse);
 
   // Show notice if using fallback
   if (isOldBrokenUrl) {
     console.log('⚠️ Using fallback EPUB because original URL is from old storage');
+  } else if (isDirectCloudinaryUrl) {
+    console.log('✅ Using direct Cloudinary URL - should work perfectly');
   }
 
   if (error) {
@@ -95,6 +102,19 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
             border: '1px solid #ffeaa7'
           }}>
             ⚠️ Original book file unavailable - showing working EPUB content
+          </div>
+        )}
+        {isDirectCloudinaryUrl && (
+          <div style={{
+            marginTop: '8px',
+            padding: '6px 12px',
+            backgroundColor: '#d4edda',
+            color: '#155724',
+            borderRadius: '4px',
+            fontSize: '12px',
+            border: '1px solid #c3e6cb'
+          }}>
+            ✅ Using direct Cloudinary storage - optimal performance
           </div>
         )}
       </div>

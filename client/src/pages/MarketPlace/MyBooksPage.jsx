@@ -8,6 +8,7 @@ import { SafeImage } from '../../utils/imageUtils';
 import './MyBooksPage.css';
 import LoadingAnimation from '../../components/LoadingAnimation';
 import api from '../../services/api';
+import SimpleEpubViewer from '../../components/SimpleEpubViewer';
 
 
 const MyBooksPage = () => {
@@ -15,6 +16,7 @@ const MyBooksPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [groupedBooks, setGroupedBooks] = useState([]);
+  const [selectedBook, setSelectedBook] = useState(null);
 
   // Fallback EPUB URL for when books don't work
   const FALLBACK_EPUB_URL = 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748511974/ebooks/inzg33a5nsxjff2i2kyn';
@@ -116,6 +118,64 @@ const MyBooksPage = () => {
     });
   };
 
+  const handleReadBook = (book) => {
+    console.log('📖 Opening book:', book.title);
+    console.log('📖 EPUB URL:', book.epubUrl || book.url);
+
+    // Check URL type for logging
+    const epubUrl = book.epubUrl || book.url;
+    if (epubUrl && epubUrl.includes('res.cloudinary.com') && epubUrl.includes('/ebooks/')) {
+      console.log('✅ Direct Cloudinary URL detected - should work perfectly');
+    } else if (epubUrl && epubUrl.includes('/api/books/file/')) {
+      console.log('⚠️ In-memory storage URL detected - may not work after server restart');
+    } else {
+      console.log('❓ Unknown URL type:', epubUrl);
+    }
+
+    setSelectedBook(book);
+  };
+
+  const handleCloseReader = () => {
+    setSelectedBook(null);
+  };
+
+  // If a book is selected, show the reader
+  if (selectedBook) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{
+          padding: '10px 20px',
+          backgroundColor: '#f8f9fa',
+          borderBottom: '1px solid #dee2e6',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <h2 style={{ margin: '0', color: '#495057' }}>📖 {selectedBook.title}</h2>
+          <button
+            onClick={handleCloseReader}
+            style={{
+              backgroundColor: '#6c757d',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            ✕ Close Reader
+          </button>
+        </div>
+        <div style={{ flex: 1 }}>
+          <SimpleEpubViewer
+            epubUrl={selectedBook.epubUrl || selectedBook.url}
+            title={selectedBook.title}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <Navbar />
@@ -196,16 +256,10 @@ const MyBooksPage = () => {
                           <div className="book-actions">
                             <button
                               className="read-button"
-                              onClick={() => {
-                                // Always navigate to reader - let the reader handle URL issues
-                                const bookId = book.bookId || book._id;
-                                console.log("📖 Navigating to reader with book ID:", bookId);
-                                console.log("📖 Book URL:", book.url);
-                                navigate(`/reader/${bookId}`);
-                              }}
+                              onClick={() => handleReadBook(book)}
                             >
                               <FileText size={16} />
-                              Read Book
+                              📖 Read Book
                             </button>
                           </div>
                         </div>

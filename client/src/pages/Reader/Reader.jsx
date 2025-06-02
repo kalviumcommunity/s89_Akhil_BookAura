@@ -40,12 +40,17 @@ function Reader() {
               console.log("📖 Book found in purchases:", foundBook);
               console.log("📖 Purchase EPUB URL:", foundBook.epubUrl || foundBook.url);
 
-              // Check if this is an old broken URL
+              // Check URL type and handle accordingly
               const epubUrl = foundBook.epubUrl || foundBook.url;
-              const isOldBrokenUrl = epubUrl && epubUrl.includes('bookstore/bookFiles');
+              const isOldBrokenUrl = epubUrl && (
+                epubUrl.includes('bookstore/bookFiles') ||
+                epubUrl.includes('/api/books/file/')
+              );
+              const isDirectCloudinaryUrl = epubUrl && epubUrl.includes('res.cloudinary.com') && epubUrl.includes('/ebooks/');
 
               if (isOldBrokenUrl) {
-                console.log("⚠️ Detected old broken Cloudinary URL, using fallback");
+                console.log("⚠️ Detected old/broken URL, using fallback");
+                console.log("Original URL:", epubUrl);
                 // Use fallback URL for old broken books
                 setBook({
                   _id: foundBook.bookId || foundBook._id,
@@ -62,7 +67,27 @@ function Reader() {
                   epubUrl: 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748511974/ebooks/inzg33a5nsxjff2i2kyn', // Working fallback
                   isRestored: true // Flag to show notice
                 });
+              } else if (isDirectCloudinaryUrl) {
+                console.log("✅ Direct Cloudinary URL detected - should work perfectly");
+                console.log("Cloudinary URL:", epubUrl);
+                // Use direct Cloudinary URL
+                setBook({
+                  _id: foundBook.bookId || foundBook._id,
+                  title: foundBook.title,
+                  author: foundBook.author,
+                  description: foundBook.description,
+                  genre: foundBook.genre,
+                  categories: foundBook.categories,
+                  isBestSeller: foundBook.isBestSeller,
+                  isFeatured: foundBook.isFeatured,
+                  isNewRelease: foundBook.isNewRelease,
+                  publishedDate: foundBook.publishedDate,
+                  coverimage: foundBook.coverimage,
+                  epubUrl: foundBook.epubUrl || foundBook.url,
+                  isCloudinary: true // Flag to show optimal notice
+                });
               } else {
+                console.log("❓ Unknown URL type, using as-is:", epubUrl);
                 // Use original URL if it's not broken
                 setBook({
                   _id: foundBook.bookId || foundBook._id,
@@ -147,6 +172,20 @@ function Reader() {
                       <p className="text-sm font-medium text-yellow-800">Book Restored</p>
                       <p className="text-xs text-yellow-700">
                         This book's original file was unavailable, so we've provided a working EPUB for you to read.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {book.isCloudinary && (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center">
+                    <span className="text-green-600 mr-2">✅</span>
+                    <div>
+                      <p className="text-sm font-medium text-green-800">Optimized Storage</p>
+                      <p className="text-xs text-green-700">
+                        This book uses direct Cloudinary storage for optimal performance and reliability.
                       </p>
                     </div>
                   </div>

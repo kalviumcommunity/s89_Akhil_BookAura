@@ -1,21 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './BookDetailView.css';
 import Navbar from '../../components/Navbar';
-import { ArrowLeft, ShoppingCart, Check } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Check, FileText } from 'lucide-react';
 import axios from 'axios';
 import { useCart } from './cart';
 import { SafeImage } from '../../utils/imageUtils';
+import SimpleEpubViewer from '../../components/SimpleEpubViewer';
 
 const BookDetailView = ({ book, onClose }) => {
   if (!book) return null;
 
   const { addToCart, cartItems } = useCart();
+  const [showReader, setShowReader] = useState(false);
 
   // Check if book is already in cart
   const isInCart = cartItems.some(item => item._id === book._id);
 
   const handleAddToCart = () => {
     addToCart(book);
+  };
+
+  const handleReadBook = () => {
+    console.log('📖 Opening book for reading:', book.title);
+    console.log('📖 EPUB URL:', book.epubUrl || book.url);
+    setShowReader(true);
+  };
+
+  const handleCloseReader = () => {
+    setShowReader(false);
   };
 
   const handleBuy = async() => {
@@ -40,6 +52,43 @@ const BookDetailView = ({ book, onClose }) => {
         }
     }
   };
+
+  // If reader is open, show the EPUB viewer
+  if (showReader) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{
+          padding: '10px 20px',
+          backgroundColor: '#f8f9fa',
+          borderBottom: '1px solid #dee2e6',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <h2 style={{ margin: '0', color: '#495057' }}>📖 {book.title}</h2>
+          <button
+            onClick={handleCloseReader}
+            style={{
+              backgroundColor: '#6c757d',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            ✕ Close Reader
+          </button>
+        </div>
+        <div style={{ flex: 1 }}>
+          <SimpleEpubViewer
+            epubUrl={book.epubUrl || book.url}
+            title={book.title}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="book-detail">
@@ -78,6 +127,26 @@ const BookDetailView = ({ book, onClose }) => {
               ) : (
                 'Add to Cart'
               )}
+            </button>
+            <button
+              className="book-detail-button book-detail-read"
+              onClick={handleReadBook}
+              style={{
+                backgroundColor: '#28a745',
+                color: 'white',
+                border: 'none',
+                padding: '12px 24px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginTop: '10px'
+              }}
+            >
+              <FileText size={16} />
+              📖 Read Book (Preview)
             </button>
           </div>
 

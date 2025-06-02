@@ -1,7 +1,7 @@
 import React from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import EpubViewer from '../components/EpubViewer';
+import SimpleEpubViewer from '../components/SimpleEpubViewer';
 
 const TestEpubViewer = () => {
   // Sample EPUB URL - replace with an actual EPUB URL from your application
@@ -32,7 +32,7 @@ const TestEpubViewer = () => {
           }}>EPUB Viewer Test</h1>
 
           <div style={{ height: '700px' }}>
-            <EpubViewer epubUrl={epubUrl} />
+            <SimpleEpubViewer epubUrl={epubUrl} title="Moby Dick Test" />
           </div>
         </div>
       </div>

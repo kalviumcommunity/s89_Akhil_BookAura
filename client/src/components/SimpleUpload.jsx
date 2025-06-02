@@ -74,7 +74,7 @@ const SimpleUpload = ({ onUploadSuccess }) => {
 
       console.log('📤 Uploading book:', formData.title);
 
-      const response = await axios.post('https://s89-akhil-bookaura-3.onrender.com/api/simple-books/upload', uploadData, {
+      const response = await axios.post('https://s89-akhil-bookaura-3.onrender.com/api/books/upload', uploadData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

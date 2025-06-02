@@ -16,7 +16,7 @@ const SimpleBookList = () => {
     try {
       setLoading(true);
       setError('');
-      const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/simple-books');
+      const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/books');
       setBooks(response.data);
       console.log('📚 Fetched books:', response.data);
     } catch (error) {
@@ -30,6 +30,17 @@ const SimpleBookList = () => {
   const handleReadBook = (book) => {
     console.log('📖 Opening book:', book.title);
     console.log('📖 EPUB URL:', book.epubUrl || book.url);
+
+    // Check URL type for logging
+    const epubUrl = book.epubUrl || book.url;
+    if (epubUrl && epubUrl.includes('res.cloudinary.com') && epubUrl.includes('/ebooks/')) {
+      console.log('✅ Direct Cloudinary URL detected - should work perfectly');
+    } else if (epubUrl && epubUrl.includes('/api/books/file/')) {
+      console.log('⚠️ In-memory storage URL detected - may not work after server restart');
+    } else {
+      console.log('❓ Unknown URL type:', epubUrl);
+    }
+
     setSelectedBook(book);
   };
 

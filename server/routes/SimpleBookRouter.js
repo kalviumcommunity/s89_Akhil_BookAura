@@ -5,7 +5,7 @@ const Book = require('../models/Book');
 const router = express.Router();
 
 // Configure multer for memory storage
-const upload = multer({ 
+const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 50 * 1024 * 1024 // 50MB limit
@@ -19,22 +19,32 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Helper function to upload to Cloudinary
+// Helper function to upload to Cloudinary with optimized settings
 const uploadToCloudinary = (buffer, folder, resourceType = 'auto') => {
   return new Promise((resolve, reject) => {
+    const uploadOptions = {
+      resource_type: resourceType,
+      folder: folder,
+      use_filename: true,
+      unique_filename: true,
+      access_mode: 'public', // Ensure public access
+    };
+
+    // Special settings for EPUB files
+    if (resourceType === 'raw') {
+      uploadOptions.format = 'epub';
+      uploadOptions.flags = 'attachment'; // Helps with direct download if needed
+    }
+
     const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        resource_type: resourceType,
-        folder: folder,
-        use_filename: true,
-        unique_filename: true
-      },
+      uploadOptions,
       (error, result) => {
         if (error) {
           console.error('Cloudinary upload error:', error);
           reject(error);
         } else {
           console.log('Cloudinary upload success:', result.secure_url);
+          console.log('Public ID:', result.public_id);
           resolve(result);
         }
       }
@@ -55,8 +65,8 @@ router.post('/upload', upload.fields([
 
     // Check if files are present
     if (!req.files || !req.files.epub || !req.files.coverimage) {
-      return res.status(400).json({ 
-        error: 'Both EPUB file and cover image are required' 
+      return res.status(400).json({
+        error: 'Both EPUB file and cover image are required'
       });
     }
 
@@ -75,7 +85,7 @@ router.post('/upload', upload.fields([
     console.log('📚 Uploading EPUB:', epubFile.originalname);
     console.log('🖼️ Uploading cover:', coverFile.originalname);
 
-    // Upload EPUB to Cloudinary
+    // Upload EPUB to Cloudinary with specific settings for direct access
     const epubResult = await uploadToCloudinary(
       epubFile.buffer,
       'ebooks',
@@ -89,16 +99,21 @@ router.post('/upload', upload.fields([
       'image'
     );
 
-    // Create book in database
+    console.log('📚 EPUB uploaded to Cloudinary:', epubResult.secure_url);
+    console.log('🖼️ Cover uploaded to Cloudinary:', coverResult.secure_url);
+
+    // Create book in database with direct Cloudinary URLs
     const newBook = new Book({
       title,
       author,
       description,
       genre,
       price: parseFloat(price),
-      epubUrl: epubResult.secure_url,
+      epubUrl: epubResult.secure_url, // Direct Cloudinary URL
       url: epubResult.secure_url, // For backward compatibility
-      coverimage: coverResult.secure_url,
+      coverimage: coverResult.secure_url, // Direct Cloudinary URL
+      cloudinaryPublicId: epubResult.public_id, // Store for future reference
+      storageType: 'cloudinary', // Mark as Cloudinary storage
       createdAt: new Date()
     });
 
@@ -140,7 +155,7 @@ router.get('/:id', async (req, res) => {
   try {
     console.log('📖 Fetching book with ID:', req.params.id);
     const book = await Book.findById(req.params.id);
-    
+
     if (!book) {
       console.log('❌ Book not found');
       return res.status(404).json({
@@ -163,7 +178,7 @@ router.delete('/:id', async (req, res) => {
   try {
     console.log('🗑️ Deleting book with ID:', req.params.id);
     const book = await Book.findByIdAndDelete(req.params.id);
-    
+
     if (!book) {
       return res.status(404).json({
         error: 'Book not found'

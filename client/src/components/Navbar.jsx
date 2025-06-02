@@ -146,11 +146,18 @@ const Navbar = () => {
           StudyHub
         </li>
         <li
-          className={location.pathname === '/working-epub' ? 'active' : 'notactive'}
-          onClick={() => handleNavigation('/working-epub')}
+          className={location.pathname === '/all-books' ? 'active' : 'notactive'}
+          onClick={() => handleNavigation('/all-books')}
           style={{ color: '#28a745', fontWeight: 'bold' }}
         >
-          📚 EPUB Test
+          📚 All Books
+        </li>
+        <li
+          className={location.pathname === '/working-epub' ? 'active' : 'notactive'}
+          onClick={() => handleNavigation('/working-epub')}
+          style={{ color: '#007bff', fontWeight: 'bold' }}
+        >
+          📤 Upload
         </li>
 
         {/* Close button for mobile menu */}

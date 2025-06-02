@@ -51,6 +51,15 @@ const bookSchema = mongoose.Schema({
         type:String,
         // Not required for backward compatibility
     },
+    cloudinaryPublicId: {
+        type: String,
+        // Store Cloudinary public ID for future reference/deletion
+    },
+    storageType: {
+        type: String,
+        enum: ['cloudinary', 'in-memory', 'legacy'],
+        default: 'cloudinary'
+    },
     publishedDate: {
         type: Date,
         default: Date.now
