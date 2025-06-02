@@ -17,20 +17,20 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   const [originalContent, setOriginalContent] = useState(null);
   const [translationError, setTranslationError] = useState(null);
   const [translationProgress, setTranslationProgress] = useState({ current: 0, total: 0 });
-  const [showChapterMenu, setShowChapterMenu] = useState(false);
-  const [chapters, setChapters] = useState([]);
-  const [currentChapter, setCurrentChapter] = useState(null);
 
   // Fallback EPUB URL for when books don't work - using the working URL from AllBooks
   const FALLBACK_EPUB_URL = 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748874237/ebooks/file_ifmsnc.epub';
 
+  // LibreTranslate configuration with working endpoints
+  const LIBRETRANSLATE_ENDPOINTS = [
+    'https://libretranslate.de/translate',      // German instance (most reliable)
+    'https://libretranslate.com/translate',     // Official instance
+    // Note: Some endpoints may require API keys or have CORS restrictions
+  ];
 
-
-  // Supported languages for translation with Google Translate API
+  // Supported languages for translation
   const SUPPORTED_LANGUAGES = [
     { code: 'original', name: 'Original', flag: '📖' },
-
-    // Major World Languages
     { code: 'en', name: 'English', flag: '🇺🇸' },
     { code: 'es', name: 'Spanish', flag: '🇪🇸' },
     { code: 'fr', name: 'French', flag: '🇫🇷' },
@@ -40,46 +40,16 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
     { code: 'ru', name: 'Russian', flag: '🇷🇺' },
     { code: 'ja', name: 'Japanese', flag: '🇯🇵' },
     { code: 'ko', name: 'Korean', flag: '🇰🇷' },
-    { code: 'zh', name: 'Chinese (Simplified)', flag: '🇨🇳' },
-    { code: 'zh-tw', name: 'Chinese (Traditional)', flag: '🇹🇼' },
+    { code: 'zh', name: 'Chinese', flag: '🇨🇳' },
     { code: 'ar', name: 'Arabic', flag: '🇸🇦' },
-
-    // Indian Languages
     { code: 'hi', name: 'Hindi', flag: '🇮🇳' },
-    { code: 'te', name: 'Telugu', flag: '🇮🇳' },
-    { code: 'ta', name: 'Tamil', flag: '🇮🇳' },
-    { code: 'ml', name: 'Malayalam', flag: '🇮🇳' },
-    { code: 'kn', name: 'Kannada', flag: '🇮🇳' },
-    { code: 'bn', name: 'Bengali', flag: '🇮🇳' },
-    { code: 'gu', name: 'Gujarati', flag: '🇮🇳' },
-    { code: 'mr', name: 'Marathi', flag: '🇮🇳' },
-    { code: 'pa', name: 'Punjabi', flag: '🇮🇳' },
-    { code: 'or', name: 'Odia', flag: '🇮🇳' },
-    { code: 'as', name: 'Assamese', flag: '🇮🇳' },
-    { code: 'ur', name: 'Urdu', flag: '🇵🇰' },
-
-    // European Languages
     { code: 'nl', name: 'Dutch', flag: '🇳🇱' },
     { code: 'sv', name: 'Swedish', flag: '🇸🇪' },
     { code: 'da', name: 'Danish', flag: '🇩🇰' },
     { code: 'no', name: 'Norwegian', flag: '🇳🇴' },
     { code: 'fi', name: 'Finnish', flag: '🇫🇮' },
     { code: 'pl', name: 'Polish', flag: '🇵🇱' },
-    { code: 'tr', name: 'Turkish', flag: '🇹🇷' },
-    { code: 'el', name: 'Greek', flag: '🇬🇷' },
-    { code: 'cs', name: 'Czech', flag: '🇨🇿' },
-    { code: 'hu', name: 'Hungarian', flag: '🇭🇺' },
-    { code: 'ro', name: 'Romanian', flag: '🇷🇴' },
-
-    // Other Major Languages
-    { code: 'th', name: 'Thai', flag: '🇹🇭' },
-    { code: 'vi', name: 'Vietnamese', flag: '🇻🇳' },
-    { code: 'id', name: 'Indonesian', flag: '🇮🇩' },
-    { code: 'ms', name: 'Malay', flag: '🇲🇾' },
-    { code: 'tl', name: 'Filipino', flag: '🇵🇭' },
-    { code: 'sw', name: 'Swahili', flag: '🇰🇪' },
-    { code: 'he', name: 'Hebrew', flag: '🇮🇱' },
-    { code: 'fa', name: 'Persian', flag: '🇮🇷' }
+    { code: 'tr', name: 'Turkish', flag: '🇹🇷' }
   ];
 
   // Keyboard event handler
@@ -107,9 +77,6 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
       } else if (event.key === 'l' || event.key === 'L') {
         event.preventDefault();
         setShowLanguageMenu(!showLanguageMenu);
-      } else if (event.key === 'c' || event.key === 'C') {
-        event.preventDefault();
-        setShowChapterMenu(!showChapterMenu);
       }
     };
 
@@ -119,94 +86,13 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
     };
   }, [isFullscreen, showSettings]);
 
-  // Apply theme when dark mode changes
-  useEffect(() => {
-    if (rendition) {
-      applyTheme(rendition);
-    }
-  }, [isDarkMode, fontSize]);
-
   const handleLocationChanged = (epubcifi) => {
     setLocation(epubcifi);
   };
 
-  // Reader styles for the outer container
-  const readerStyles = {
-    backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff',
-    color: isDarkMode ? '#e0e0e0' : '#333333',
-    height: '100%',
-    width: '100%'
-  };
-
   const handleRenditionReady = (renditionInstance) => {
-    console.log('📖 Rendition ready, setting up EPUB viewer...');
     setRendition(renditionInstance);
-
-    // Apply theme immediately
     applyTheme(renditionInstance);
-
-    // Add event listeners for better debugging
-    renditionInstance.on('rendered', () => {
-      console.log('✅ EPUB content rendered successfully');
-    });
-
-    renditionInstance.on('displayed', (section) => {
-      console.log('📄 EPUB section displayed:', section);
-    });
-
-    // Extract chapters from the EPUB
-    if (renditionInstance.book && renditionInstance.book.navigation) {
-      const toc = renditionInstance.book.navigation.toc;
-      const chapterList = toc.map((item, index) => ({
-        id: item.id || `chapter-${index}`,
-        label: item.label || `Chapter ${index + 1}`,
-        href: item.href,
-        subitems: item.subitems || []
-      }));
-
-      setChapters(chapterList);
-      console.log('📚 Chapters extracted:', chapterList);
-
-      // Navigate to first chapter/page by default
-      if (chapterList.length > 0) {
-        const firstChapter = chapterList[0];
-        setCurrentChapter(firstChapter);
-        console.log('📖 Navigating to first chapter:', firstChapter.label);
-
-        // Navigate to the first chapter with longer delay
-        setTimeout(() => {
-          renditionInstance.display(firstChapter.href).then(() => {
-            console.log('✅ Successfully navigated to first chapter');
-            // Apply theme again after navigation
-            setTimeout(() => applyTheme(renditionInstance), 100);
-          }).catch((error) => {
-            console.error('❌ Error navigating to first chapter:', error);
-          });
-        }, 300);
-      } else {
-        console.log('📖 No chapters found, displaying from beginning');
-        // If no chapters, just display the beginning
-        setTimeout(() => {
-          renditionInstance.display().then(() => {
-            console.log('✅ Successfully displayed EPUB from beginning');
-            // Apply theme again after navigation
-            setTimeout(() => applyTheme(renditionInstance), 100);
-          }).catch((error) => {
-            console.error('❌ Error displaying EPUB:', error);
-          });
-        }, 300);
-      }
-    } else {
-      console.log('⚠️ No navigation found, trying to display anyway');
-      setTimeout(() => {
-        renditionInstance.display().then(() => {
-          console.log('✅ Successfully displayed EPUB without navigation');
-          setTimeout(() => applyTheme(renditionInstance), 100);
-        }).catch((error) => {
-          console.error('❌ Error displaying EPUB without navigation:', error);
-        });
-      }, 300);
-    }
   };
 
   const toggleDarkMode = () => {
@@ -217,100 +103,36 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   };
 
   const applyTheme = (renditionInstance) => {
-    console.log('🎨 Applying theme, isDarkMode:', isDarkMode);
-
     if (isDarkMode) {
-      // Dark mode theme - simplified and more reliable
       renditionInstance.themes.default({
         'body': {
-          'background-color': '#1a1a1a !important',
-          'color': '#e0e0e0 !important',
-          'font-family': 'Georgia, serif !important',
-          'line-height': '1.6 !important',
-          'padding': '20px !important',
-          'margin': '0 !important'
+          'background': '#1a1a1a !important',
+          'color': '#e0e0e0 !important'
         },
         'p': {
-          'color': '#e0e0e0 !important',
-          'margin': '1em 0 !important'
+          'color': '#e0e0e0 !important'
         },
         'h1, h2, h3, h4, h5, h6': {
-          'color': '#ffffff !important',
-          'margin': '1em 0 0.5em 0 !important'
-        },
-        'div': {
-          'color': '#e0e0e0 !important'
-        },
-        'span': {
-          'color': '#e0e0e0 !important'
-        },
-        'a': {
-          'color': '#66b3ff !important'
+          'color': '#ffffff !important'
         }
       });
     } else {
-      // Light mode theme - simplified and more reliable
       renditionInstance.themes.default({
         'body': {
-          'background-color': '#ffffff !important',
-          'color': '#333333 !important',
-          'font-family': 'Georgia, serif !important',
-          'line-height': '1.6 !important',
-          'padding': '20px !important',
-          'margin': '0 !important'
+          'background': '#ffffff !important',
+          'color': '#333333 !important'
         },
         'p': {
-          'color': '#333333 !important',
-          'margin': '1em 0 !important'
+          'color': '#333333 !important'
         },
         'h1, h2, h3, h4, h5, h6': {
-          'color': '#000000 !important',
-          'margin': '1em 0 0.5em 0 !important'
-        },
-        'div': {
-          'color': '#333333 !important'
-        },
-        'span': {
-          'color': '#333333 !important'
-        },
-        'a': {
-          'color': '#0066cc !important'
+          'color': '#000000 !important'
         }
       });
     }
 
     // Apply font size
     renditionInstance.themes.fontSize(`${fontSize}%`);
-    console.log('🔤 Applied font size:', fontSize + '%');
-
-    // Force theme application with more aggressive approach
-    setTimeout(() => {
-      try {
-        if (renditionInstance.manager && renditionInstance.manager.container) {
-          const iframe = renditionInstance.manager.container.querySelector('iframe');
-          if (iframe && iframe.contentDocument) {
-            const doc = iframe.contentDocument;
-            if (doc.body) {
-              // Force styles directly on the body
-              doc.body.style.setProperty('background-color', isDarkMode ? '#1a1a1a' : '#ffffff', 'important');
-              doc.body.style.setProperty('color', isDarkMode ? '#e0e0e0' : '#333333', 'important');
-              doc.body.style.setProperty('font-family', 'Georgia, serif', 'important');
-              doc.body.style.setProperty('line-height', '1.6', 'important');
-              doc.body.style.setProperty('padding', '20px', 'important');
-              doc.body.style.setProperty('margin', '0', 'important');
-
-              // Force visibility
-              doc.body.style.setProperty('visibility', 'visible', 'important');
-              doc.body.style.setProperty('opacity', '1', 'important');
-
-              console.log('✅ Forced theme application on iframe body');
-            }
-          }
-        }
-      } catch (error) {
-        console.error('❌ Error forcing theme application:', error);
-      }
-    }, 200);
   };
 
   const increaseFontSize = () => {
@@ -359,19 +181,20 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
     }
   };
 
+  // Translation functions with robust error handling
   const translateText = async (text, targetLanguage) => {
     if (!text || text.trim().length === 0) return text;
 
     // Validate inputs
     let cleanText = text.trim();
     if (cleanText.length === 0) return text;
-    if (cleanText.length > 500) {
+    if (cleanText.length > 5000) {
       console.warn('Text too long for translation, truncating...');
-      cleanText = cleanText.substring(0, 500);
+      cleanText = cleanText.substring(0, 5000);
     }
 
-    // Get valid language codes from our supported languages
-    const validLanguages = SUPPORTED_LANGUAGES.map(lang => lang.code).filter(code => code !== 'original');
+    // Validate target language
+    const validLanguages = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh', 'ar', 'hi', 'nl', 'sv', 'da', 'no', 'fi', 'pl', 'tr'];
     if (!validLanguages.includes(targetLanguage)) {
       console.error(`Invalid target language: ${targetLanguage}`);
       return text;
@@ -380,80 +203,106 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
     // Check cache first
     const cacheKey = `${cleanText}_${targetLanguage}`;
     if (translationCache[cacheKey]) {
-      console.log(`📋 Using cached translation for: ${cleanText.substring(0, 50)}...`);
       return translationCache[cacheKey];
     }
 
-    try {
-      console.log(`🌍 Translating to ${targetLanguage}: ${cleanText.substring(0, 50)}...`);
+    // Try each endpoint until one works
+    for (let i = 0; i < LIBRETRANSLATE_ENDPOINTS.length; i++) {
+      const endpoint = LIBRETRANSLATE_ENDPOINTS[i];
 
-      // Use MyMemory Translation API (free, browser-compatible)
-      // MyMemory doesn't support 'auto', so we'll assume English as source for most content
-      const encodedText = encodeURIComponent(cleanText);
-      const sourceLanguage = 'en'; // Assume English source for most EPUB content
+      try {
+        console.log(`🌍 Trying translation endpoint ${i + 1}/${LIBRETRANSLATE_ENDPOINTS.length}: ${endpoint}`);
 
-      // Log the API call for debugging
-      console.log(`📡 API call: langpair=${sourceLanguage}|${targetLanguage}`);
-      const apiUrl = `https://api.mymemory.translated.net/get?q=${encodedText}&langpair=${sourceLanguage}|${targetLanguage}`;
+        // Create AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-      const response = await fetch(apiUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
+        // Prepare request body with proper validation
+        const requestBody = {
+          q: cleanText,
+          source: 'auto', // Auto-detect source language
+          target: targetLanguage,
+          format: 'text'
+        };
+
+        // Log the request for debugging
+        console.log(`📤 Request to ${endpoint}:`, requestBody);
+
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        // Log response for debugging
+        console.log(`📥 Response status: ${response.status} ${response.statusText}`);
+
+        if (!response.ok) {
+          // Try to get error details from response
+          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          try {
+            const errorData = await response.json();
+            if (errorData.error) {
+              errorMessage += ` - ${errorData.error}`;
+            }
+            console.log(`📥 Error response:`, errorData);
+          } catch (e) {
+            // Response might not be JSON
+            const errorText = await response.text();
+            if (errorText) {
+              errorMessage += ` - ${errorText}`;
+            }
+            console.log(`📥 Error text:`, errorText);
+          }
+          throw new Error(errorMessage);
         }
-      });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const data = await response.json();
+        console.log(`📥 Success response:`, data);
+
+        if (!data.translatedText) {
+          throw new Error('No translated text in response');
+        }
+
+        const translatedText = data.translatedText;
+
+        // Cache the translation
+        setTranslationCache(prev => ({
+          ...prev,
+          [cacheKey]: translatedText
+        }));
+
+        console.log(`✅ Translation successful using endpoint: ${endpoint}`);
+        return translatedText;
+
+      } catch (error) {
+        console.warn(`❌ Translation failed with endpoint ${endpoint}:`, error.message);
+
+        // If this was the last endpoint, return original text
+        if (i === LIBRETRANSLATE_ENDPOINTS.length - 1) {
+          console.error('🚫 All translation endpoints failed, returning original text');
+          return text;
+        }
+
+        // Otherwise, try the next endpoint
+        continue;
       }
-
-      const data = await response.json();
-      console.log(`📥 API response:`, data);
-
-      if (!data.responseData || !data.responseData.translatedText) {
-        // Log the full response for debugging
-        console.error('❌ Invalid API response structure:', data);
-        throw new Error(`No translation result received. API response: ${JSON.stringify(data)}`);
-      }
-
-      const translatedText = data.responseData.translatedText;
-
-      // Check if translation actually happened (not just echoed back)
-      if (translatedText === cleanText) {
-        console.warn(`⚠️ Translation returned same text - may not support ${targetLanguage}`);
-      }
-
-      console.log(`✅ Translation successful: ${translatedText.substring(0, 50)}...`);
-
-      // Cache the translation
-      setTranslationCache(prev => ({
-        ...prev,
-        [cacheKey]: translatedText
-      }));
-
-      return translatedText;
-
-    } catch (error) {
-      console.error(`❌ Translation API failed:`, error.message);
-      console.log(`🎭 Using mock translation as fallback for: ${cleanText.substring(0, 30)}...`);
-
-      // Always use mock translation as fallback - provides visual feedback
-      const mockTranslated = mockTranslateText(cleanText, targetLanguage);
-
-      // Cache the mock translation too
-      setTranslationCache(prev => ({
-        ...prev,
-        [cacheKey]: mockTranslated
-      }));
-
-      return mockTranslated;
     }
+
+    // Final fallback - return original text
+    console.error('🚫 All translation endpoints failed');
+    return text;
   };
 
   // Mock translation function for testing (when APIs are down)
   const mockTranslateText = (text, targetLanguage) => {
     const mockTranslations = {
-      // Major World Languages
       'es': text => `[ES] ${text}`,
       'fr': text => `[FR] ${text}`,
       'de': text => `[DE] ${text}`,
@@ -463,45 +312,15 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
       'ja': text => `[JA] ${text}`,
       'ko': text => `[KO] ${text}`,
       'zh': text => `[ZH] ${text}`,
-      'zh-tw': text => `[ZH-TW] ${text}`,
       'ar': text => `[AR] ${text}`,
-
-      // Indian Languages
-      'hi': text => `[हिंदी] ${text}`,
-      'te': text => `[తెలుగు] ${text}`,
-      'ta': text => `[தமிழ்] ${text}`,
-      'ml': text => `[മലയാളം] ${text}`,
-      'kn': text => `[ಕನ್ನಡ] ${text}`,
-      'bn': text => `[বাংলা] ${text}`,
-      'gu': text => `[ગુજરાતી] ${text}`,
-      'mr': text => `[मराठी] ${text}`,
-      'pa': text => `[ਪੰਜਾਬੀ] ${text}`,
-      'or': text => `[ଓଡ଼ିଆ] ${text}`,
-      'as': text => `[অসমীয়া] ${text}`,
-      'ur': text => `[اردو] ${text}`,
-
-      // European Languages
+      'hi': text => `[HI] ${text}`,
       'nl': text => `[NL] ${text}`,
       'sv': text => `[SV] ${text}`,
       'da': text => `[DA] ${text}`,
       'no': text => `[NO] ${text}`,
       'fi': text => `[FI] ${text}`,
       'pl': text => `[PL] ${text}`,
-      'tr': text => `[TR] ${text}`,
-      'el': text => `[EL] ${text}`,
-      'cs': text => `[CS] ${text}`,
-      'hu': text => `[HU] ${text}`,
-      'ro': text => `[RO] ${text}`,
-
-      // Other Major Languages
-      'th': text => `[TH] ${text}`,
-      'vi': text => `[VI] ${text}`,
-      'id': text => `[ID] ${text}`,
-      'ms': text => `[MS] ${text}`,
-      'tl': text => `[TL] ${text}`,
-      'sw': text => `[SW] ${text}`,
-      'he': text => `[HE] ${text}`,
-      'fa': text => `[FA] ${text}`
+      'tr': text => `[TR] ${text}`
     };
 
     const translator = mockTranslations[targetLanguage];
@@ -663,17 +482,6 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
     }
   };
 
-  const handleChapterNavigation = (chapter) => {
-    if (!rendition) return;
-
-    console.log(`📖 Navigating to chapter: ${chapter.label}`);
-    setCurrentChapter(chapter);
-    setShowChapterMenu(false);
-
-    // Navigate to the selected chapter
-    rendition.display(chapter.href);
-  };
-
   const handleError = (error) => {
     console.error('EPUB loading error:', error);
     console.log('🔄 EPUB failed to load, using fallback URL...');
@@ -742,14 +550,7 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   }
 
   return (
-    <div style={{
-      height: '100vh',
-      width: '100%',
-      position: 'relative',
-      display: 'flex',
-      flexDirection: 'column',
-      backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff'
-    }}>
+    <div style={{ height: '600px', width: '100%', position: 'relative' }}>
       {/* Enhanced Header with Controls */}
       <div style={{
         padding: '10px 20px',
@@ -766,7 +567,7 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
             📖 {title}
           </h3>
           <small style={{ color: isDarkMode ? '#cccccc' : '#6c757d', display: 'block', marginTop: '4px' }}>
-            Arrow keys: Navigate • F: Fullscreen • D: Dark mode • S: Settings • L: Language • C: Chapters • ESC: Close
+            Arrow keys: Navigate • F: Fullscreen • D: Dark mode • S: Settings • L: Language • ESC: Close
           </small>
         </div>
 
@@ -875,41 +676,6 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
             )}
           </button>
 
-          {/* Chapter Navigation Toggle */}
-          <button
-            onClick={() => setShowChapterMenu(!showChapterMenu)}
-            style={{
-              backgroundColor: showChapterMenu ? (isDarkMode ? '#555' : '#e9ecef') : (isDarkMode ? '#444' : '#ffffff'),
-              color: isDarkMode ? '#ffffff' : '#333',
-              border: `1px solid ${isDarkMode ? '#666' : '#ddd'}`,
-              borderRadius: '4px',
-              padding: '6px 8px',
-              cursor: 'pointer',
-              position: 'relative'
-            }}
-            title="Toggle chapters"
-          >
-            <BookOpen size={14} />
-            {chapters.length > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '-2px',
-                right: '-2px',
-                backgroundColor: '#28a745',
-                color: 'white',
-                borderRadius: '50%',
-                width: '12px',
-                height: '12px',
-                fontSize: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                {chapters.length}
-              </span>
-            )}
-          </button>
-
           {/* Fullscreen Toggle */}
           <button
             onClick={toggleFullscreen}
@@ -923,7 +689,7 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
             }}
             title="Toggle fullscreen"
           >
-            📺
+            <BookOpen size={14} />
           </button>
         </div>
       </div>
@@ -1166,131 +932,13 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
             <div style={{ marginBottom: '4px' }}>
               <strong>💡 Translation Tips:</strong>
             </div>
-            <div>• Powered by MyMemory Translation API</div>
+            <div>• Powered by LibreTranslate (multiple servers)</div>
             <div>• Press 'L' for quick access</div>
-            <div>• Supports 40+ languages including Indian languages</div>
             <div>• Translations are cached for speed</div>
             <div>• Select 'Original' to restore</div>
-            <div>• Demo mode available if API is down</div>
+            <div>• Auto-retries if service is busy</div>
+            <div>• Demo mode available if APIs are down</div>
             <div>• Works offline with cached content</div>
-          </div>
-        </div>
-      )}
-
-      {/* Chapter Navigation Menu */}
-      {showChapterMenu && (
-        <div style={{
-          position: 'absolute',
-          top: '70px',
-          left: '20px',
-          backgroundColor: isDarkMode ? '#2d2d2d' : '#ffffff',
-          border: `1px solid ${isDarkMode ? '#444' : '#ddd'}`,
-          borderRadius: '8px',
-          padding: '10px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          zIndex: 1000,
-          minWidth: '250px',
-          maxHeight: '400px',
-          overflowY: 'auto'
-        }}>
-          <h4 style={{
-            margin: '0 0 12px 0',
-            color: isDarkMode ? '#ffffff' : '#333',
-            fontSize: '14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <BookOpen size={16} />
-            Table of Contents
-            {chapters.length > 0 && (
-              <span style={{
-                fontSize: '12px',
-                color: '#28a745',
-                fontWeight: 'normal'
-              }}>
-                ({chapters.length} chapters)
-              </span>
-            )}
-          </h4>
-
-          {chapters.length === 0 ? (
-            <div style={{
-              padding: '20px',
-              textAlign: 'center',
-              color: isDarkMode ? '#cccccc' : '#666',
-              fontSize: '12px'
-            }}>
-              📚 Loading chapters...
-            </div>
-          ) : (
-            <div style={{
-              display: 'grid',
-              gap: '2px'
-            }}>
-              {chapters.map((chapter, index) => (
-                <button
-                  key={chapter.id || index}
-                  onClick={() => handleChapterNavigation(chapter)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 12px',
-                    backgroundColor: currentChapter?.id === chapter.id
-                      ? (isDarkMode ? '#555' : '#e9ecef')
-                      : 'transparent',
-                    color: isDarkMode ? '#ffffff' : '#333',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    textAlign: 'left',
-                    width: '100%',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (currentChapter?.id !== chapter.id) {
-                      e.target.style.backgroundColor = isDarkMode ? '#444' : '#f8f9fa';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (currentChapter?.id !== chapter.id) {
-                      e.target.style.backgroundColor = 'transparent';
-                    }
-                  }}
-                >
-                  <span style={{
-                    fontSize: '16px',
-                    minWidth: '20px',
-                    textAlign: 'center'
-                  }}>
-                    {index + 1}
-                  </span>
-                  <span style={{ flex: 1 }}>{chapter.label}</span>
-                  {currentChapter?.id === chapter.id && (
-                    <span style={{ color: '#28a745' }}>📖</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div style={{
-            marginTop: '12px',
-            padding: '8px',
-            backgroundColor: isDarkMode ? '#1a1a1a' : '#f8f9fa',
-            borderRadius: '4px',
-            fontSize: '11px',
-            color: isDarkMode ? '#cccccc' : '#666'
-          }}>
-            <div style={{ marginBottom: '4px' }}>
-              <strong>📖 Navigation Tips:</strong>
-            </div>
-            <div>• Click chapter to jump directly</div>
-            <div>• Press 'C' for quick access</div>
-            <div>• Use arrow keys for page navigation</div>
-            <div>• Current chapter highlighted</div>
           </div>
         </div>
       )}
@@ -1323,12 +971,10 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
         </div>
       )}
 
-      {/* EPUB Reader - Takes all remaining space */}
+      {/* EPUB Reader */}
       <div style={{
-        flex: 1,
-        minHeight: 0,
-        backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff',
-        overflow: 'hidden'
+        height: 'calc(100% - 120px)',
+        backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff'
       }}>
         <ReactReader
           url={urlToUse}
@@ -1339,106 +985,20 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
             allowScriptedContent: true
           }}
           epubOptions={{
-            flow: 'paginated',
-            manager: 'default',
-            spread: 'none',
-            width: '100%',
-            height: '100%',
-            allowScriptedContent: true,
-            allowPopups: false
+            flow: 'scrolled',
+            manager: 'default'
           }}
           getRendition={handleRenditionReady}
           onError={handleError}
-          readerStyles={{
-            ...readerStyles,
-            backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff'
-          }}
-          showToc={false}
-          swipeable={true}
         />
       </div>
 
-      {/* CSS Animations and Styles */}
+      {/* CSS Animations */}
       <style jsx>{`
         @keyframes pulse {
           0% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.7; transform: scale(1.1); }
           100% { opacity: 1; transform: scale(1); }
-        }
-
-        /* Ensure EPUB viewer takes full space and content is visible */
-        .react-reader {
-          height: 100% !important;
-          width: 100% !important;
-          position: relative !important;
-          background: ${isDarkMode ? '#1a1a1a' : '#ffffff'} !important;
-        }
-
-        .react-reader iframe {
-          height: 100% !important;
-          width: 100% !important;
-          border: none !important;
-          overflow: auto !important;
-          background: ${isDarkMode ? '#1a1a1a' : '#ffffff'} !important;
-          visibility: visible !important;
-          opacity: 1 !important;
-        }
-
-        /* Force EPUB content visibility */
-        .react-reader iframe body {
-          background-color: ${isDarkMode ? '#1a1a1a' : '#ffffff'} !important;
-          color: ${isDarkMode ? '#e0e0e0' : '#333333'} !important;
-          font-family: Georgia, serif !important;
-          line-height: 1.6 !important;
-          padding: 20px !important;
-          margin: 0 !important;
-          visibility: visible !important;
-          opacity: 1 !important;
-        }
-
-        /* Enable EPUB navigation controls */
-        .react-reader .epub-container {
-          height: 100% !important;
-          overflow: visible !important;
-          background: ${isDarkMode ? '#1a1a1a' : '#ffffff'} !important;
-        }
-
-        .react-reader .epub-view {
-          height: 100% !important;
-          background: ${isDarkMode ? '#1a1a1a' : '#ffffff'} !important;
-        }
-
-        /* Force text visibility */
-        .react-reader iframe p,
-        .react-reader iframe div,
-        .react-reader iframe span,
-        .react-reader iframe h1,
-        .react-reader iframe h2,
-        .react-reader iframe h3,
-        .react-reader iframe h4,
-        .react-reader iframe h5,
-        .react-reader iframe h6 {
-          color: ${isDarkMode ? '#e0e0e0' : '#333333'} !important;
-          visibility: visible !important;
-          opacity: 1 !important;
-        }
-
-        /* Dark mode scrollbar */
-        .react-reader iframe::-webkit-scrollbar {
-          width: 8px;
-        }
-
-        .react-reader iframe::-webkit-scrollbar-track {
-          background: ${isDarkMode ? '#2d2d2d' : '#f1f1f1'};
-        }
-
-        .react-reader iframe::-webkit-scrollbar-thumb {
-          background: ${isDarkMode ? '#555' : '#888'};
-          border-radius: 4px;
-        }
-
-        .react-reader iframe::-webkit-scrollbar-thumb:hover {
-          background: ${isDarkMode ? '#777' : '#555'};
         }
       `}</style>
     </div>
