@@ -393,4 +393,60 @@ router.get("/verify-session", verifyToken, async (req, res) => {
   }
 });
 
+// Admin utility: Clean up old purchased books with broken URLs
+router.post("/admin/cleanup-old-books", verifyToken, async (req, res) => {
+  try {
+    console.log('🧹 Starting cleanup of old purchased books...');
+
+    // Find all users with purchased books
+    const users = await User.find({ 'purchasedBooks.0': { $exists: true } });
+    console.log(`📚 Found ${users.length} users with purchased books`);
+
+    let totalCleaned = 0;
+    let totalUsers = 0;
+
+    for (const user of users) {
+      let userCleaned = 0;
+
+      // Filter out books with old Cloudinary URLs that don't work
+      user.purchasedBooks = user.purchasedBooks.filter(book => {
+        const hasOldCloudinaryUrl = book.url && (
+          book.url.includes('/bookstore/bookFiles/') ||
+          book.url.includes('/bookFiles/') ||
+          book.url.includes('/ebooks/')
+        ) && !book.url.includes('/api/books/file/');
+
+        if (hasOldCloudinaryUrl) {
+          console.log(`🗑️ Removing old book: "${book.title}" by ${book.author} (URL: ${book.url})`);
+          userCleaned++;
+          return false; // Remove this book
+        }
+        return true; // Keep this book
+      });
+
+      if (userCleaned > 0) {
+        await user.save();
+        totalUsers++;
+        totalCleaned += userCleaned;
+        console.log(`✅ Cleaned ${userCleaned} books for user ${user.username || user.email}`);
+      }
+    }
+
+    console.log(`🎉 Cleanup complete! Removed ${totalCleaned} old books from ${totalUsers} users`);
+
+    res.status(200).json({
+      success: true,
+      message: `Cleanup complete! Removed ${totalCleaned} old books from ${totalUsers} users`,
+      stats: {
+        usersAffected: totalUsers,
+        booksRemoved: totalCleaned
+      }
+    });
+
+  } catch (error) {
+    console.error('🚨 Error during cleanup:', error);
+    res.status(500).json({ error: "Failed to cleanup old books", message: error.message });
+  }
+});
+
 module.exports = router;

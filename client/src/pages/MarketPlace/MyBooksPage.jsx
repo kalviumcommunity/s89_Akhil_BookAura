@@ -14,8 +14,43 @@ const MyBooksPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [cleanupLoading, setCleanupLoading] = useState(false);
 
   const [groupedBooks, setGroupedBooks] = useState([]);
+
+  // Function to clean up old books
+  const cleanupOldBooks = async () => {
+    if (!window.confirm(
+      '🧹 Clean Up Old Books\n\n' +
+      'This will remove all books with old Cloudinary URLs that no longer work.\n\n' +
+      '⚠️ Warning: This action cannot be undone!\n\n' +
+      'Books with working URLs (new in-memory system) will be kept.\n\n' +
+      'Continue with cleanup?'
+    )) {
+      return;
+    }
+
+    try {
+      setCleanupLoading(true);
+      const response = await api.post('/api/payment/admin/cleanup-old-books');
+
+      if (response.data.success) {
+        alert(
+          `✅ Cleanup Complete!\n\n` +
+          `${response.data.stats.booksRemoved} old books removed from ${response.data.stats.usersAffected} users.\n\n` +
+          `The page will now refresh to show your updated library.`
+        );
+        window.location.reload();
+      } else {
+        alert('❌ Cleanup failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Cleanup error:', error);
+      alert('❌ Error during cleanup. Please try again or contact support.');
+    } finally {
+      setCleanupLoading(false);
+    }
+  };
 
   // Fetch books inside useEffect directly
   useEffect(() => {
@@ -119,8 +154,30 @@ const MyBooksPage = () => {
       <Navbar />
       <div className="my-books-page">
         <div className="my-books-header">
-          <h1 className="my-books-title">My Books</h1>
-          <p className="my-books-subtitle">Access your purchased books anytime, anywhere</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            <div>
+              <h1 className="my-books-title">My Books</h1>
+              <p className="my-books-subtitle">Access your purchased books anytime, anywhere</p>
+            </div>
+            <button
+              onClick={cleanupOldBooks}
+              disabled={cleanupLoading}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: cleanupLoading ? '#ccc' : '#ff6b6b',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: cleanupLoading ? 'not-allowed' : 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                transition: 'background-color 0.2s'
+              }}
+              title="Remove books with broken old URLs"
+            >
+              {cleanupLoading ? '🧹 Cleaning...' : '🧹 Clean Old Books'}
+            </button>
+          </div>
         </div>
 
         <div className="my-books-content">
@@ -196,21 +253,37 @@ const MyBooksPage = () => {
                               className="read-button"
                               onClick={() => {
                                 if (book.url && book.url.startsWith('http')) {
-                                  // Since Cloudinary URLs don't have extensions, assume all books from book folders are EPUBs
-                                  // This is safer since we're in the purchased books section
                                   const isFromBookFiles = book.url.includes('/bookstore/bookFiles/') ||
                                                          book.url.includes('/bookFiles/') ||
                                                          book.url.includes('/ebooks/');
 
+                                  const isNewInMemoryUrl = book.url.includes('/api/books/file/');
+
                                   console.log("Book URL:", book.url);
                                   console.log("Is from bookFiles folder:", isFromBookFiles);
+                                  console.log("Is new in-memory URL:", isNewInMemoryUrl);
 
-                                  if (isFromBookFiles) {
-                                    console.log("Opening EPUB in reader page:", book.url);
-                                    // Navigate to the reader page with the book ID (like your working code)
+                                  if (isNewInMemoryUrl) {
+                                    // New system - navigate to reader with book ID
                                     const bookId = book.bookId || book._id;
                                     console.log("📖 Navigating to reader with book ID:", bookId);
                                     navigate(`/reader/${bookId}`);
+                                  } else if (isFromBookFiles) {
+                                    // Old Cloudinary system - show warning and try direct URL
+                                    console.log("⚠️ Old Cloudinary EPUB detected:", book.url);
+                                    const shouldTryAnyway = window.confirm(
+                                      `⚠️ This book uses old storage and may not work properly.\n\n` +
+                                      `Book: "${book.title}" by ${book.author}\n\n` +
+                                      `Options:\n` +
+                                      `• Click "OK" to try opening it anyway (may fail)\n` +
+                                      `• Click "Cancel" and re-upload this book for best experience\n\n` +
+                                      `💡 Tip: Use "Add Products" page to re-upload this book.`
+                                    );
+
+                                    if (shouldTryAnyway) {
+                                      // Try to open the old URL directly
+                                      window.open(book.url, '_blank');
+                                    }
                                   } else {
                                     // For non-EPUB files, open in a new tab
                                     console.log("Opening non-EPUB in new tab:", book.url);
@@ -223,8 +296,10 @@ const MyBooksPage = () => {
                               }}
                             >
                               <FileText size={16} />
-                              {book.url && (book.url.includes('/bookstore/bookFiles/') || book.url.includes('/bookFiles/') || book.url.includes('/ebooks/'))
+                              {book.url && book.url.includes('/api/books/file/')
                                 ? 'Read Book'
+                                : book.url && (book.url.includes('/bookstore/bookFiles/') || book.url.includes('/bookFiles/') || book.url.includes('/ebooks/'))
+                                ? '⚠️ Read (Old)'
                                 : 'Open Book'}
                             </button>
                           </div>
