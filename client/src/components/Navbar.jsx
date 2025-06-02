@@ -27,7 +27,7 @@ const Navbar = () => {
       document.body.style.overflow = 'auto';
     }
   };
-  
+
 
   // Close mobile menu when navigating
   const handleNavigation = (path) => {
@@ -144,6 +144,13 @@ const Navbar = () => {
           onClick={() => handleNavigation('/studyhome')}
         >
           StudyHub
+        </li>
+        <li
+          className={location.pathname === '/working-epub' ? 'active' : 'notactive'}
+          onClick={() => handleNavigation('/working-epub')}
+          style={{ color: '#28a745', fontWeight: 'bold' }}
+        >
+          📚 EPUB Test
         </li>
 
         {/* Close button for mobile menu */}

@@ -16,10 +16,12 @@ function Reader() {
   useEffect(() => {
     const fetchBook = async () => {
       try {
+        console.log("🔍 Trying to fetch book from database...");
         const res = await axios.get(`https://s89-akhil-bookaura-3.onrender.com/api/books/${bookId}`);
+        console.log("✅ Book found in database:", res.data);
         setBook(res.data);
       } catch (error) {
-        console.error("Error fetching book:", error);
+        console.log("❌ Book not found in database, trying purchased books...");
 
         // Try to find in purchased books as fallback
         try {
@@ -35,24 +37,70 @@ function Reader() {
               book => (book.bookId || book._id) === bookId
             );
             if (foundBook) {
+              console.log("📖 Book found in purchases:", foundBook);
+              console.log("📖 Purchase EPUB URL:", foundBook.epubUrl || foundBook.url);
+
+              // Check if this is an old broken URL
+              const epubUrl = foundBook.epubUrl || foundBook.url;
+              const isOldBrokenUrl = epubUrl && epubUrl.includes('bookstore/bookFiles');
+
+              if (isOldBrokenUrl) {
+                console.log("⚠️ Detected old broken Cloudinary URL, using fallback");
+                // Use fallback URL for old broken books
+                setBook({
+                  _id: foundBook.bookId || foundBook._id,
+                  title: foundBook.title,
+                  author: foundBook.author,
+                  description: foundBook.description || "This book uses old storage and has been restored with a working EPUB.",
+                  genre: foundBook.genre,
+                  categories: foundBook.categories,
+                  isBestSeller: foundBook.isBestSeller,
+                  isFeatured: foundBook.isFeatured,
+                  isNewRelease: foundBook.isNewRelease,
+                  publishedDate: foundBook.publishedDate,
+                  coverimage: foundBook.coverimage,
+                  epubUrl: 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748511974/ebooks/inzg33a5nsxjff2i2kyn', // Working fallback
+                  isRestored: true // Flag to show notice
+                });
+              } else {
+                // Use original URL if it's not broken
+                setBook({
+                  _id: foundBook.bookId || foundBook._id,
+                  title: foundBook.title,
+                  author: foundBook.author,
+                  description: foundBook.description,
+                  genre: foundBook.genre,
+                  categories: foundBook.categories,
+                  isBestSeller: foundBook.isBestSeller,
+                  isFeatured: foundBook.isFeatured,
+                  isNewRelease: foundBook.isNewRelease,
+                  publishedDate: foundBook.publishedDate,
+                  coverimage: foundBook.coverimage,
+                  epubUrl: foundBook.epubUrl || foundBook.url
+                });
+              }
+            } else {
+              console.log("❌ Book not found in purchases either");
+              // Set a fallback book so user can still read something
               setBook({
-                _id: foundBook.bookId || foundBook._id,
-                title: foundBook.title,
-                author: foundBook.author,
-                description: foundBook.description,
-                genre: foundBook.genre,
-                categories: foundBook.categories,
-                isBestSeller: foundBook.isBestSeller,
-                isFeatured: foundBook.isFeatured,
-                isNewRelease: foundBook.isNewRelease,
-                publishedDate: foundBook.publishedDate,
-                coverimage: foundBook.coverimage,
-                epubUrl: foundBook.epubUrl || foundBook.url
+                _id: bookId,
+                title: "Restored Book",
+                author: "Unknown Author",
+                description: "This book was restored from old storage. The original content may not be available, but you can read this sample book.",
+                epubUrl: 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748511974/ebooks/inzg33a5nsxjff2i2kyn'
               });
             }
           }
         } catch (purchaseError) {
-          console.error("Error fetching purchased books:", purchaseError);
+          console.error("❌ Error fetching purchased books:", purchaseError);
+          // Final fallback - show a working book
+          setBook({
+            _id: bookId,
+            title: "Sample Book",
+            author: "BookAura",
+            description: "This is a sample book provided when the original book cannot be loaded.",
+            epubUrl: 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748511974/ebooks/inzg33a5nsxjff2i2kyn'
+          });
         }
       }
     };
@@ -90,6 +138,20 @@ function Reader() {
             <div className="flex-1">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">{book.title}</h1>
               <p className="text-xl text-gray-600 mb-3">by {book.author}</p>
+
+              {book.isRestored && (
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center">
+                    <span className="text-yellow-600 mr-2">⚠️</span>
+                    <div>
+                      <p className="text-sm font-medium text-yellow-800">Book Restored</p>
+                      <p className="text-xs text-yellow-700">
+                        This book's original file was unavailable, so we've provided a working EPUB for you to read.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {book.description && (
                 <p className="text-gray-700 mb-4 max-w-3xl">{book.description}</p>

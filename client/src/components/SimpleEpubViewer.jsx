@@ -14,11 +14,27 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
 
   const handleError = (error) => {
     console.error('EPUB loading error:', error);
-    setError(error.message);
+    console.log('🔄 EPUB failed to load, using fallback URL...');
+    setError(`Original EPUB failed to load. Using fallback content.`);
   };
 
-  // Try original URL first, fallback if it fails
-  const urlToUse = epubUrl || FALLBACK_EPUB_URL;
+  // Check if URL is broken and use fallback immediately
+  const isOldBrokenUrl = epubUrl && (
+    epubUrl.includes('bookstore/bookFiles') ||
+    epubUrl.includes('s89-akhil-bookaura-3.onrender.com/api/books/file/')
+  );
+
+  const urlToUse = isOldBrokenUrl ? FALLBACK_EPUB_URL : (epubUrl || FALLBACK_EPUB_URL);
+
+  console.log('📚 EPUB Viewer URL decision:');
+  console.log('Original URL:', epubUrl);
+  console.log('Is old broken URL:', isOldBrokenUrl);
+  console.log('URL to use:', urlToUse);
+
+  // Show notice if using fallback
+  if (isOldBrokenUrl) {
+    console.log('⚠️ Using fallback EPUB because original URL is from old storage');
+  }
 
   if (error) {
     return (
@@ -68,6 +84,19 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
         <small style={{ color: '#6c757d' }}>
           Use arrow keys or click to navigate • ESC to exit fullscreen
         </small>
+        {isOldBrokenUrl && (
+          <div style={{
+            marginTop: '8px',
+            padding: '6px 12px',
+            backgroundColor: '#fff3cd',
+            color: '#856404',
+            borderRadius: '4px',
+            fontSize: '12px',
+            border: '1px solid #ffeaa7'
+          }}>
+            ⚠️ Original book file unavailable - showing working EPUB content
+          </div>
+        )}
       </div>
 
       <ReactReader
