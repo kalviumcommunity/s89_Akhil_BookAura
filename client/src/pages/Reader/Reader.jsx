@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import FastEpubViewer from '../../epub/FastEpubViewer';
-import './Reader.css';
 
 function Reader() {
   const { bookId } = useParams();
@@ -16,91 +16,44 @@ function Reader() {
   useEffect(() => {
     const fetchBook = async () => {
       try {
-        // First try to get from purchased books (your current system)
-        const baseUrl = import.meta.env.VITE_API_URL || 'https://s89-akhil-bookaura-3.onrender.com';
+        const res = await axios.get(`https://s89-akhil-bookaura-3.onrender.com/api/books/${bookId}`);
+        setBook(res.data);
+      } catch (error) {
+        console.error("Error fetching book:", error);
 
+        // Try to find in purchased books as fallback
         try {
-          const response = await fetch(`${baseUrl}/api/payment/my-purchases`, {
+          const token = localStorage.getItem('authToken');
+          const purchasedResponse = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/payment/my-purchases', {
             headers: {
-              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-              'Content-Type': 'application/json'
+              'Authorization': `Bearer ${token}`
             }
           });
 
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-              // Find the book with matching ID
-              const foundBook = data.purchasedBooks.find(book =>
-                book.bookId.toString() === bookId || book._id === bookId
-              );
-
-              if (foundBook) {
-                console.log("📖 Book found in purchases:", foundBook);
-                console.log("📖 Purchase EPUB URL:", foundBook.epubUrl || foundBook.url);
-
-                // Always fetch fresh book data from database to get correct URLs
-                console.log("🔄 Fetching fresh book data from database...");
-                try {
-                  const freshBookResponse = await fetch(`${baseUrl}/api/books/${foundBook.bookId || foundBook._id}`);
-                  if (freshBookResponse.ok) {
-                    const freshBookData = await freshBookResponse.json();
-                    setBook({
-                      _id: freshBookData._id,
-                      title: freshBookData.title,
-                      author: freshBookData.author,
-                      epubUrl: freshBookData.epubUrl || freshBookData.url
-                    });
-                    console.log("✅ Fresh book data from database:", freshBookData);
-                    console.log("✅ Using fresh EPUB URL:", freshBookData.epubUrl || freshBookData.url);
-                    return;
-                  }
-                } catch (freshError) {
-                  console.log("❌ Failed to fetch fresh book data, using purchase data");
-                }
-
-                // Fallback to purchase data if fresh fetch fails
-                console.log("❌ Fresh book data not found, using purchase data");
-                console.log("📖 Using purchase data as fallback:", foundBook);
-
-                setBook({
-                  _id: foundBook.bookId || foundBook._id,
-                  title: foundBook.title,
-                  author: foundBook.author,
-                  epubUrl: foundBook.epubUrl || foundBook.url || FALLBACK_EPUB_URL
-                });
-                return;
-              }
+          if (purchasedResponse.data.success && purchasedResponse.data.purchasedBooks) {
+            const foundBook = purchasedResponse.data.purchasedBooks.find(
+              book => (book.bookId || book._id) === bookId
+            );
+            if (foundBook) {
+              setBook({
+                _id: foundBook.bookId || foundBook._id,
+                title: foundBook.title,
+                author: foundBook.author,
+                description: foundBook.description,
+                genre: foundBook.genre,
+                categories: foundBook.categories,
+                isBestSeller: foundBook.isBestSeller,
+                isFeatured: foundBook.isFeatured,
+                isNewRelease: foundBook.isNewRelease,
+                publishedDate: foundBook.publishedDate,
+                coverimage: foundBook.coverimage,
+                epubUrl: foundBook.epubUrl || foundBook.url
+              });
             }
           }
         } catch (purchaseError) {
-          console.log("Purchase API failed, trying direct book API...");
+          console.error("Error fetching purchased books:", purchaseError);
         }
-
-        // Fallback: Try direct book API (like your working model)
-        try {
-          const directResponse = await fetch(`${baseUrl}/api/books/${bookId}`);
-          if (directResponse.ok) {
-            const bookData = await directResponse.json();
-            // Use epubUrl if available, otherwise use url
-            setBook({
-              _id: bookData._id,
-              title: bookData.title,
-              author: bookData.author,
-              epubUrl: bookData.epubUrl || bookData.url || FALLBACK_EPUB_URL
-            });
-            console.log("📖 Book found via direct API:", bookData);
-            console.log("📖 Direct API EPUB URL:", bookData.epubUrl || bookData.url);
-            return;
-          }
-        } catch (directError) {
-          console.log("Direct API also failed:", directError);
-        }
-
-        console.log("❌ Book not found in any source");
-
-      } catch (error) {
-        console.error('Error fetching book:', error);
       }
     };
 
@@ -113,25 +66,74 @@ function Reader() {
     navigate('/my-books');
   };
 
-  if (!book) {
-    return (
-      <div className="reader-loading">
-        <p>Loading book...</p>
-      </div>
-    );
-  }
+  if (!book) return <p>Loading...</p>;
 
   return (
-    <div className="reader-container">
-      <div className="reader-header">
-        <button onClick={handleGoBack} className="back-button">
-          ← Back to My Books
-        </button>
-        <h1 className="reader-title">{book.title} by {book.author}</h1>
+    <div className="min-h-screen bg-gray-50">
+      {/* Book Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <button
+            onClick={handleGoBack}
+            className="text-blue-600 hover:text-blue-800 mb-4"
+          >
+            ← Back to My Books
+          </button>
+          <div className="flex items-start space-x-6">
+            {book.coverimage && (
+              <img
+                src={book.coverimage}
+                alt={book.title}
+                className="w-24 h-32 object-cover rounded-lg shadow-md"
+              />
+            )}
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">{book.title}</h1>
+              <p className="text-xl text-gray-600 mb-3">by {book.author}</p>
+
+              {book.description && (
+                <p className="text-gray-700 mb-4 max-w-3xl">{book.description}</p>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                {book.genre && (
+                  <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">{book.genre}</span>
+                )}
+                {book.isBestSeller && (
+                  <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm rounded-full">Best Seller</span>
+                )}
+                {book.isFeatured && (
+                  <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-full">Featured</span>
+                )}
+                {book.isNewRelease && (
+                  <span className="px-3 py-1 bg-red-100 text-red-800 text-sm rounded-full">New Release</span>
+                )}
+              </div>
+
+              {book.categories && book.categories.length > 0 && (
+                <div className="mt-3">
+                  <span className="text-sm text-gray-500">Categories: </span>
+                  {book.categories.map((category, index) => (
+                    <span key={index} className="text-sm text-gray-600">
+                      {category}{index < book.categories.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {book.publishedDate && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Published: {new Date(book.publishedDate).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="reader-content">
-        <FastEpubViewer epubUrl={book.epubUrl} />
+      {/* EPUB Viewer */}
+      <div className="flex-1 p-4">
+        <FastEpubViewer epubUrl={book.epubUrl || book.url} />
       </div>
     </div>
   );
