@@ -17,6 +17,9 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   const [originalContent, setOriginalContent] = useState(null);
   const [translationError, setTranslationError] = useState(null);
   const [translationProgress, setTranslationProgress] = useState({ current: 0, total: 0 });
+  const [showChapterMenu, setShowChapterMenu] = useState(false);
+  const [chapters, setChapters] = useState([]);
+  const [currentChapter, setCurrentChapter] = useState(null);
 
   // Fallback EPUB URL for when books don't work - using the working URL from AllBooks
   const FALLBACK_EPUB_URL = 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748874237/ebooks/file_ifmsnc.epub';
@@ -104,6 +107,9 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
       } else if (event.key === 'l' || event.key === 'L') {
         event.preventDefault();
         setShowLanguageMenu(!showLanguageMenu);
+      } else if (event.key === 'c' || event.key === 'C') {
+        event.preventDefault();
+        setShowChapterMenu(!showChapterMenu);
       }
     };
 
@@ -135,6 +141,37 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   const handleRenditionReady = (renditionInstance) => {
     setRendition(renditionInstance);
     applyTheme(renditionInstance);
+
+    // Extract chapters from the EPUB
+    if (renditionInstance.book && renditionInstance.book.navigation) {
+      const toc = renditionInstance.book.navigation.toc;
+      const chapterList = toc.map((item, index) => ({
+        id: item.id || `chapter-${index}`,
+        label: item.label || `Chapter ${index + 1}`,
+        href: item.href,
+        subitems: item.subitems || []
+      }));
+
+      setChapters(chapterList);
+      console.log('📚 Chapters extracted:', chapterList);
+
+      // Navigate to first chapter/page by default
+      if (chapterList.length > 0) {
+        const firstChapter = chapterList[0];
+        setCurrentChapter(firstChapter);
+        console.log('📖 Navigating to first chapter:', firstChapter.label);
+
+        // Navigate to the first chapter
+        setTimeout(() => {
+          renditionInstance.display(firstChapter.href);
+        }, 100);
+      } else {
+        // If no chapters, just display the beginning
+        setTimeout(() => {
+          renditionInstance.display();
+        }, 100);
+      }
+    }
   };
 
   const toggleDarkMode = () => {
@@ -575,6 +612,17 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
     }
   };
 
+  const handleChapterNavigation = (chapter) => {
+    if (!rendition) return;
+
+    console.log(`📖 Navigating to chapter: ${chapter.label}`);
+    setCurrentChapter(chapter);
+    setShowChapterMenu(false);
+
+    // Navigate to the selected chapter
+    rendition.display(chapter.href);
+  };
+
   const handleError = (error) => {
     console.error('EPUB loading error:', error);
     console.log('🔄 EPUB failed to load, using fallback URL...');
@@ -667,7 +715,7 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
             📖 {title}
           </h3>
           <small style={{ color: isDarkMode ? '#cccccc' : '#6c757d', display: 'block', marginTop: '4px' }}>
-            Arrow keys: Navigate • F: Fullscreen • D: Dark mode • S: Settings • L: Language • ESC: Close
+            Arrow keys: Navigate • F: Fullscreen • D: Dark mode • S: Settings • L: Language • C: Chapters • ESC: Close
           </small>
         </div>
 
@@ -776,6 +824,41 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
             )}
           </button>
 
+          {/* Chapter Navigation Toggle */}
+          <button
+            onClick={() => setShowChapterMenu(!showChapterMenu)}
+            style={{
+              backgroundColor: showChapterMenu ? (isDarkMode ? '#555' : '#e9ecef') : (isDarkMode ? '#444' : '#ffffff'),
+              color: isDarkMode ? '#ffffff' : '#333',
+              border: `1px solid ${isDarkMode ? '#666' : '#ddd'}`,
+              borderRadius: '4px',
+              padding: '6px 8px',
+              cursor: 'pointer',
+              position: 'relative'
+            }}
+            title="Toggle chapters"
+          >
+            <BookOpen size={14} />
+            {chapters.length > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-2px',
+                right: '-2px',
+                backgroundColor: '#28a745',
+                color: 'white',
+                borderRadius: '50%',
+                width: '12px',
+                height: '12px',
+                fontSize: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {chapters.length}
+              </span>
+            )}
+          </button>
+
           {/* Fullscreen Toggle */}
           <button
             onClick={toggleFullscreen}
@@ -789,7 +872,7 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
             }}
             title="Toggle fullscreen"
           >
-            <BookOpen size={14} />
+            📺
           </button>
         </div>
       </div>
@@ -1043,6 +1126,124 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
         </div>
       )}
 
+      {/* Chapter Navigation Menu */}
+      {showChapterMenu && (
+        <div style={{
+          position: 'absolute',
+          top: '70px',
+          left: '20px',
+          backgroundColor: isDarkMode ? '#2d2d2d' : '#ffffff',
+          border: `1px solid ${isDarkMode ? '#444' : '#ddd'}`,
+          borderRadius: '8px',
+          padding: '10px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          zIndex: 1000,
+          minWidth: '250px',
+          maxHeight: '400px',
+          overflowY: 'auto'
+        }}>
+          <h4 style={{
+            margin: '0 0 12px 0',
+            color: isDarkMode ? '#ffffff' : '#333',
+            fontSize: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <BookOpen size={16} />
+            Table of Contents
+            {chapters.length > 0 && (
+              <span style={{
+                fontSize: '12px',
+                color: '#28a745',
+                fontWeight: 'normal'
+              }}>
+                ({chapters.length} chapters)
+              </span>
+            )}
+          </h4>
+
+          {chapters.length === 0 ? (
+            <div style={{
+              padding: '20px',
+              textAlign: 'center',
+              color: isDarkMode ? '#cccccc' : '#666',
+              fontSize: '12px'
+            }}>
+              📚 Loading chapters...
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gap: '2px'
+            }}>
+              {chapters.map((chapter, index) => (
+                <button
+                  key={chapter.id || index}
+                  onClick={() => handleChapterNavigation(chapter)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 12px',
+                    backgroundColor: currentChapter?.id === chapter.id
+                      ? (isDarkMode ? '#555' : '#e9ecef')
+                      : 'transparent',
+                    color: isDarkMode ? '#ffffff' : '#333',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    textAlign: 'left',
+                    width: '100%',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (currentChapter?.id !== chapter.id) {
+                      e.target.style.backgroundColor = isDarkMode ? '#444' : '#f8f9fa';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentChapter?.id !== chapter.id) {
+                      e.target.style.backgroundColor = 'transparent';
+                    }
+                  }}
+                >
+                  <span style={{
+                    fontSize: '16px',
+                    minWidth: '20px',
+                    textAlign: 'center'
+                  }}>
+                    {index + 1}
+                  </span>
+                  <span style={{ flex: 1 }}>{chapter.label}</span>
+                  {currentChapter?.id === chapter.id && (
+                    <span style={{ color: '#28a745' }}>📖</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div style={{
+            marginTop: '12px',
+            padding: '8px',
+            backgroundColor: isDarkMode ? '#1a1a1a' : '#f8f9fa',
+            borderRadius: '4px',
+            fontSize: '11px',
+            color: isDarkMode ? '#cccccc' : '#666'
+          }}>
+            <div style={{ marginBottom: '4px' }}>
+              <strong>📖 Navigation Tips:</strong>
+            </div>
+            <div>• Click chapter to jump directly</div>
+            <div>• Press 'C' for quick access</div>
+            <div>• Use arrow keys for page navigation</div>
+            <div>• Current chapter highlighted</div>
+          </div>
+        </div>
+      )}
+
       {/* Status Notices */}
       {isOldBrokenUrl && (
         <div style={{
@@ -1089,7 +1290,9 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
           epubOptions={{
             flow: 'paginated',
             manager: 'default',
-            spread: 'none'
+            spread: 'none',
+            width: '100%',
+            height: '100%'
           }}
           getRendition={handleRenditionReady}
           onError={handleError}
@@ -1097,6 +1300,8 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
             ...readerStyles,
             backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff'
           }}
+          showToc={false}
+          swipeable={true}
         />
       </div>
 
