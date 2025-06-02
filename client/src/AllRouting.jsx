@@ -29,6 +29,7 @@ import TestPdfUpload from './pages/TestPdfUpload';
 import TestEpubViewer from './pages/TestEpubViewer';
 import GoogleAuthTest from './pages/GoogleAuthTest';
 import Flashcards from './pages/studyhub/Flashcards';
+import WorkingEpubTest from './pages/WorkingEpubTest';
 
 const pageTransition = {
   initial: { opacity: 0, x: -100 },
@@ -176,6 +177,10 @@ const AllRouting = () => {
           element={<TestEpubViewer />}
         />
         <Route
+          path="/working-epub"
+          element={<WorkingEpubTest />}
+        />
+        <Route
           path="/read-epub/:encodedUrl"
           element={<EpubViewerPage />}
         />
@@ -186,6 +191,10 @@ const AllRouting = () => {
         <Route
           path="/reader/:id"
           element={<Reader />}
+        />
+        <Route
+          path="/reader/:bookId"
+          element={<BookReader />}
         />
       </Routes>
     </AnimatePresence>

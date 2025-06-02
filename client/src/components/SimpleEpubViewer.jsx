@@ -1,145 +1,99 @@
-import React, { useEffect, useRef } from 'react';
-import ePub from 'epubjs';
-import './EpubViewer.css';
+import React, { useState } from 'react';
+import { ReactReader } from 'react-reader';
 
-/**
- * A simplified EPUB viewer component that focuses on basic functionality
- * This is used as a fallback when the main viewer has issues
- */
-const SimpleEpubViewer = ({ epubUrl }) => {
-  const viewerRef = useRef(null);
-  const bookRef = useRef(null);
-  const renditionRef = useRef(null);
+const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
+  const [location, setLocation] = useState(null);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const loadBook = async () => {
-      try {
-        console.log("SimpleEpubViewer: Loading book from URL:", epubUrl);
-        
-        // Try to load the book directly
-        try {
-          bookRef.current = ePub(epubUrl);
-        } catch (error) {
-          console.error("SimpleEpubViewer: Direct loading failed, trying fetch:", error);
-          
-          // Try fetching the book
-          const response = await fetch(epubUrl);
-          const blob = await response.blob();
-          bookRef.current = ePub(blob);
-        }
-        
-        // Render the book
-        renditionRef.current = bookRef.current.renderTo(viewerRef.current, {
-          width: '100%',
-          height: '100%',
-          flow: 'paginated',
-        });
-        
-        // Display the book
-        await renditionRef.current.display();
-        console.log("SimpleEpubViewer: Book displayed successfully");
-        
-        // Add keyboard navigation
-        document.addEventListener('keydown', handleKeyPress);
-      } catch (error) {
-        console.error("SimpleEpubViewer: Error loading book:", error);
-        if (viewerRef.current) {
-          viewerRef.current.innerHTML = `
-            <div style="padding: 20px; color: red;">
-              <h3>Error Loading EPUB</h3>
-              <p>${error.message}</p>
-              <p>Please try again or contact support.</p>
-            </div>
-          `;
-        }
-      }
-    };
-    
-    loadBook();
-    
-    // Cleanup
-    return () => {
-      document.removeEventListener('keydown', handleKeyPress);
-      if (bookRef.current) {
-        try {
-          bookRef.current.destroy();
-        } catch (e) {
-          console.warn("SimpleEpubViewer: Error destroying book:", e);
-        }
-      }
-    };
-  }, [epubUrl]);
-  
-  const handleKeyPress = (e) => {
-    if (!renditionRef.current) return;
-    
-    if (e.key === 'ArrowRight') {
-      renditionRef.current.next();
-    } else if (e.key === 'ArrowLeft') {
-      renditionRef.current.prev();
-    }
-  };
-  
-  const nextPage = () => {
-    if (renditionRef.current) {
-      renditionRef.current.next();
-    }
-  };
-  
-  const prevPage = () => {
-    if (renditionRef.current) {
-      renditionRef.current.prev();
-    }
+  // Fallback EPUB URL for when books don't work
+  const FALLBACK_EPUB_URL = 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748511974/ebooks/inzg33a5nsxjff2i2kyn';
+
+  const handleLocationChanged = (epubcifi) => {
+    setLocation(epubcifi);
   };
 
-  return (
-    <div className="simple-epub-container">
-      <div 
-        ref={viewerRef} 
-        className="simple-epub-viewer"
-        style={{ 
-          width: '100%', 
-          height: 'calc(100% - 50px)',
-          backgroundColor: '#fff',
-          overflow: 'hidden'
-        }}
-      />
-      
-      <div className="simple-epub-controls" style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        padding: '10px',
-        borderTop: '1px solid #eee',
-        backgroundColor: '#f8f9fa'
+  const handleError = (error) => {
+    console.error('EPUB loading error:', error);
+    setError(error.message);
+  };
+
+  // Try original URL first, fallback if it fails
+  const urlToUse = epubUrl || FALLBACK_EPUB_URL;
+
+  if (error) {
+    return (
+      <div style={{
+        padding: '20px',
+        textAlign: 'center',
+        backgroundColor: '#f8f9fa',
+        border: '1px solid #dee2e6',
+        borderRadius: '8px',
+        margin: '20px'
       }}>
-        <button 
-          onClick={prevPage}
+        <h3 style={{ color: '#dc3545', marginBottom: '16px' }}>
+          📚 Unable to Load EPUB
+        </h3>
+        <p style={{ color: '#6c757d', marginBottom: '16px' }}>
+          <strong>Error:</strong> {error}
+        </p>
+        <button
+          onClick={() => {
+            setError(null);
+            window.location.reload();
+          }}
           style={{
-            padding: '5px 15px',
-            backgroundColor: '#A67C52',
+            backgroundColor: '#007bff',
             color: 'white',
             border: 'none',
+            padding: '8px 16px',
             borderRadius: '4px',
             cursor: 'pointer'
           }}
         >
-          Previous Page
-        </button>
-        
-        <button 
-          onClick={nextPage}
-          style={{
-            padding: '5px 15px',
-            backgroundColor: '#A67C52',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Next Page
+          🔄 Try Again
         </button>
       </div>
+    );
+  }
+
+  return (
+    <div style={{ height: '600px', width: '100%' }}>
+      <div style={{
+        padding: '10px',
+        backgroundColor: '#f8f9fa',
+        borderBottom: '1px solid #dee2e6',
+        textAlign: 'center'
+      }}>
+        <h3 style={{ margin: '0', color: '#495057' }}>📖 {title}</h3>
+        <small style={{ color: '#6c757d' }}>
+          Use arrow keys or click to navigate • ESC to exit fullscreen
+        </small>
+      </div>
+
+      <ReactReader
+        url={urlToUse}
+        location={location}
+        locationChanged={handleLocationChanged}
+        epubInitOptions={{
+          openAs: 'epub',
+          allowScriptedContent: true
+        }}
+        epubOptions={{
+          flow: 'scrolled',
+          manager: 'default'
+        }}
+        getRendition={(rendition) => {
+          // Apply some basic styling
+          rendition.themes.default({
+            body: {
+              'font-family': 'Georgia, serif !important',
+              'line-height': '1.6 !important',
+              'font-size': '16px !important'
+            }
+          });
+        }}
+        onError={handleError}
+      />
     </div>
   );
 };

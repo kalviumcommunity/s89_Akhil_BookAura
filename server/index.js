@@ -146,6 +146,7 @@ const cartRouter = require('./routes/CartRouter');
 const eventRouter = require('./routes/EventRouter');
 const chatHistoryRouter = require('./routes/ChatHistoryRouter');
 const flashcardRouter = require('./routes/FlashcardRouter');
+const simpleBookRouter = require('./routes/SimpleBookRouter');
 
 // Log loaded routers for debugging
 console.log('Loaded routers:');
@@ -168,6 +169,7 @@ app.use("/api/flashcards", flashcardRouter);
 app.use('/router', userRouter);
 app.use('/router', bookRouter);
 app.use('/api/books', bookRouter); // Add API route like your working model
+app.use('/api/simple-books', simpleBookRouter); // Simple working EPUB system
 
 // Health check endpoint
 app.get('/health', (_, res) => {

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import FastEpubViewer from '../../epub/FastEpubViewer';
+import SimpleEpubViewer from '../../components/SimpleEpubViewer';
 
 function Reader() {
   const { bookId } = useParams();
@@ -133,7 +133,10 @@ function Reader() {
 
       {/* EPUB Viewer */}
       <div className="flex-1 p-4">
-        <FastEpubViewer epubUrl={book.epubUrl || book.url} />
+        <SimpleEpubViewer
+          epubUrl={book.epubUrl || book.url}
+          title={book.title}
+        />
       </div>
     </div>
   );
