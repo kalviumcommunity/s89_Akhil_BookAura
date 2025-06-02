@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ReactReader } from 'react-reader';
 import { Sun, Moon, Settings, BookOpen, RotateCcw, ZoomIn, ZoomOut, Languages, Globe } from 'lucide-react';
-import translate from '@vitalets/google-translate-api';
 
 const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   const [location, setLocation] = useState(null);
@@ -278,9 +277,9 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
     // Validate inputs
     let cleanText = text.trim();
     if (cleanText.length === 0) return text;
-    if (cleanText.length > 5000) {
+    if (cleanText.length > 500) {
       console.warn('Text too long for translation, truncating...');
-      cleanText = cleanText.substring(0, 5000);
+      cleanText = cleanText.substring(0, 500);
     }
 
     // Get valid language codes from our supported languages
@@ -300,14 +299,28 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
     try {
       console.log(`🌍 Translating to ${targetLanguage}: ${cleanText.substring(0, 50)}...`);
 
-      // Use Google Translate API
-      const result = await translate(cleanText, { to: targetLanguage });
+      // Use MyMemory Translation API (free, browser-compatible)
+      const encodedText = encodeURIComponent(cleanText);
+      const apiUrl = `https://api.mymemory.translated.net/get?q=${encodedText}&langpair=auto|${targetLanguage}`;
 
-      if (!result || !result.text) {
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.responseData || !data.responseData.translatedText) {
         throw new Error('No translation result received');
       }
 
-      const translatedText = result.text;
+      const translatedText = data.responseData.translatedText;
       console.log(`✅ Translation successful: ${translatedText.substring(0, 50)}...`);
 
       // Cache the translation
@@ -319,7 +332,7 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
       return translatedText;
 
     } catch (error) {
-      console.error(`❌ Google Translate failed:`, error.message);
+      console.error(`❌ Translation API failed:`, error.message);
 
       // Return mock translation as fallback
       const mockTranslated = mockTranslateText(cleanText, targetLanguage);
@@ -1002,7 +1015,7 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
             <div style={{ marginBottom: '4px' }}>
               <strong>💡 Translation Tips:</strong>
             </div>
-            <div>• Powered by Google Translate API</div>
+            <div>• Powered by MyMemory Translation API</div>
             <div>• Press 'L' for quick access</div>
             <div>• Supports 40+ languages including Indian languages</div>
             <div>• Translations are cached for speed</div>
