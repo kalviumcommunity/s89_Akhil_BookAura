@@ -139,8 +139,20 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   };
 
   const handleRenditionReady = (renditionInstance) => {
+    console.log('📖 Rendition ready, setting up EPUB viewer...');
     setRendition(renditionInstance);
+
+    // Apply theme immediately
     applyTheme(renditionInstance);
+
+    // Add event listeners for better debugging
+    renditionInstance.on('rendered', () => {
+      console.log('✅ EPUB content rendered successfully');
+    });
+
+    renditionInstance.on('displayed', (section) => {
+      console.log('📄 EPUB section displayed:', section);
+    });
 
     // Extract chapters from the EPUB
     if (renditionInstance.book && renditionInstance.book.navigation) {
@@ -161,16 +173,39 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
         setCurrentChapter(firstChapter);
         console.log('📖 Navigating to first chapter:', firstChapter.label);
 
-        // Navigate to the first chapter
+        // Navigate to the first chapter with longer delay
         setTimeout(() => {
-          renditionInstance.display(firstChapter.href);
-        }, 100);
+          renditionInstance.display(firstChapter.href).then(() => {
+            console.log('✅ Successfully navigated to first chapter');
+            // Apply theme again after navigation
+            setTimeout(() => applyTheme(renditionInstance), 100);
+          }).catch((error) => {
+            console.error('❌ Error navigating to first chapter:', error);
+          });
+        }, 300);
       } else {
+        console.log('📖 No chapters found, displaying from beginning');
         // If no chapters, just display the beginning
         setTimeout(() => {
-          renditionInstance.display();
-        }, 100);
+          renditionInstance.display().then(() => {
+            console.log('✅ Successfully displayed EPUB from beginning');
+            // Apply theme again after navigation
+            setTimeout(() => applyTheme(renditionInstance), 100);
+          }).catch((error) => {
+            console.error('❌ Error displaying EPUB:', error);
+          });
+        }, 300);
       }
+    } else {
+      console.log('⚠️ No navigation found, trying to display anyway');
+      setTimeout(() => {
+        renditionInstance.display().then(() => {
+          console.log('✅ Successfully displayed EPUB without navigation');
+          setTimeout(() => applyTheme(renditionInstance), 100);
+        }).catch((error) => {
+          console.error('❌ Error displaying EPUB without navigation:', error);
+        });
+      }, 300);
     }
   };
 
@@ -182,84 +217,100 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   };
 
   const applyTheme = (renditionInstance) => {
+    console.log('🎨 Applying theme, isDarkMode:', isDarkMode);
+
     if (isDarkMode) {
-      // Dark mode theme
+      // Dark mode theme - simplified and more reliable
       renditionInstance.themes.default({
-        'html': {
-          'background': '#1a1a1a !important',
-          'color': '#e0e0e0 !important'
-        },
         'body': {
-          'background': '#1a1a1a !important',
+          'background-color': '#1a1a1a !important',
           'color': '#e0e0e0 !important',
-          'margin': '0 !important',
-          'padding': '20px !important',
+          'font-family': 'Georgia, serif !important',
           'line-height': '1.6 !important',
-          'font-family': 'Georgia, serif !important'
+          'padding': '20px !important',
+          'margin': '0 !important'
         },
-        'p, div, span': {
+        'p': {
           'color': '#e0e0e0 !important',
-          'background': 'transparent !important'
+          'margin': '1em 0 !important'
         },
         'h1, h2, h3, h4, h5, h6': {
           'color': '#ffffff !important',
-          'background': 'transparent !important'
+          'margin': '1em 0 0.5em 0 !important'
+        },
+        'div': {
+          'color': '#e0e0e0 !important'
+        },
+        'span': {
+          'color': '#e0e0e0 !important'
         },
         'a': {
           'color': '#66b3ff !important'
-        },
-        '*': {
-          'background': 'transparent !important'
         }
       });
     } else {
-      // Light mode theme
+      // Light mode theme - simplified and more reliable
       renditionInstance.themes.default({
-        'html': {
-          'background': '#ffffff !important',
-          'color': '#333333 !important'
-        },
         'body': {
-          'background': '#ffffff !important',
+          'background-color': '#ffffff !important',
           'color': '#333333 !important',
-          'margin': '0 !important',
-          'padding': '20px !important',
+          'font-family': 'Georgia, serif !important',
           'line-height': '1.6 !important',
-          'font-family': 'Georgia, serif !important'
+          'padding': '20px !important',
+          'margin': '0 !important'
         },
-        'p, div, span': {
+        'p': {
           'color': '#333333 !important',
-          'background': 'transparent !important'
+          'margin': '1em 0 !important'
         },
         'h1, h2, h3, h4, h5, h6': {
           'color': '#000000 !important',
-          'background': 'transparent !important'
+          'margin': '1em 0 0.5em 0 !important'
+        },
+        'div': {
+          'color': '#333333 !important'
+        },
+        'span': {
+          'color': '#333333 !important'
         },
         'a': {
           'color': '#0066cc !important'
-        },
-        '*': {
-          'background': 'transparent !important'
         }
       });
     }
 
     // Apply font size
     renditionInstance.themes.fontSize(`${fontSize}%`);
+    console.log('🔤 Applied font size:', fontSize + '%');
 
-    // Force theme application
+    // Force theme application with more aggressive approach
     setTimeout(() => {
-      if (renditionInstance.manager && renditionInstance.manager.container) {
-        const iframe = renditionInstance.manager.container.querySelector('iframe');
-        if (iframe && iframe.contentDocument) {
-          const doc = iframe.contentDocument;
-          if (doc.body) {
-            doc.body.style.backgroundColor = isDarkMode ? '#1a1a1a' : '#ffffff';
-            doc.body.style.color = isDarkMode ? '#e0e0e0' : '#333333';
+      try {
+        if (renditionInstance.manager && renditionInstance.manager.container) {
+          const iframe = renditionInstance.manager.container.querySelector('iframe');
+          if (iframe && iframe.contentDocument) {
+            const doc = iframe.contentDocument;
+            if (doc.body) {
+              // Force styles directly on the body
+              doc.body.style.setProperty('background-color', isDarkMode ? '#1a1a1a' : '#ffffff', 'important');
+              doc.body.style.setProperty('color', isDarkMode ? '#e0e0e0' : '#333333', 'important');
+              doc.body.style.setProperty('font-family', 'Georgia, serif', 'important');
+              doc.body.style.setProperty('line-height', '1.6', 'important');
+              doc.body.style.setProperty('padding', '20px', 'important');
+              doc.body.style.setProperty('margin', '0', 'important');
+
+              // Force visibility
+              doc.body.style.setProperty('visibility', 'visible', 'important');
+              doc.body.style.setProperty('opacity', '1', 'important');
+
+              console.log('✅ Forced theme application on iframe body');
+            }
           }
         }
+      } catch (error) {
+        console.error('❌ Error forcing theme application:', error);
       }
-    }, 100);
+    }, 200);
   };
 
   const increaseFontSize = () => {
@@ -1292,7 +1343,9 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
             manager: 'default',
             spread: 'none',
             width: '100%',
-            height: '100%'
+            height: '100%',
+            allowScriptedContent: true,
+            allowPopups: false
           }}
           getRendition={handleRenditionReady}
           onError={handleError}
@@ -1313,11 +1366,12 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
           100% { opacity: 1; transform: scale(1); }
         }
 
-        /* Ensure EPUB viewer takes full space and allows navigation */
+        /* Ensure EPUB viewer takes full space and content is visible */
         .react-reader {
           height: 100% !important;
           width: 100% !important;
           position: relative !important;
+          background: ${isDarkMode ? '#1a1a1a' : '#ffffff'} !important;
         }
 
         .react-reader iframe {
@@ -1325,16 +1379,48 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
           width: 100% !important;
           border: none !important;
           overflow: auto !important;
+          background: ${isDarkMode ? '#1a1a1a' : '#ffffff'} !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+        }
+
+        /* Force EPUB content visibility */
+        .react-reader iframe body {
+          background-color: ${isDarkMode ? '#1a1a1a' : '#ffffff'} !important;
+          color: ${isDarkMode ? '#e0e0e0' : '#333333'} !important;
+          font-family: Georgia, serif !important;
+          line-height: 1.6 !important;
+          padding: 20px !important;
+          margin: 0 !important;
+          visibility: visible !important;
+          opacity: 1 !important;
         }
 
         /* Enable EPUB navigation controls */
         .react-reader .epub-container {
           height: 100% !important;
           overflow: visible !important;
+          background: ${isDarkMode ? '#1a1a1a' : '#ffffff'} !important;
         }
 
         .react-reader .epub-view {
           height: 100% !important;
+          background: ${isDarkMode ? '#1a1a1a' : '#ffffff'} !important;
+        }
+
+        /* Force text visibility */
+        .react-reader iframe p,
+        .react-reader iframe div,
+        .react-reader iframe span,
+        .react-reader iframe h1,
+        .react-reader iframe h2,
+        .react-reader iframe h3,
+        .react-reader iframe h4,
+        .react-reader iframe h5,
+        .react-reader iframe h6 {
+          color: ${isDarkMode ? '#e0e0e0' : '#333333'} !important;
+          visibility: visible !important;
+          opacity: 1 !important;
         }
 
         /* Dark mode scrollbar */
