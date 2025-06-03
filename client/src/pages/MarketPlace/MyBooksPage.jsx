@@ -83,6 +83,7 @@ const MyBooksPage = () => {
         } else {
           setError('Failed to fetch your purchased books');
         }
+        
       } catch (error) {
         if (error.response) {
           if (error.response.status === 401) {
@@ -204,6 +205,20 @@ const MyBooksPage = () => {
       </div>
     );
   }
+  useEffect(() => {
+    if(!selectedBook) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleCloseReader();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedBook]);
 
   return (
     <>
@@ -287,7 +302,7 @@ const MyBooksPage = () => {
                               className="read-button"
                               onClick={() => handleReadBook(book)}
                             >
-                              <FileText size={16} />
+                             
                               📖 Read Book
                             </button>
                           </div>
