@@ -21,26 +21,11 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   // Fallback EPUB URL for when books don't work - using the working URL from AllBooks
   const FALLBACK_EPUB_URL = 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1748874237/ebooks/file_ifmsnc.epub';
 
-  // Multiple free translation APIs for better reliability
-  const TRANSLATION_APIS = [
-    {
-      name: 'Google Translate',
-      type: 'google',
-      url: 'https://translate.googleapis.com/translate_a/single',
-      supports: ['te', 'ml', 'hi', 'ta', 'kn', 'bn', 'gu', 'mr', 'pa', 'or', 'as', 'ur', 'en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh', 'ar', 'nl', 'sv', 'da', 'no', 'fi', 'pl', 'tr', 'el', 'cs', 'hu', 'ro', 'th', 'vi', 'id', 'ms', 'tl', 'sw', 'he', 'fa']
-    },
-    {
-      name: 'LibreTranslate DE',
-      type: 'libretranslate',
-      url: 'https://libretranslate.de/translate',
-      supports: ['te', 'ml', 'hi', 'ta', 'en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh', 'ar', 'nl', 'sv', 'da', 'no', 'fi', 'pl', 'tr']
-    },
-    {
-      name: 'MyMemory',
-      type: 'mymemory',
-      url: 'https://api.mymemory.translated.net/get',
-      supports: ['te', 'ml', 'hi', 'ta', 'kn', 'bn', 'gu', 'mr', 'pa', 'en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh', 'ar', 'nl', 'sv', 'da', 'no', 'fi', 'pl', 'tr']
-    }
+  // LibreTranslate configuration with working endpoints
+  const LIBRETRANSLATE_ENDPOINTS = [
+    'https://libretranslate.de/translate',      // German instance (most reliable)
+    'https://libretranslate.com/translate',     // Official instance
+    // Note: Some endpoints may require API keys or have CORS restrictions
   ];
 
   // Supported languages for translation
@@ -106,25 +91,8 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   };
 
   const handleRenditionReady = (renditionInstance) => {
-    console.log('📖 Rendition ready, setting up EPUB viewer...');
-    console.log('🔍 Rendition instance:', renditionInstance);
-    console.log('🔍 Rendition book:', renditionInstance?.book);
-    console.log('🔍 Rendition manager:', renditionInstance?.manager);
-
     setRendition(renditionInstance);
     applyTheme(renditionInstance);
-
-    // Force display the first page
-    setTimeout(() => {
-      console.log('🚀 Attempting to display first page...');
-      if (renditionInstance && renditionInstance.display) {
-        renditionInstance.display().then(() => {
-          console.log('✅ Successfully displayed EPUB content');
-        }).catch((error) => {
-          console.error('❌ Error displaying EPUB content:', error);
-        });
-      }
-    }, 500);
   };
 
   const toggleDarkMode = () => {
@@ -225,10 +193,10 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
       cleanText = cleanText.substring(0, 5000);
     }
 
-    // Validate target language - check if any API supports it
-    const supportedLanguages = [...new Set(TRANSLATION_APIS.flatMap(api => api.supports))];
-    if (!supportedLanguages.includes(targetLanguage)) {
-      console.error(`Invalid target language: ${targetLanguage}. Supported: ${supportedLanguages.join(', ')}`);
+    // Validate target language
+    const validLanguages = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh', 'ar', 'hi', 'nl', 'sv', 'da', 'no', 'fi', 'pl', 'tr'];
+    if (!validLanguages.includes(targetLanguage)) {
+      console.error(`Invalid target language: ${targetLanguage}`);
       return text;
     }
 
@@ -238,98 +206,91 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
       return translationCache[cacheKey];
     }
 
-    // Try each API until one works
-    for (let i = 0; i < TRANSLATION_APIS.length; i++) {
-      const api = TRANSLATION_APIS[i];
-
-      // Skip API if it doesn't support the target language
-      if (!api.supports.includes(targetLanguage)) {
-        console.log(`⏭️ Skipping ${api.name} - doesn't support ${targetLanguage}`);
-        continue;
-      }
+    // Try each endpoint until one works
+    for (let i = 0; i < LIBRETRANSLATE_ENDPOINTS.length; i++) {
+      const endpoint = LIBRETRANSLATE_ENDPOINTS[i];
 
       try {
-        console.log(`🌍 Trying ${api.name} (${i + 1}/${TRANSLATION_APIS.length})...`);
+        console.log(`🌍 Trying translation endpoint ${i + 1}/${LIBRETRANSLATE_ENDPOINTS.length}: ${endpoint}`);
 
-        let translatedText = null;
+        // Create AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-        if (api.type === 'google') {
-          // Google Translate API
-          const googleUrl = `${api.url}?client=gtx&sl=auto&tl=${targetLanguage}&dt=t&q=${encodeURIComponent(cleanText)}`;
+        // Prepare request body with proper validation
+        const requestBody = {
+          q: cleanText,
+          source: 'auto', // Auto-detect source language
+          target: targetLanguage,
+          format: 'text'
+        };
 
-          const response = await fetch(googleUrl, {
-            method: 'GET',
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        // Log the request for debugging
+        console.log(`📤 Request to ${endpoint}:`, requestBody);
+
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        // Log response for debugging
+        console.log(`📥 Response status: ${response.status} ${response.statusText}`);
+
+        if (!response.ok) {
+          // Try to get error details from response
+          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          try {
+            const errorData = await response.json();
+            if (errorData.error) {
+              errorMessage += ` - ${errorData.error}`;
             }
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            if (data && data[0] && data[0][0] && data[0][0][0]) {
-              translatedText = data[0][0][0];
+            console.log(`📥 Error response:`, errorData);
+          } catch (e) {
+            // Response might not be JSON
+            const errorText = await response.text();
+            if (errorText) {
+              errorMessage += ` - ${errorText}`;
             }
+            console.log(`📥 Error text:`, errorText);
           }
-
-        } else if (api.type === 'libretranslate') {
-          // LibreTranslate API
-          const response = await fetch(api.url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              q: cleanText,
-              source: 'auto',
-              target: targetLanguage,
-              format: 'text'
-            })
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            if (data.translatedText) {
-              translatedText = data.translatedText;
-            }
-          }
-
-        } else if (api.type === 'mymemory') {
-          // MyMemory API
-          const myMemoryUrl = `${api.url}?q=${encodeURIComponent(cleanText)}&langpair=en|${targetLanguage}`;
-
-          const response = await fetch(myMemoryUrl);
-          if (response.ok) {
-            const data = await response.json();
-            if (data.responseData && data.responseData.translatedText) {
-              translatedText = data.responseData.translatedText;
-            }
-          }
+          throw new Error(errorMessage);
         }
 
-        // If we got a translation
-        if (translatedText && translatedText !== cleanText) {
-          // Cache the translation
-          setTranslationCache(prev => ({
-            ...prev,
-            [cacheKey]: translatedText
-          }));
+        const data = await response.json();
+        console.log(`📥 Success response:`, data);
 
-          console.log(`✅ Translation successful using ${api.name}: ${translatedText.substring(0, 50)}...`);
-          return translatedText;
-        } else {
-          throw new Error('No translation result or same as original');
+        if (!data.translatedText) {
+          throw new Error('No translated text in response');
         }
+
+        const translatedText = data.translatedText;
+
+        // Cache the translation
+        setTranslationCache(prev => ({
+          ...prev,
+          [cacheKey]: translatedText
+        }));
+
+        console.log(`✅ Translation successful using endpoint: ${endpoint}`);
+        return translatedText;
 
       } catch (error) {
-        console.warn(`❌ ${api.name} failed:`, error.message);
+        console.warn(`❌ Translation failed with endpoint ${endpoint}:`, error.message);
 
-        // If this was the last API, return original text
-        if (i === TRANSLATION_APIS.length - 1) {
-          console.error('🚫 All translation APIs failed, returning original text');
+        // If this was the last endpoint, return original text
+        if (i === LIBRETRANSLATE_ENDPOINTS.length - 1) {
+          console.error('🚫 All translation endpoints failed, returning original text');
           return text;
         }
 
-        // Otherwise, try the next API
+        // Otherwise, try the next endpoint
         continue;
       }
     }
@@ -342,7 +303,6 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   // Mock translation function for testing (when APIs are down)
   const mockTranslateText = (text, targetLanguage) => {
     const mockTranslations = {
-      // Major World Languages
       'es': text => `[ES] ${text}`,
       'fr': text => `[FR] ${text}`,
       'de': text => `[DE] ${text}`,
@@ -353,43 +313,14 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
       'ko': text => `[KO] ${text}`,
       'zh': text => `[ZH] ${text}`,
       'ar': text => `[AR] ${text}`,
-
-      // Indian Languages with native script
-      'hi': text => `[हिंदी] ${text}`,
-      'te': text => `[తెలుగు] ${text}`,
-      'ml': text => `[മലയാളം] ${text}`,
-      'ta': text => `[தமிழ்] ${text}`,
-      'kn': text => `[ಕನ್ನಡ] ${text}`,
-      'bn': text => `[বাংলা] ${text}`,
-      'gu': text => `[ગુજરાતી] ${text}`,
-      'mr': text => `[मराठी] ${text}`,
-      'pa': text => `[ਪੰਜਾਬੀ] ${text}`,
-      'or': text => `[ଓଡ଼ିଆ] ${text}`,
-      'as': text => `[অসমীয়া] ${text}`,
-      'ur': text => `[اردو] ${text}`,
-
-      // European Languages
+      'hi': text => `[HI] ${text}`,
       'nl': text => `[NL] ${text}`,
       'sv': text => `[SV] ${text}`,
       'da': text => `[DA] ${text}`,
       'no': text => `[NO] ${text}`,
       'fi': text => `[FI] ${text}`,
       'pl': text => `[PL] ${text}`,
-      'tr': text => `[TR] ${text}`,
-      'el': text => `[EL] ${text}`,
-      'cs': text => `[CS] ${text}`,
-      'hu': text => `[HU] ${text}`,
-      'ro': text => `[RO] ${text}`,
-
-      // Other Major Languages
-      'th': text => `[TH] ${text}`,
-      'vi': text => `[VI] ${text}`,
-      'id': text => `[ID] ${text}`,
-      'ms': text => `[MS] ${text}`,
-      'tl': text => `[TL] ${text}`,
-      'sw': text => `[SW] ${text}`,
-      'he': text => `[HE] ${text}`,
-      'fa': text => `[FA] ${text}`
+      'tr': text => `[TR] ${text}`
     };
 
     const translator = mockTranslations[targetLanguage];
@@ -552,24 +483,7 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   };
 
   const handleError = (error) => {
-    console.error('❌ EPUB loading error:', error);
-
-    // Handle specific ReactReader errors
-    if (error.message && (
-      error.message.includes('Invalid array length') ||
-      error.message.includes('RangeError') ||
-      error.message.includes('scrolledLocation')
-    )) {
-      console.error('🔧 ReactReader configuration error - trying page reload');
-      setError('EPUB display error detected. Reloading with safer configuration...');
-
-      // Try to reload with different configuration after a short delay
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
-      return;
-    }
-
+    console.error('EPUB loading error:', error);
     console.log('🔄 EPUB failed to load, using fallback URL...');
     setError(`Original EPUB failed to load. Using fallback content.`);
   };
@@ -1018,12 +932,10 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
             <div style={{ marginBottom: '4px' }}>
               <strong>💡 Translation Tips:</strong>
             </div>
-            <div>• Powered by Google Translate + LibreTranslate + MyMemory</div>
+            <div>• Powered by LibreTranslate (multiple servers)</div>
             <div>• Press 'L' for quick access</div>
-            <div>• Supports Telugu, Malayalam, Hindi & 40+ languages</div>
             <div>• Translations are cached for speed</div>
             <div>• Select 'Original' to restore</div>
-            <div>• Automatic fallback between APIs for reliability</div>
             <div>• Auto-retries if service is busy</div>
             <div>• Demo mode available if APIs are down</div>
             <div>• Works offline with cached content</div>
@@ -1061,100 +973,24 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
 
       {/* EPUB Reader */}
       <div style={{
-        flex: 1,
-        minHeight: '400px',
-        height: 'calc(100vh - 140px)',
-        backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff',
-        position: 'relative',
-        overflow: 'hidden'
+        height: 'calc(100% - 100vh)',
+        backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff'
       }}>
-        {error ? (
-          <div style={{
-            padding: '40px',
-            textAlign: 'center',
-            color: isDarkMode ? '#ffffff' : '#333333'
-          }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
-            <h3>EPUB Loading Error</h3>
-            <p style={{ marginBottom: '20px' }}>{error}</p>
-            <button
-              onClick={() => {
-                setError(null);
-                window.location.reload();
-              }}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                marginRight: '10px'
-              }}
-            >
-              🔄 Reload Page
-            </button>
-            <button
-              onClick={() => setError(null)}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              ✅ Try Again
-            </button>
-          </div>
-        ) : (
-          <div style={{
-            width: '100%',
-            height: '100%',
-            position: 'relative',
-            border: '2px solid red' // Debug border to see container
-          }}>
-            <div style={{
-              position: 'absolute',
-              top: '10px',
-              left: '10px',
-              background: 'rgba(0,0,0,0.8)',
-              color: 'white',
-              padding: '8px',
-              borderRadius: '4px',
-              fontSize: '12px',
-              zIndex: 1000
-            }}>
-              📊 ReactReader Debug: URL={urlToUse ? 'Valid' : 'Invalid'} | Container: {window.innerHeight}px
-            </div>
-
-            <ReactReader
-              url={urlToUse}
-              location={location}
-              locationChanged={handleLocationChanged}
-              epubInitOptions={{
-                openAs: 'epub',
-                allowScriptedContent: false
-              }}
-              epubOptions={{
-                flow: 'paginated',
-                manager: 'default',
-                spread: 'none',
-                minSpreadWidth: 600,
-                gap: 'none'
-              }}
-              getRendition={handleRenditionReady}
-              onError={handleError}
-              showToc={false}
-              swipeable={false}
-              readerStyles={{
-                backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff',
-                color: isDarkMode ? '#e0e0e0' : '#333333'
-              }}
-            />
-          </div>
-        )}
+        <ReactReader
+          url={urlToUse}
+          location={location}
+          locationChanged={handleLocationChanged}
+          epubInitOptions={{
+            openAs: 'epub',
+            allowScriptedContent: true
+          }}
+          epubOptions={{
+            flow: 'scrolled',
+            manager: 'default'
+          }}
+          getRendition={handleRenditionReady}
+          onError={handleError}
+        />
       </div>
 
       {/* CSS Animations */}
