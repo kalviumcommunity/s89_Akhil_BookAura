@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ReactReader } from 'react-reader';
-import GoogleTranslate from './GoogleTranslate';  // adjust path as necessary
+import GoogleTranslate from '../components/GoogleTranslateWidget';  // adjust path as necessary
 
 const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   const [location, setLocation] = useState(null);
