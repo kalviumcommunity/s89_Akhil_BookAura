@@ -4,6 +4,8 @@ import axios from 'axios';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import SimpleEpubViewer from '../components/SimpleEpubViewer';
+import BookReaderGoogleTranslate from '../components/BookReaderGoogleTranslate';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { Book, Calendar, ArrowLeft, FileText, Upload } from 'lucide-react';
 
 const AllBooksPage = () => {
@@ -56,7 +58,12 @@ const AllBooksPage = () => {
   // If a book is selected, show the reader
   if (selectedBook) {
     return (
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+        {/* Google Translate Widget for Book Reader */}
+        <ErrorBoundary>
+          <BookReaderGoogleTranslate position="top-right" />
+        </ErrorBoundary>
+
         <div style={{
           padding: '10px 20px',
           backgroundColor: '#f8f9fa',

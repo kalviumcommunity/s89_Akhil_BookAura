@@ -6,6 +6,8 @@ import axios from 'axios';
 import { useCart } from './cart';
 import { SafeImage } from '../../utils/imageUtils';
 import SimpleEpubViewer from '../../components/SimpleEpubViewer';
+import BookReaderGoogleTranslate from '../../components/BookReaderGoogleTranslate';
+import ErrorBoundary from '../../components/ErrorBoundary';
 
 const BookDetailView = ({ book, onClose }) => {
   if (!book) return null;
@@ -56,7 +58,12 @@ const BookDetailView = ({ book, onClose }) => {
   // If reader is open, show the EPUB viewer
   if (showReader) {
     return (
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+        {/* Google Translate Widget for Book Reader */}
+        <ErrorBoundary>
+          <BookReaderGoogleTranslate position="top-right" />
+        </ErrorBoundary>
+
         <div style={{
           padding: '10px 20px',
           backgroundColor: '#f8f9fa',

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import SimpleEpubViewer from '../../components/SimpleEpubViewer';
+import BookReaderGoogleTranslate from '../../components/BookReaderGoogleTranslate';
+import ErrorBoundary from '../../components/ErrorBoundary';
 
 function Reader() {
   const { bookId } = useParams();
@@ -142,7 +144,12 @@ function Reader() {
   if (!book) return <p>Loading...</p>;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" style={{ position: 'relative' }}>
+      {/* Google Translate Widget for Book Reader */}
+      <ErrorBoundary>
+        <BookReaderGoogleTranslate position="top-right" />
+      </ErrorBoundary>
+
       {/* Book Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 py-6">

@@ -9,6 +9,8 @@ import './MyBooksPage.css';
 import LoadingAnimation from '../../components/LoadingAnimation';
 import api from '../../services/api';
 import SimpleEpubViewer from '../../components/SimpleEpubViewer';
+import BookReaderGoogleTranslate from '../../components/BookReaderGoogleTranslate';
+import ErrorBoundary from '../../components/ErrorBoundary';
 
 
 const MyBooksPage = () => {
@@ -188,7 +190,12 @@ const MyBooksPage = () => {
   // If a book is selected, show the reader
   if (selectedBook) {
     return (
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+        {/* Google Translate Widget for Book Reader */}
+        <ErrorBoundary>
+          <BookReaderGoogleTranslate position="top-right" />
+        </ErrorBoundary>
+
         <div style={{
           padding: '10px 20px',
           backgroundColor: '#f8f9fa',
