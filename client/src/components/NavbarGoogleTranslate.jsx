@@ -14,19 +14,37 @@ const NavbarGoogleTranslate = () => {
     const initializeGoogleTranslate = () => {
       try {
         if (!mounted) return;
-        
+
+        console.log('Initializing Google Translate for navbar');
+
         if (window.google && window.google.translate && window.google.translate.TranslateElement) {
+          // Clear any existing content first
+          const element = document.getElementById('navbar_google_translate_element');
+          if (element) {
+            element.innerHTML = '';
+          }
+
           new window.google.translate.TranslateElement({
             pageLanguage: 'en',
             includedLanguages: 'en,te,ta,ml,hi,bn,gu,kn,mr,pa,ur,es,fr,de,it,pt,ru,ja,ko,zh',
             layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE,
             autoDisplay: false,
+            multilanguagePage: true
           }, 'navbar_google_translate_element');
-          
+
           if (mounted) {
             setIsLoaded(true);
             setError(null);
+            console.log('Navbar Google Translate initialized successfully');
           }
+        } else {
+          console.log('Google Translate API not ready yet for navbar');
+          // Retry after a short delay
+          setTimeout(() => {
+            if (mounted && window.google && window.google.translate) {
+              initializeGoogleTranslate();
+            }
+          }, 500);
         }
       } catch (err) {
         console.error('Google Translate initialization error:', err);
@@ -64,8 +82,12 @@ const NavbarGoogleTranslate = () => {
       document.head.appendChild(script);
     } else {
       // Script already exists, try to initialize
+      console.log('Script already exists for navbar, initializing...');
       if (window.google && window.google.translate) {
         initializeGoogleTranslate();
+      } else {
+        // Wait for the API to be ready
+        setTimeout(initializeGoogleTranslate, 1000);
       }
     }
 

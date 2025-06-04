@@ -17,19 +17,37 @@ const BookReaderGoogleTranslate = ({ position = 'top-right' }) => {
     const initializeGoogleTranslate = () => {
       try {
         if (!mounted) return;
-        
+
+        console.log('Initializing Google Translate for:', uniqueId);
+
         if (window.google && window.google.translate && window.google.translate.TranslateElement) {
+          // Clear any existing content first
+          const element = document.getElementById(uniqueId);
+          if (element) {
+            element.innerHTML = '';
+          }
+
           new window.google.translate.TranslateElement({
             pageLanguage: 'en',
             includedLanguages: 'en,te,ta,ml,hi,bn,gu,kn,mr,pa,ur,es,fr,de,it,pt,ru,ja,ko,zh,ar,th,vi,tr,pl,nl,sv,da,no,fi,he,fa,id,ms,tl',
             layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE,
             autoDisplay: false,
+            multilanguagePage: true
           }, uniqueId);
-          
+
           if (mounted) {
             setIsLoaded(true);
             setError(null);
+            console.log('Google Translate initialized successfully');
           }
+        } else {
+          console.log('Google Translate API not ready yet');
+          // Retry after a short delay
+          setTimeout(() => {
+            if (mounted && window.google && window.google.translate) {
+              initializeGoogleTranslate();
+            }
+          }, 500);
         }
       } catch (err) {
         console.error('Google Translate initialization error:', err);
@@ -39,47 +57,45 @@ const BookReaderGoogleTranslate = ({ position = 'top-right' }) => {
       }
     };
 
-    // Set up the global callback with unique name
-    const callbackName = `googleTranslateElementInit_${uniqueId}`;
-    window[callbackName] = initializeGoogleTranslate;
+    // Use a simpler global callback approach
+    window.googleTranslateElementInit = initializeGoogleTranslate;
 
     // Check if script is already loaded
     const existingScript = document.querySelector('script[src*="translate.google.com"]');
-    
+
     if (!existingScript) {
       const script = document.createElement('script');
-      script.src = `https://translate.google.com/translate_a/element.js?cb=${callbackName}`;
+      script.src = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
       script.async = true;
-      script.defer = true;
-      
+
       script.onload = () => {
         if (mounted) {
-          console.log('Google Translate script loaded successfully for book reader');
+          console.log('Google Translate script loaded successfully');
         }
       };
-      
+
       script.onerror = () => {
         if (mounted) {
           console.error('Failed to load Google Translate script');
           setError('Failed to load translation service');
         }
       };
-      
+
       document.head.appendChild(script);
     } else {
       // Script already exists, try to initialize
+      console.log('Script already exists, initializing...');
       if (window.google && window.google.translate) {
         initializeGoogleTranslate();
+      } else {
+        // Wait for the API to be ready
+        setTimeout(initializeGoogleTranslate, 1000);
       }
     }
 
     // Cleanup function
     return () => {
       mounted = false;
-      // Clean up the global callback
-      if (window[callbackName] === initializeGoogleTranslate) {
-        delete window[callbackName];
-      }
     };
   }, [uniqueId]);
 
