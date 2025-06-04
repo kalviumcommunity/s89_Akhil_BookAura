@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ReactReader } from 'react-reader';
-// import GoogleTranslate from './GoogleTranslateWidget';
-// import ErrorBoundary from './ErrorBoundary';
+import GoogleTranslate from './GoogleTranslateWidget';
+import ErrorBoundary from './ErrorBoundary';
 
 const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
   const [location, setLocation] = useState(null);
@@ -82,10 +82,10 @@ const SimpleEpubViewer = ({ epubUrl, title = "EPUB Reader" }) => {
 
   return (
     <div style={{ height: '600px', width: '100%' }}>
-      {/* Google Translate widget - temporarily disabled for debugging */}
-      {/* <ErrorBoundary>
+      {/* Google Translate widget */}
+      <ErrorBoundary>
         <GoogleTranslate />
-      </ErrorBoundary> */}
+      </ErrorBoundary>
 
       {/* Header */}
       <div style={{

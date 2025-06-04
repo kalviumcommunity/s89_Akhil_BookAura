@@ -169,6 +169,22 @@ const MyBooksPage = () => {
     setSelectedBook(null);
   };
 
+  // ESC key handler - must be before conditional return
+  useEffect(() => {
+    if(!selectedBook) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleCloseReader();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedBook]);
+
   // If a book is selected, show the reader
   if (selectedBook) {
     return (
@@ -205,20 +221,6 @@ const MyBooksPage = () => {
       </div>
     );
   }
-  useEffect(() => {
-    if(!selectedBook) return;
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        handleCloseReader();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [selectedBook]);
 
   return (
     <>
