@@ -83,63 +83,154 @@ const WorkingGoogleTranslate = ({ position = 'top-right' }) => {
     console.log(`🔄 Translating to: ${languageCode}`);
 
     try {
-      // Method 1: Try using Google Translate API directly
+      // Method 1: Use Google Translate Widget approach
       if (window.google && window.google.translate) {
-        // Create a temporary element for Google Translate
-        const tempDiv = document.createElement('div');
-        tempDiv.id = 'temp_google_translate';
-        tempDiv.style.display = 'none';
-        document.body.appendChild(tempDiv);
+        console.log('🎯 Using Google Translate Widget method...');
 
-        new window.google.translate.TranslateElement({
+        // Remove any existing translate elements
+        const existingElements = document.querySelectorAll('[id^="google_translate_element"]');
+        existingElements.forEach(el => el.remove());
+
+        // Create a new translate element
+        const translateDiv = document.createElement('div');
+        translateDiv.id = 'google_translate_element_active';
+        translateDiv.style.position = 'fixed';
+        translateDiv.style.top = '-1000px';
+        translateDiv.style.left = '-1000px';
+        translateDiv.style.visibility = 'hidden';
+        document.body.appendChild(translateDiv);
+
+        // Initialize Google Translate
+        const translateElement = new window.google.translate.TranslateElement({
           pageLanguage: 'en',
-          includedLanguages: languageCode,
+          includedLanguages: `en,${languageCode}`,
           layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE,
-          autoDisplay: false
-        }, 'temp_google_translate');
+          autoDisplay: false,
+          multilanguagePage: true
+        }, 'google_translate_element_active');
 
-        // Trigger translation
+        // Wait for the element to be created and trigger translation
         setTimeout(() => {
-          const select = tempDiv.querySelector('select');
+          const select = translateDiv.querySelector('.goog-te-combo');
           if (select) {
-            select.value = languageCode;
-            select.dispatchEvent(new Event('change'));
-            console.log('✅ Translation triggered via Google Translate API');
+            console.log('🎯 Found translate dropdown, triggering translation...');
+
+            // Find the option for the target language
+            const targetOption = Array.from(select.options).find(option =>
+              option.value.includes(languageCode)
+            );
+
+            if (targetOption) {
+              select.value = targetOption.value;
+              select.dispatchEvent(new Event('change', { bubbles: true }));
+              console.log(`✅ Translation triggered for ${languageCode}`);
+
+              // Check if translation actually happened
+              setTimeout(() => {
+                const isTranslated = document.querySelector('.goog-te-banner-frame') ||
+                                   document.body.classList.contains('translated-ltr') ||
+                                   document.body.classList.contains('translated-rtl');
+
+                if (isTranslated) {
+                  console.log('✅ Page successfully translated!');
+                } else {
+                  console.log('⚠️ Translation may not have worked, trying fallback...');
+                  fallbackTranslation(languageCode);
+                }
+                setIsTranslating(false);
+              }, 2000);
+            } else {
+              console.log('❌ Target language option not found, using fallback...');
+              fallbackTranslation(languageCode);
+            }
+          } else {
+            console.log('❌ Translate dropdown not found, using fallback...');
+            fallbackTranslation(languageCode);
           }
-          document.body.removeChild(tempDiv);
-          setIsTranslating(false);
-        }, 1000);
+        }, 1500);
+
       } else {
-        // Method 2: Use Google Translate URL redirect
-        const currentUrl = window.location.href;
-        const translateUrl = `https://translate.google.com/translate?sl=en&tl=${languageCode}&u=${encodeURIComponent(currentUrl)}`;
-        console.log('🔗 Redirecting to Google Translate:', translateUrl);
-        window.open(translateUrl, '_blank');
-        setIsTranslating(false);
+        console.log('❌ Google Translate API not available, using fallback...');
+        fallbackTranslation(languageCode);
       }
     } catch (error) {
       console.error('❌ Translation error:', error);
-      // Fallback: Open Google Translate in new tab
-      const currentUrl = window.location.href;
-      const translateUrl = `https://translate.google.com/translate?sl=en&tl=${languageCode}&u=${encodeURIComponent(currentUrl)}`;
-      window.open(translateUrl, '_blank');
-      setIsTranslating(false);
+      fallbackTranslation(languageCode);
     }
+  };
+
+  // Fallback translation method
+  const fallbackTranslation = (languageCode) => {
+    console.log(`🔄 Using fallback translation for ${languageCode}...`);
+
+    // Method 1: Try to use existing Google Translate on page
+    const existingSelect = document.querySelector('.goog-te-combo');
+    if (existingSelect) {
+      const targetOption = Array.from(existingSelect.options).find(option =>
+        option.value.includes(languageCode)
+      );
+      if (targetOption) {
+        existingSelect.value = targetOption.value;
+        existingSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        setIsTranslating(false);
+        return;
+      }
+    }
+
+    // Method 2: Open in Google Translate (new tab)
+    const currentUrl = window.location.href;
+    const translateUrl = `https://translate.google.com/translate?sl=en&tl=${languageCode}&u=${encodeURIComponent(currentUrl)}`;
+    console.log('🔗 Opening Google Translate in new tab:', translateUrl);
+    window.open(translateUrl, '_blank');
+    setIsTranslating(false);
   };
 
   // Function to restore original language
   const restoreOriginal = () => {
     console.log('🔄 Restoring original language...');
-    
-    // Try to find and click the "Show original" button
-    const showOriginalBtn = document.querySelector('.goog-te-menu-value span');
-    if (showOriginalBtn && showOriginalBtn.textContent.includes('Show original')) {
-      showOriginalBtn.click();
-      return;
-    }
+    setIsTranslating(true);
 
-    // Alternative: Reload the page to restore original
-    window.location.reload();
+    try {
+      // Method 1: Try to find and use existing Google Translate dropdown
+      const existingSelect = document.querySelector('.goog-te-combo');
+      if (existingSelect) {
+        // Find the English option
+        const englishOption = Array.from(existingSelect.options).find(option =>
+          option.value === '' || option.value.includes('en') || option.text.includes('English')
+        );
+        if (englishOption) {
+          existingSelect.value = englishOption.value;
+          existingSelect.dispatchEvent(new Event('change', { bubbles: true }));
+          console.log('✅ Restored to original language via dropdown');
+          setIsTranslating(false);
+          return;
+        }
+      }
+
+      // Method 2: Try to find and click the "Show original" button
+      const showOriginalBtn = document.querySelector('.goog-te-menu-value span');
+      if (showOriginalBtn && showOriginalBtn.textContent.includes('Show original')) {
+        showOriginalBtn.click();
+        console.log('✅ Restored to original language via Show Original button');
+        setIsTranslating(false);
+        return;
+      }
+
+      // Method 3: Remove translation classes from body
+      document.body.classList.remove('translated-ltr', 'translated-rtl');
+      const translateBanner = document.querySelector('.goog-te-banner-frame');
+      if (translateBanner) {
+        translateBanner.remove();
+      }
+
+      // Method 4: Reload the page as last resort
+      console.log('🔄 Reloading page to restore original language...');
+      window.location.reload();
+
+    } catch (error) {
+      console.error('❌ Error restoring original language:', error);
+      setIsTranslating(false);
+    }
   };
 
   const handleLanguageSelect = (languageCode) => {
