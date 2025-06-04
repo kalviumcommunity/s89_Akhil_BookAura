@@ -9,7 +9,7 @@ import './MyBooksPage.css';
 import LoadingAnimation from '../../components/LoadingAnimation';
 import api from '../../services/api';
 import SimpleEpubViewer from '../../components/SimpleEpubViewer';
-import SimpleGoogleTranslate from '../../components/SimpleGoogleTranslate';
+import WorkingGoogleTranslate from '../../components/WorkingGoogleTranslate';
 import ErrorBoundary from '../../components/ErrorBoundary';
 
 
@@ -193,7 +193,7 @@ const MyBooksPage = () => {
       <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
         {/* Google Translate Widget for Book Reader */}
         <ErrorBoundary>
-          <SimpleGoogleTranslate position="top-right" />
+          <WorkingGoogleTranslate position="top-right" />
         </ErrorBoundary>
 
         <div style={{

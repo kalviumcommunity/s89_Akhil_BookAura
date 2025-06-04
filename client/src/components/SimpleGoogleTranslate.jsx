@@ -7,21 +7,26 @@ const SimpleGoogleTranslate = ({ position = 'top-right' }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    let retryCount = 0;
+    const maxRetries = 10;
+
     // Function to initialize Google Translate
     const initGoogleTranslate = () => {
-      console.log('Attempting to initialize Google Translate...');
-      console.log('window.google:', window.google);
-      console.log('window.google.translate:', window.google?.translate);
+      console.log(`🔄 Attempt ${retryCount + 1}/${maxRetries} to initialize Google Translate...`);
+
+      const element = document.getElementById('google_translate_element');
+      if (!element) {
+        console.log('❌ Element google_translate_element not found in DOM');
+        return;
+      }
 
       if (window.google && window.google.translate && window.google.translate.TranslateElement) {
         try {
           // Clear existing content
-          const element = document.getElementById('google_translate_element');
-          if (element) {
-            element.innerHTML = '';
-          }
+          element.innerHTML = '';
 
-          new window.google.translate.TranslateElement(
+          console.log('🎯 Creating TranslateElement...');
+          const translateElement = new window.google.translate.TranslateElement(
             {
               pageLanguage: 'en',
               includedLanguages: 'en,te,ta,ml,hi,bn,gu,kn,mr,pa,ur,es,fr,de,it,pt,ru,ja,ko,zh,ar,th,vi,tr,pl,nl,sv,da,no,fi,he,fa,id,ms,tl',
@@ -31,14 +36,36 @@ const SimpleGoogleTranslate = ({ position = 'top-right' }) => {
             },
             'google_translate_element'
           );
-          setIsLoaded(true);
-          console.log('✅ Google Translate loaded successfully!');
+
+          // Wait a bit and check if the dropdown was created
+          setTimeout(() => {
+            const dropdown = element.querySelector('.goog-te-combo');
+            if (dropdown && dropdown.options && dropdown.options.length > 1) {
+              setIsLoaded(true);
+              console.log('✅ Google Translate dropdown created successfully with', dropdown.options.length, 'options');
+              console.log('🌍 Available languages:', Array.from(dropdown.options).map(opt => opt.text).join(', '));
+            } else {
+              console.log('⚠️ Dropdown created but no options found, retrying...');
+              if (retryCount < maxRetries) {
+                retryCount++;
+                setTimeout(initGoogleTranslate, 1000);
+              }
+            }
+          }, 1000);
+
         } catch (error) {
           console.error('❌ Error initializing Google Translate:', error);
+          if (retryCount < maxRetries) {
+            retryCount++;
+            setTimeout(initGoogleTranslate, 2000);
+          }
         }
       } else {
-        console.log('⏳ Google Translate API not ready yet, retrying...');
-        setTimeout(initGoogleTranslate, 1000);
+        console.log('⏳ Google Translate API not ready yet...');
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(initGoogleTranslate, 1000);
+        }
       }
     };
 
@@ -53,12 +80,14 @@ const SimpleGoogleTranslate = ({ position = 'top-right' }) => {
       script.type = 'text/javascript';
       script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
       script.async = true;
-      script.onload = () => console.log('📜 Google Translate script loaded');
+      script.onload = () => {
+        console.log('📜 Google Translate script loaded');
+        setTimeout(initGoogleTranslate, 500);
+      };
       script.onerror = () => console.error('❌ Failed to load Google Translate script');
       document.head.appendChild(script);
     } else {
       console.log('📜 Google Translate script already exists, initializing...');
-      // Script already loaded, try to initialize
       setTimeout(initGoogleTranslate, 500);
     }
 
@@ -68,7 +97,7 @@ const SimpleGoogleTranslate = ({ position = 'top-right' }) => {
         delete window.googleTranslateElementInit;
       }
     };
-  }, []);
+  }, [isVisible]); // Re-run when visibility changes
 
   const getPositionStyles = () => {
     const baseStyles = {
