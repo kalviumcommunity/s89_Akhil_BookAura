@@ -6,8 +6,7 @@ import { ShoppingCart, Home, BookOpen, GraduationCap, Menu, X } from 'lucide-rea
 import { useCart } from '../pages/MarketPlace/cart';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import NavbarGoogleTranslate from './NavbarGoogleTranslate';
-import ErrorBoundary from './ErrorBoundary';
+import GoogleTranslate from './GoogleTranslateWidget';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -147,6 +146,28 @@ const Navbar = () => {
         >
           StudyHub
         </li>
+        <li
+          className={location.pathname === '/all-books' ? 'active' : 'notactive'}
+          onClick={() => handleNavigation('/all-books')}
+          style={{ color: '#28a745', fontWeight: 'bold' }}
+        >
+          📚 All Books
+        </li>
+        <li
+          className={location.pathname === '/working-epub' ? 'active' : 'notactive'}
+          onClick={() => handleNavigation('/working-epub')}
+          style={{ color: '#007bff', fontWeight: 'bold' }}
+        >
+          📤 Upload
+        </li>
+
+        {/* Google Translate in mobile menu */}
+        <li className="mobile-translate-item">
+          <span style={{ fontSize: '14px', color: '#666', marginBottom: '8px', display: 'block' }}>
+            🌐 Translate Page
+          </span>
+          <GoogleTranslate />
+        </li>
 
         {/* Close button for mobile menu */}
         <li className="close-mobile-menu" onClick={toggleMobileMenu}>
@@ -157,11 +178,7 @@ const Navbar = () => {
       {/* Always visible elements on the right */}
       <div className="always-visible-items">
         {/* Google Translate Widget */}
-        <div className="translate-widget-container">
-          <ErrorBoundary>
-            <NavbarGoogleTranslate />
-          </ErrorBoundary>
-        </div>
+        <GoogleTranslate />
 
         {!isLoggedIn && (
           <div
