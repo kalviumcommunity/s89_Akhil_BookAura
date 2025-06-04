@@ -7,7 +7,8 @@ import { useCart } from './MarketPlace/cart'
 import { SafeImage, getProxiedImageUrl, handleImageError } from '../utils/imageUtils'
 import {useNavigate,useLocation} from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
-import DirectGoogleTranslate from '../components/DirectGoogleTranslate'
+import UniversalGoogleTranslate from '../components/UniversalGoogleTranslate'
+import TranslationDemo from '../components/TranslationDemo'
 import ErrorBoundary from '../components/ErrorBoundary'
 import axios from 'axios';
 
@@ -112,7 +113,12 @@ const Home = () => {
 
       {/* Page-level Google Translate Widget */}
       <ErrorBoundary>
-        <DirectGoogleTranslate position="bottom-right" />
+        <UniversalGoogleTranslate position="bottom-right" />
+      </ErrorBoundary>
+
+      {/* Translation Demo */}
+      <ErrorBoundary>
+        <TranslationDemo />
       </ErrorBoundary>
 
       <div className='main-box'>
