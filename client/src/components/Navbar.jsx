@@ -6,6 +6,8 @@ import { ShoppingCart, Home, BookOpen, GraduationCap, Menu, X } from 'lucide-rea
 import { useCart } from '../pages/MarketPlace/cart';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import NavbarGoogleTranslate from './NavbarGoogleTranslate';
+import ErrorBoundary from './ErrorBoundary';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -145,20 +147,6 @@ const Navbar = () => {
         >
           StudyHub
         </li>
-        <li
-          className={location.pathname === '/all-books' ? 'active' : 'notactive'}
-          onClick={() => handleNavigation('/all-books')}
-          style={{ color: '#28a745', fontWeight: 'bold' }}
-        >
-          📚 All Books
-        </li>
-        <li
-          className={location.pathname === '/working-epub' ? 'active' : 'notactive'}
-          onClick={() => handleNavigation('/working-epub')}
-          style={{ color: '#007bff', fontWeight: 'bold' }}
-        >
-          📤 Upload
-        </li>
 
         {/* Close button for mobile menu */}
         <li className="close-mobile-menu" onClick={toggleMobileMenu}>
@@ -168,6 +156,13 @@ const Navbar = () => {
 
       {/* Always visible elements on the right */}
       <div className="always-visible-items">
+        {/* Google Translate Widget */}
+        <div className="translate-widget-container">
+          <ErrorBoundary>
+            <NavbarGoogleTranslate />
+          </ErrorBoundary>
+        </div>
+
         {!isLoggedIn && (
           <div
             className='login'
