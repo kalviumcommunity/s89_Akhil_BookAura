@@ -1,6 +1,6 @@
 // Simple Navbar Google Translate - Whole page translation with memory
 import React, { useState, useEffect } from 'react';
-import { Globe, ChevronDown, Languages } from 'lucide-react';
+import { Globe, ChevronDown } from 'lucide-react';
 
 const NavbarGoogleTranslate = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -102,19 +102,38 @@ const NavbarGoogleTranslate = () => {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
+          gap: '4px',
           padding: '8px 12px',
-          color: 'white',
-          border: 'none',
-          borderRadius: '25px',
+          backgroundColor: 'transparent',
+          color: '#333',
+          borderRadius: '20px',
           cursor: 'pointer',
+          fontSize: '12px',
+          fontWeight: '500',
+          minWidth: '40px',
+          justifyContent: 'center',
+          border: currentLang !== 'en' ? '2px solid #34a853' : 'none',
+          transition: 'all 0.2s ease'
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.backgroundColor = '#f5f5f5';
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.backgroundColor = 'transparent';
         }}
         title={currentLang === 'en' ? 'Translate Page' : `Translated to ${languages.find(l => l.code === currentLang)?.name}`}
       >
-        <Languages size={14} />
-        <span style={{ display: 'none' }}>
-          {currentLang === 'en' ? 'EN' : currentLang.toUpperCase()}
-        </span>
+        <Globe size={18} color={currentLang === 'en' ? '#333' : '#34a853'} />
+        {currentLang !== 'en' && (
+          <span style={{
+            fontSize: '10px',
+            color: '#34a853',
+            fontWeight: 'bold',
+            textTransform: 'uppercase'
+          }}>
+            {currentLang}
+          </span>
+        )}
       </div>
 
       {/* Compact Dropdown */}
