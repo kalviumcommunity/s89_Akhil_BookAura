@@ -80,7 +80,7 @@ const Login = () => {
             }
           })
           .catch(userError => {
-            console.error("Error fetching user data for caching:", userError);
+            console.log("Error fetching user data for caching:", userError);
           });
         }, 100); // Small delay to prioritize UI response
       }
@@ -120,7 +120,6 @@ const Login = () => {
       <div className='loginbox'>
         <div className='login-form'>
           <h1>Sign In</h1>
-          {error && <div className="error-message">{error}</div>}
           <form onSubmit={handleSubmit}>
             <label>Email</label>
             <input type="text" placeholder='Email...' value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />

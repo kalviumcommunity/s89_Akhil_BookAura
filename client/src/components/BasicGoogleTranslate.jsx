@@ -5,48 +5,154 @@ import { Globe, ChevronDown } from 'lucide-react';
 const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [showFallback, setShowFallback] = useState(false);
+
+  // Fallback language options
+  const fallbackLanguages = [
+    { code: 'en', name: 'English', flag: '🇺🇸' },
+    { code: 'hi', name: 'Hindi', flag: '🇮🇳', native: 'हिन्दी' },
+    { code: 'te', name: 'Telugu', flag: '🇮🇳', native: 'తెలుగు' },
+    { code: 'ta', name: 'Tamil', flag: '🇮🇳', native: 'தமிழ்' },
+    { code: 'ml', name: 'Malayalam', flag: '🇮🇳', native: 'മലയാളം' },
+    { code: 'bn', name: 'Bengali', flag: '🇮🇳', native: 'বাংলা' },
+    { code: 'gu', name: 'Gujarati', flag: '🇮🇳', native: 'ગુજરાતી' },
+    { code: 'kn', name: 'Kannada', flag: '🇮🇳', native: 'ಕನ್ನಡ' },
+    { code: 'mr', name: 'Marathi', flag: '🇮🇳', native: 'मराठी' },
+    { code: 'pa', name: 'Punjabi', flag: '🇮🇳', native: 'ਪੰਜਾਬੀ' },
+    { code: 'ur', name: 'Urdu', flag: '🇵🇰', native: 'اردو' },
+    { code: 'es', name: 'Spanish', flag: '🇪🇸', native: 'Español' },
+    { code: 'fr', name: 'French', flag: '🇫🇷', native: 'Français' },
+    { code: 'de', name: 'German', flag: '🇩🇪', native: 'Deutsch' },
+    { code: 'it', name: 'Italian', flag: '🇮🇹', native: 'Italiano' },
+    { code: 'pt', name: 'Portuguese', flag: '🇵🇹', native: 'Português' },
+    { code: 'ru', name: 'Russian', flag: '🇷🇺', native: 'Русский' },
+    { code: 'ja', name: 'Japanese', flag: '🇯🇵', native: '日本語' },
+    { code: 'ko', name: 'Korean', flag: '🇰🇷', native: '한국어' },
+    { code: 'zh', name: 'Chinese', flag: '🇨🇳', native: '中文' },
+    { code: 'ar', name: 'Arabic', flag: '🇸🇦', native: 'العربية' },
+    { code: 'th', name: 'Thai', flag: '🇹🇭', native: 'ไทย' },
+    { code: 'vi', name: 'Vietnamese', flag: '🇻🇳', native: 'Tiếng Việt' },
+    { code: 'tr', name: 'Turkish', flag: '🇹🇷', native: 'Türkçe' }
+  ];
 
   useEffect(() => {
+    let initAttempts = 0;
+    const maxAttempts = 5; // Reduced attempts for faster fallback
+
+    // Set timeout to show fallback if Google Translate doesn't load
+    const fallbackTimeout = setTimeout(() => {
+      if (!isLoaded) {
+        console.log('Google Translate loading timeout, showing fallback');
+        setShowFallback(true);
+      }
+    }, 10000); // 10 seconds timeout
+
     // Initialize Google Translate
     const initGoogleTranslate = () => {
+      console.log('Attempting to initialize Google Translate...');
+
       if (window.google && window.google.translate && window.google.translate.TranslateElement) {
         try {
+          // Clear any existing widget
+          const element = document.getElementById('google_translate_element');
+          if (element) {
+            element.innerHTML = '';
+          }
+
           new window.google.translate.TranslateElement({
             pageLanguage: 'en',
             includedLanguages: 'en,te,ta,ml,hi,bn,gu,kn,mr,pa,ur,es,fr,de,it,pt,ru,ja,ko,zh,ar,th,vi,tr,pl,nl,sv,da,no,fi,he,fa,id,ms,tl',
             layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE,
-            autoDisplay: false
+            autoDisplay: false,
+            multilanguagePage: true
           }, 'google_translate_element');
+
           setIsLoaded(true);
+          setShowFallback(false);
+          clearTimeout(fallbackTimeout);
+          console.log('Google Translate initialized successfully');
         } catch (error) {
-          console.log('Google Translate init error:', error);
+          console.error('Google Translate init error:', error);
+
+          // Retry initialization
+          if (initAttempts < maxAttempts) {
+            initAttempts++;
+            setTimeout(initGoogleTranslate, 1000);
+          } else {
+            // Show fallback after max attempts
+            setShowFallback(true);
+            setIsLoaded(false);
+          }
+        }
+      } else {
+        console.log('Google Translate not ready, retrying...');
+
+        // Retry if Google Translate isn't ready yet
+        if (initAttempts < maxAttempts) {
+          initAttempts++;
+          setTimeout(initGoogleTranslate, 1000);
+        } else {
+          // Show fallback after max attempts
+          setShowFallback(true);
+          setIsLoaded(false);
         }
       }
     };
 
+    // Manual translation fallback
+    const handleManualTranslate = (langCode) => {
+      if (langCode === 'en') {
+        // Reset to original
+        window.location.reload();
+        return;
+      }
+
+      // Use Google Translate URL redirect as fallback
+      const currentUrl = encodeURIComponent(window.location.href);
+      const translateUrl = `https://translate.google.com/translate?sl=en&tl=${langCode}&u=${currentUrl}`;
+
+      // Open in same window
+      window.location.href = translateUrl;
+    };
+
     // Load Google Translate script
     if (!window.google || !window.google.translate) {
+      console.log('Loading Google Translate script...');
+
+      // Set up global callback
+      window.googleTranslateElementInit = initGoogleTranslate;
+
       const script = document.createElement('script');
       script.type = 'text/javascript';
       script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
       script.async = true;
-      
-      window.googleTranslateElementInit = initGoogleTranslate;
-      
+
       script.onload = () => {
+        console.log('Google Translate script loaded');
         setTimeout(initGoogleTranslate, 500);
       };
-      
+
+      script.onerror = () => {
+        console.error('Failed to load Google Translate script');
+      };
+
       document.head.appendChild(script);
     } else {
+      console.log('Google Translate already available');
       initGoogleTranslate();
     }
 
     // Cleanup function
     return () => {
-      // Don't remove scripts or manipulate DOM on cleanup
+      // Clean up timeout
+      clearTimeout(fallbackTimeout);
+
+      // Clean up global callback
+      if (window.googleTranslateElementInit) {
+        delete window.googleTranslateElementInit;
+      }
     };
-  }, []);
+  }, [isVisible]);
 
   const getPositionStyles = () => {
     const baseStyles = {
@@ -154,12 +260,56 @@ const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
           </div>
 
           {/* Google Translate Element */}
-          <div id="google_translate_element" style={{
-            textAlign: 'center'
-          }}></div>
+          {!showFallback && (
+            <div id="google_translate_element" style={{
+              textAlign: 'center'
+            }}></div>
+          )}
+
+          {/* Fallback Language Selector */}
+          {showFallback && (
+            <div style={{
+              maxHeight: '300px',
+              overflowY: 'auto'
+            }}>
+              {fallbackLanguages.map((lang) => (
+                <div
+                  key={lang.code}
+                  onClick={() => handleManualTranslate(lang.code)}
+                  style={{
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid #f0f0f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = '#f8f9fa';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <span style={{ fontSize: '18px' }}>{lang.flag}</span>
+                  <div>
+                    <div style={{ fontWeight: '500', color: '#333' }}>
+                      {lang.name}
+                    </div>
+                    {lang.native && (
+                      <div style={{ fontSize: '12px', color: '#666' }}>
+                        {lang.native}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Loading State */}
-          {!isLoaded && (
+          {!isLoaded && !showFallback && (
             <div style={{
               textAlign: 'center',
               padding: '20px',
@@ -189,7 +339,7 @@ const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
             color: '#666',
             textAlign: 'center'
           }}>
-            Powered by Google Translate
+            {showFallback ? 'Manual Translation (redirects to Google Translate)' : 'Powered by Google Translate'}
           </div>
 
           {/* Close Button */}
