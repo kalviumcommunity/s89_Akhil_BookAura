@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import './App.css'
+import './components/GoogleTranslateGlobal.css'
 import { BrowserRouter } from 'react-router-dom'
 import AllRouting from './AllRouting'
 import { CartProvider } from './pages/MarketPlace/cart'
