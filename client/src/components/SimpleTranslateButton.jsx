@@ -10,6 +10,7 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
   const [autoTranslateEnabled, setAutoTranslateEnabled] = useState(false);
   const [observers, setObservers] = useState([]);
   const [intervalId, setIntervalId] = useState(null);
+  const [globalTranslatedElements, setGlobalTranslatedElements] = useState(new Map());
 
   // Language options
   const languages = [
@@ -206,6 +207,7 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
               // Store original
               element.dataset.originalText = originalText;
               element.dataset.translatedLang = languageCode;
+              element.dataset.translatedText = translatedText;
 
               // Apply translation
               element.textContent = translatedText;
@@ -218,8 +220,16 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
               element.style.transition = 'all 0.3s ease';
               element.style.boxShadow = '0 1px 3px rgba(166, 124, 82, 0.1)';
 
+              // Store in global map for persistence
+              const elementKey = `${originalText}_${languageCode}`;
+              globalTranslatedElements.set(elementKey, {
+                original: originalText,
+                translated: translatedText,
+                language: languageCode
+              });
+
               translated++;
-              setTranslatedCount(translated);
+              setTranslatedCount(prev => prev + 1);
             }
           } catch (error) {
             console.error('Error translating element:', error);
@@ -263,10 +273,87 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
 
       console.log('🔄 Page change detected, auto-translating new content...');
 
-      // Small delay to let content load
-      setTimeout(() => {
-        translatePage(languageCode, true); // true = auto-translate mode
-      }, 500);
+      // Multiple attempts to catch all content
+      const translateAttempts = [300, 800, 1500]; // Multiple delays
+
+      translateAttempts.forEach((delay, index) => {
+        setTimeout(() => {
+          console.log(`🔄 Translation attempt ${index + 1} after ${delay}ms`);
+          translateAllVisibleContent(languageCode);
+        }, delay);
+      });
+    };
+
+    // Comprehensive translation of all visible content
+    const translateAllVisibleContent = async (languageCode) => {
+      try {
+        const allElements = [];
+
+        // Get all iframes and their content
+        const iframes = document.querySelectorAll('iframe');
+        console.log(`🔍 Checking ${iframes.length} iframes for content`);
+
+        iframes.forEach((iframe, index) => {
+          try {
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+            if (iframeDoc) {
+              const iframeElements = findAllTextElements(iframeDoc);
+              console.log(`📖 Iframe ${index + 1}: Found ${iframeElements.length} text elements`);
+              allElements.push(...iframeElements);
+            }
+          } catch (e) {
+            console.log(`❌ Cannot access iframe ${index + 1}:`, e.message);
+          }
+        });
+
+        // Get main document elements
+        const mainElements = findAllTextElements(document);
+        allElements.push(...mainElements);
+
+        // Filter for untranslated elements
+        const untranslated = allElements.filter(element => {
+          const text = element.textContent.trim();
+          const elementKey = `${text}_${languageCode}`;
+
+          // Skip if already translated or should be excluded
+          if (element.dataset.originalText ||
+              shouldExcludeElement(element) ||
+              text.length < 3) {
+            return false;
+          }
+
+          // Check if we have a cached translation
+          if (globalTranslatedElements.has(elementKey)) {
+            const cached = globalTranslatedElements.get(elementKey);
+            // Apply cached translation
+            element.dataset.originalText = cached.original;
+            element.dataset.translatedLang = cached.language;
+            element.dataset.translatedText = cached.translated;
+            element.textContent = cached.translated;
+
+            // Apply visual styling
+            element.style.backgroundColor = 'rgba(166, 124, 82, 0.1)';
+            element.style.borderLeft = '3px solid #A67C52';
+            element.style.paddingLeft = '6px';
+            element.style.borderRadius = '2px';
+            element.style.boxShadow = '0 1px 3px rgba(166, 124, 82, 0.1)';
+
+            return false; // Don't need to translate again
+          }
+
+          return true; // Needs translation
+        });
+
+        if (untranslated.length > 0) {
+          console.log(`🆕 Found ${untranslated.length} new elements to translate`);
+          await translateNewElements(untranslated, languageCode);
+        } else {
+          console.log('✅ All visible content is already translated');
+        }
+
+      } catch (error) {
+        console.error('Error in comprehensive translation:', error);
+      }
     };
 
     // Observe main document changes
@@ -470,20 +557,43 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
     for (const element of elements) {
       const originalText = element.textContent.trim();
 
-      // Skip if already translated or not worth translating
-      if (originalText.length < 2 ||
-          /^[\d\s\.,;:!?\-'"()]+$/.test(originalText) ||
-          element.dataset.originalText) {
+      // Skip if already translated, not worth translating, or UI element
+      if (originalText.length < 3 ||
+          /^[\d\s\.,;:!?\-'"()→←▶◀»«⋯…]+$/.test(originalText) ||
+          element.dataset.originalText ||
+          shouldExcludeElement(element)) {
         continue;
       }
 
       try {
-        const translatedText = await translateText(originalText, languageCode);
+        // Check cache first
+        const elementKey = `${originalText}_${languageCode}`;
+        let translatedText;
+
+        if (globalTranslatedElements.has(elementKey)) {
+          // Use cached translation
+          const cached = globalTranslatedElements.get(elementKey);
+          translatedText = cached.translated;
+          console.log(`💾 Using cached translation for: "${originalText}"`);
+        } else {
+          // Get new translation
+          translatedText = await translateText(originalText, languageCode);
+
+          // Cache the translation
+          if (translatedText && translatedText !== originalText) {
+            globalTranslatedElements.set(elementKey, {
+              original: originalText,
+              translated: translatedText,
+              language: languageCode
+            });
+          }
+        }
 
         if (translatedText && translatedText !== originalText) {
-          // Store original
+          // Store data
           element.dataset.originalText = originalText;
           element.dataset.translatedLang = languageCode;
+          element.dataset.translatedText = translatedText;
 
           // Apply translation
           element.textContent = translatedText;
@@ -548,15 +658,17 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
 
     switch (position) {
       case 'top-left':
-        return { ...baseStyles, top: '20px', left: '20px' };
+        return { ...baseStyles, top: '80px', left: '20px' }; // Moved down to avoid close button
       case 'top-right':
-        return { ...baseStyles, top: '20px', right: '20px' };
+        return { ...baseStyles, top: '80px', right: '20px' }; // Moved down to avoid close button
       case 'bottom-left':
         return { ...baseStyles, bottom: '20px', left: '20px' };
       case 'bottom-right':
         return { ...baseStyles, bottom: '20px', right: '20px' };
+      case 'middle-right':
+        return { ...baseStyles, top: '50%', right: '20px', transform: 'translateY(-50%)' };
       default:
-        return { ...baseStyles, top: '20px', right: '20px' };
+        return { ...baseStyles, top: '80px', right: '20px' }; // Default moved down
     }
   };
 

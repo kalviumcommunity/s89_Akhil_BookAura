@@ -193,7 +193,7 @@ const MyBooksPage = () => {
       <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
         {/* Simple Translate Button for Book Reader */}
         <ErrorBoundary>
-          <SimpleTranslateButton position="top-right" />
+          <SimpleTranslateButton position="middle-right" />
         </ErrorBoundary>
 
         <div style={{
