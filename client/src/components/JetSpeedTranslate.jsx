@@ -62,87 +62,117 @@ const JetSpeedTranslate = ({ position = 'middle-right' }) => {
   // JET SPEED Google Translate - Direct API calls for maximum speed
   const jetTranslate = async (texts, targetLang) => {
     const results = [];
-    const batchSize = 100; // Massive batches for jet speed
-    
+    const batchSize = 50; // Reduced batch size for stability
+
     for (let i = 0; i < texts.length; i += batchSize) {
       const batch = texts.slice(i, i + batchSize);
-      
+
       // Ultra-parallel processing for jet speed
       const promises = batch.map(async (text) => {
         const cacheKey = `${text}_${targetLang}`;
-        
+
         // Instant cache lookup
         if (translationCache.has(cacheKey)) {
           return translationCache.get(cacheKey);
         }
-        
+
         try {
           // Direct Google Translate API call
           const response = await fetch(
             `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`,
-            { 
+            {
               method: 'GET',
               headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
               }
             }
           );
-          
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
           const data = await response.json();
           const translation = data?.[0]?.[0]?.[0] || text;
-          
+
           // Cache for instant future use
-          translationCache.set(cacheKey, translation);
+          setTranslationCache(prev => {
+            const newCache = new Map(prev);
+            newCache.set(cacheKey, translation);
+            return newCache;
+          });
+
           return translation;
         } catch (error) {
           console.error('Jet translation error:', error);
           return text;
         }
       });
-      
+
       const batchResults = await Promise.all(promises);
       results.push(...batchResults);
+
+      // Small delay between batches to prevent rate limiting
+      if (i + batchSize < texts.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
     }
-    
+
     return results;
   };
 
-  // Lightning-fast text collection
+  // Lightning-fast text collection with safety checks
   const collectAllTexts = () => {
     const allTexts = [];
     const allElements = [];
-    
-    // Get all sources instantly
-    const sources = [
-      document,
-      ...Array.from(document.querySelectorAll('iframe')).map(iframe => {
+
+    try {
+      // Get all sources instantly
+      const sources = [document];
+
+      // Safely get iframe documents
+      const iframes = document.querySelectorAll('iframe');
+      iframes.forEach(iframe => {
         try {
-          return iframe.contentDocument || iframe.contentWindow?.document;
+          const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+          if (iframeDoc) {
+            sources.push(iframeDoc);
+          }
         } catch (e) {
-          return null;
-        }
-      }).filter(Boolean)
-    ];
-    
-    sources.forEach(doc => {
-      if (!doc) return;
-      
-      // Ultra-fast text extraction
-      const textElements = doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, div, li, td, th, a, em, strong, i, b, blockquote, cite, section, article');
-      
-      textElements.forEach(el => {
-        const text = el.textContent?.trim();
-        if (text && 
-            text.length > 2 && 
-            !text.match(/^[\d\s\.,;:!?\-'"()→←▶◀»«⋯…]+$/) &&
-            !el.closest('button, nav, [class*="nav"], [class*="menu"], [class*="btn"], [class*="control"], [class*="translate"]')) {
-          
-          allTexts.push(text);
-          allElements.push(el);
+          // Ignore iframe access errors
         }
       });
-    });
-    
+
+      sources.forEach(doc => {
+        if (!doc) return;
+
+        try {
+          // Ultra-fast text extraction
+          const textElements = doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, div, li, td, th, a, em, strong, i, b, blockquote, cite, section, article');
+
+          textElements.forEach(el => {
+            try {
+              const text = el.textContent?.trim();
+              if (text &&
+                  text.length > 2 &&
+                  !text.match(/^[\d\s\.,;:!?\-'"()→←▶◀»«⋯…]+$/) &&
+                  !el.closest('button, nav, [class*="nav"], [class*="menu"], [class*="btn"], [class*="control"], [class*="translate"]')) {
+
+                allTexts.push(text);
+                allElements.push(el);
+              }
+            } catch (e) {
+              // Skip problematic elements
+            }
+          });
+        } catch (e) {
+          console.warn('Error processing document:', e);
+        }
+      });
+    } catch (error) {
+      console.error('Error in collectAllTexts:', error);
+    }
+
     return { texts: allTexts, elements: allElements };
   };
 
@@ -166,6 +196,7 @@ const JetSpeedTranslate = ({ position = 'middle-right' }) => {
       console.log(`⚡ Collected ${texts.length} texts in ${Date.now() - startTime}ms`);
 
       if (texts.length === 0) {
+        console.log('No texts found to translate');
         setIsTranslating(false);
         return;
       }
@@ -181,26 +212,32 @@ const JetSpeedTranslate = ({ position = 'middle-right' }) => {
       // STEP 4: Instant application (0.05s)
       let applied = 0;
       elements.forEach((element, index) => {
-        const originalText = texts[index];
-        const uniqueIndex = uniqueTexts.indexOf(originalText);
-        const translatedText = translations[uniqueIndex];
+        try {
+          if (!element || !texts[index]) return; // Safety check
 
-        if (translatedText && translatedText !== originalText) {
-          if (!element.dataset.originalText) {
-            element.dataset.originalText = originalText;
+          const originalText = texts[index];
+          const uniqueIndex = uniqueTexts.indexOf(originalText);
+          const translatedText = translations[uniqueIndex];
+
+          if (translatedText && translatedText !== originalText && element.textContent) {
+            if (!element.dataset.originalText) {
+              element.dataset.originalText = originalText;
+            }
+
+            element.textContent = translatedText;
+
+            // Jet-speed gold highlight
+            element.style.backgroundColor = 'rgba(255, 215, 0, 0.2)';
+            element.style.borderLeft = '4px solid #FFD700';
+            element.style.paddingLeft = '8px';
+            element.style.borderRadius = '3px';
+            element.style.boxShadow = '0 2px 5px rgba(255, 215, 0, 0.4)';
+            element.style.transition = 'all 0.1s ease';
+
+            applied++;
           }
-
-          element.textContent = translatedText;
-
-          // Jet-speed gold highlight
-          element.style.backgroundColor = 'rgba(255, 215, 0, 0.2)';
-          element.style.borderLeft = '4px solid #FFD700';
-          element.style.paddingLeft = '8px';
-          element.style.borderRadius = '3px';
-          element.style.boxShadow = '0 2px 5px rgba(255, 215, 0, 0.4)';
-          element.style.transition = 'all 0.1s ease';
-
-          applied++;
+        } catch (elementError) {
+          console.warn('Error applying translation to element:', elementError);
         }
       });
 
@@ -213,6 +250,7 @@ const JetSpeedTranslate = ({ position = 'middle-right' }) => {
 
     } catch (error) {
       console.error('❌ Jet translation error:', error);
+      setIsTranslating(false);
     }
 
     setIsTranslating(false);
@@ -292,21 +330,23 @@ const JetSpeedTranslate = ({ position = 'middle-right' }) => {
   const jetTranslateNewContent = async (languageCode) => {
     try {
       const { texts, elements } = collectAllTexts();
-      
+
       const untranslated = [];
       const untranslatedTexts = [];
-      
+
       elements.forEach((element, index) => {
+        if (!element || !texts[index]) return; // Safety check
+
         const text = texts[index];
         const cacheKey = `${text}_${languageCode}`;
-        
+
         if (!element.dataset.originalText) {
           if (translationCache.has(cacheKey)) {
             // Apply cached translation instantly
             const cached = translationCache.get(cacheKey);
             element.dataset.originalText = text;
             element.textContent = cached;
-            
+
             // Jet-speed visual
             element.style.backgroundColor = 'rgba(255, 215, 0, 0.2)';
             element.style.borderLeft = '4px solid #FFD700';
@@ -319,36 +359,38 @@ const JetSpeedTranslate = ({ position = 'middle-right' }) => {
           }
         }
       });
-      
+
       if (untranslated.length > 0) {
         console.log(`🚀 JET TRANSLATING ${untranslated.length} new elements`);
-        
+
         const uniqueTexts = [...new Set(untranslatedTexts)];
         const translations = await jetTranslate(uniqueTexts, languageCode);
-        
+
         untranslated.forEach((element, index) => {
+          if (!element || !untranslatedTexts[index]) return; // Safety check
+
           const originalText = untranslatedTexts[index];
           const uniqueIndex = uniqueTexts.indexOf(originalText);
           const translatedText = translations[uniqueIndex];
-          
+
           if (translatedText && translatedText !== originalText) {
             element.dataset.originalText = originalText;
             element.textContent = translatedText;
-            
+
             // Jet-speed visual
             element.style.backgroundColor = 'rgba(255, 215, 0, 0.2)';
             element.style.borderLeft = '4px solid #FFD700';
             element.style.paddingLeft = '8px';
             element.style.borderRadius = '3px';
             element.style.boxShadow = '0 2px 5px rgba(255, 215, 0, 0.4)';
-            
+
             setTranslatedCount(prev => prev + 1);
           }
         });
-        
+
         console.log(`🚀 JET: Translated ${untranslated.length} new elements!`);
       }
-      
+
     } catch (error) {
       console.error('Jet new content error:', error);
     }
@@ -379,13 +421,24 @@ const JetSpeedTranslate = ({ position = 'middle-right' }) => {
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => stopJetMode();
+    return () => {
+      try {
+        stopJetMode();
+      } catch (error) {
+        console.warn('Error during cleanup:', error);
+      }
+    };
   }, []);
 
   const handleLanguageSelect = (langCode) => {
-    setSelectedLang(langCode);
-    setIsOpen(false);
-    jetTranslatePage(langCode);
+    try {
+      setSelectedLang(langCode);
+      setIsOpen(false);
+      jetTranslatePage(langCode);
+    } catch (error) {
+      console.error('Error selecting language:', error);
+      setIsTranslating(false);
+    }
   };
 
   const getPositionStyles = () => {

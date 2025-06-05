@@ -9,7 +9,7 @@ import './MyBooksPage.css';
 import LoadingAnimation from '../../components/LoadingAnimation';
 import api from '../../services/api';
 import SimpleEpubViewer from '../../components/SimpleEpubViewer';
-import JetSpeedTranslate from '../../components/JetSpeedTranslate';
+import SafeJetSpeedTranslate from '../../components/SafeJetSpeedTranslate';
 import ErrorBoundary from '../../components/ErrorBoundary';
 
 
@@ -193,7 +193,7 @@ const MyBooksPage = () => {
       <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
         {/* Jet Speed Translate for Book Reader */}
         <ErrorBoundary>
-          <JetSpeedTranslate position="middle-right" />
+          <SafeJetSpeedTranslate position="middle-right" />
         </ErrorBoundary>
 
         <div style={{
