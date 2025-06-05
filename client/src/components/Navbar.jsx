@@ -189,8 +189,8 @@ const Navbar = () => {
         {/* Always visible elements on the right */}
       <div className="always-visible-items">
         {/* Google Translate Widget */}
-        <div className="translate-widget-container">
-          <Languages size={20} />
+        <div className="leaveit">
+          <Languages size={20} className="translate-icon" />
           <ErrorBoundary>
             <NavbarGoogleTranslate />
           </ErrorBoundary>

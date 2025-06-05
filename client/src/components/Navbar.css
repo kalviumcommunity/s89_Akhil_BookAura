@@ -546,6 +546,18 @@ body {
 
 /* Ensure the translate widget doesn't interfere with our navbar */
 
+.translate-icon {
+    color: black !important;
+    vertical-align: middle;
+    display: inline-block;
+    transition: transform 0.2s ease;
+    margin-top: 2px;
+    margin-left: 2px;
+    margin-bottom: 2px;
+    margin-right: 8px;
+    cursor: pointer;
+
+}
 
 /* Additional styling for Google Translate elements */
 .goog-te-gadget {
