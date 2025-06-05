@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './Navbar.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Logo from '../images/logo.png';
-import { ShoppingCart, Home, BookOpen, GraduationCap, Menu, X } from 'lucide-react';
+import { ShoppingCart, Home, BookOpen, GraduationCap, Menu, X ,Languages} from 'lucide-react';
 import { useCart } from '../pages/MarketPlace/cart';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -154,14 +154,7 @@ const Navbar = () => {
         </li>
       </ul>
 
-      {/* Always visible elements on the right */}
-      <div className="always-visible-items">
-        {/* Google Translate Widget */}
-        <div className="translate-widget-container">
-          <ErrorBoundary>
-            <NavbarGoogleTranslate />
-          </ErrorBoundary>
-        </div>
+      
 
         {!isLoggedIn && (
           <div
@@ -192,6 +185,15 @@ const Navbar = () => {
         <div className='cart-icon' onClick={() => handleNavigation('/cart')}>
           <ShoppingCart size={20} />
           {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
+        </div>
+        {/* Always visible elements on the right */}
+      <div className="always-visible-items">
+        {/* Google Translate Widget */}
+        <div className="translate-widget-container">
+          <Languages size={20} />
+          <ErrorBoundary>
+            <NavbarGoogleTranslate />
+          </ErrorBoundary>
         </div>
 
         {/* Mobile menu toggle button */}

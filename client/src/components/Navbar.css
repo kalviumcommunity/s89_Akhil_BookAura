@@ -409,11 +409,7 @@
 }
 
 /* Google Translate Widget Styles */
-.translate-widget-container {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
+
 
 .navbar-translate-widget {
     position: relative;
@@ -549,9 +545,7 @@ body {
 }
 
 /* Ensure the translate widget doesn't interfere with our navbar */
-.translate-widget-container .skiptranslate {
-    position: relative !important;
-}
+
 
 /* Additional styling for Google Translate elements */
 .goog-te-gadget {
