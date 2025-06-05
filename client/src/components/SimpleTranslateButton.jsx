@@ -95,7 +95,7 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
     return false;
   };
 
-  // Comprehensive text element finder
+  // Comprehensive text element finder - finds ALL text including mixed content
   const findAllTextElements = (doc = document) => {
     const allElements = [];
 
@@ -104,7 +104,9 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
       'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'div', 'li', 'td', 'th',
       'a', 'em', 'strong', 'i', 'b', 'u', 'small', 'big', 'sub', 'sup',
       'blockquote', 'cite', 'code', 'pre', 'label', 'legend', 'caption',
-      'dt', 'dd', 'figcaption', 'summary', 'details', 'mark', 'time'
+      'dt', 'dd', 'figcaption', 'summary', 'details', 'mark', 'time',
+      // Additional selectors for EPUB content
+      'section', 'article', 'main', 'aside', 'header', 'footer'
     ];
 
     selectors.forEach(selector => {
@@ -115,18 +117,44 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
           return;
         }
 
-        // Check if element has direct text content (not just child elements)
-        const hasDirectText = Array.from(el.childNodes).some(node =>
-          node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0
+        // For elements with mixed content (text + child elements)
+        const textNodes = [];
+        const walker = doc.createTreeWalker(
+          el,
+          NodeFilter.SHOW_TEXT,
+          {
+            acceptNode: function(node) {
+              // Only accept text nodes with meaningful content
+              if (node.textContent.trim().length > 2 &&
+                  !shouldExcludeElement(node.parentElement)) {
+                return NodeFilter.FILTER_ACCEPT;
+              }
+              return NodeFilter.FILTER_REJECT;
+            }
+          }
         );
 
-        // Include elements with no children OR elements with direct text
-        if ((el.children.length === 0 || hasDirectText) && el.textContent.trim().length > 1) {
-          // Skip if already in list
-          if (!allElements.includes(el)) {
-            allElements.push(el);
+        let textNode;
+        while (textNode = walker.nextNode()) {
+          // Create wrapper elements for text nodes that don't have their own element
+          if (textNode.parentElement === el ||
+              (textNode.parentElement.children.length === 0 &&
+               textNode.parentElement.textContent.trim() === textNode.textContent.trim())) {
+            textNodes.push(textNode.parentElement);
           }
         }
+
+        // Also include elements with no children but with text
+        if (el.children.length === 0 && el.textContent.trim().length > 2) {
+          textNodes.push(el);
+        }
+
+        // Add unique elements
+        textNodes.forEach(node => {
+          if (!allElements.includes(node)) {
+            allElements.push(node);
+          }
+        });
       });
     });
 
@@ -194,10 +222,19 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
           const originalText = element.textContent.trim();
 
           // Skip short, meaningless, or already translated text
-          if (originalText.length < 2 ||
-              /^[\d\s\.,;:!?\-'"()]+$/.test(originalText) ||
-              element.dataset.originalText) {
+          if (originalText.length < 3 ||
+              /^[\d\s\.,;:!?\-'"()→←▶◀»«⋯…]+$/.test(originalText) ||
+              element.dataset.originalText ||
+              shouldExcludeElement(element)) {
             return;
+          }
+
+          // Skip incomplete sentences or fragments
+          if (originalText.length < 10 && !originalText.match(/[.!?]$/)) {
+            // Allow short complete sentences but skip fragments
+            if (!originalText.match(/^[A-Z]/) || originalText.split(' ').length < 2) {
+              return;
+            }
           }
 
           try {
@@ -369,8 +406,16 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
             if (node.nodeType === Node.ELEMENT_NODE) {
               // Look for content containers or multiple new elements
               const newElements = findAllTextElements(node);
-              if (newElements.length > 5) { // Significant content change
+              if (newElements.length > 2) { // Lower threshold for better detection
                 hasSignificantChange = true;
+              }
+
+              // Also check for page-like containers
+              if (node.tagName && ['DIV', 'SECTION', 'ARTICLE', 'MAIN'].includes(node.tagName)) {
+                const textContent = node.textContent.trim();
+                if (textContent.length > 50) { // Substantial text content
+                  hasSignificantChange = true;
+                }
               }
             }
           });
@@ -406,7 +451,13 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
                 mutation.addedNodes.forEach(node => {
                   if (node.nodeType === Node.ELEMENT_NODE) {
                     const newElements = findAllTextElements(node);
-                    if (newElements.length > 3) { // Page change threshold
+                    if (newElements.length > 1) { // Very sensitive threshold for iframes
+                      hasSignificantChange = true;
+                    }
+
+                    // Also check for any substantial text content
+                    const textContent = node.textContent?.trim() || '';
+                    if (textContent.length > 30) { // Any meaningful text
                       hasSignificantChange = true;
                     }
                   }
@@ -492,7 +543,7 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
       if (autoTranslateEnabled) {
         checkForUntranslatedContent(languageCode);
       }
-    }, 2000); // Check every 2 seconds
+    }, 1000); // Check every 1 second for faster detection
 
     setIntervalId(id);
     console.log(`👁️ Started ${newObservers.length} observers + periodic check for auto-translation`);
