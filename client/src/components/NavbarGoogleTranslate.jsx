@@ -102,15 +102,12 @@ const NavbarGoogleTranslate = () => {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '4px',
+          gap: '8px',
           padding: '8px 12px',
-          color: 'Black',
-          borderRadius: '20px',
+          color: 'white',
+          border: 'none',
+          borderRadius: '25px',
           cursor: 'pointer',
-          fontSize: '12px',
-          fontWeight: '500',
-          minWidth: '80px',
-          justifyContent: 'center'
         }}
         title={currentLang === 'en' ? 'Translate Page' : `Translated to ${languages.find(l => l.code === currentLang)?.name}`}
       >
