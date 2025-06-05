@@ -35,75 +35,48 @@ const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
     { code: 'tr', name: 'Turkish', flag: '🇹🇷', native: 'Türkçe' }
   ];
 
-  // Direct content translation
+  // Simple translation
   const handleTranslate = async (langCode) => {
     if (langCode === 'en') {
-      // Reset to original
       restoreOriginalText();
-      setTranslatedCount(0);
       return;
     }
 
     setIsTranslating(true);
-    setTranslatedCount(0);
-    setIsVisible(false); // Close dropdown
-    console.log(`Translating to ${langCode}...`);
+    setIsVisible(false);
 
-    // Find all text elements
-    const textElements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, div, li, a, button, label');
-    const elementsToTranslate = [];
+    // Get all text elements - much simpler approach
+    const elements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, div, li, td, th');
+    let count = 0;
 
-    textElements.forEach(element => {
+    for (let element of elements) {
       const text = element.textContent?.trim();
+
+      // Simple check: has text, not already translated, no child elements
       if (text &&
-          text.length > 1 &&
-          !text.match(/^[\d\s\.,;:!?\-'"()→←▶◀»«⋯…]+$/) &&
-          !element.closest('script, style, code, pre') &&
-          !element.querySelector('*') && // Only leaf elements
-          !element.dataset.originalText) {
+          text.length > 3 &&
+          !element.dataset.originalText &&
+          element.children.length === 0) {
 
-        elementsToTranslate.push({
-          element,
-          text
-        });
-      }
-    });
-
-    console.log(`Found ${elementsToTranslate.length} elements to translate`);
-
-    // Translate in batches
-    const batchSize = 10;
-    for (let i = 0; i < elementsToTranslate.length; i += batchSize) {
-      const batch = elementsToTranslate.slice(i, i + batchSize);
-
-      await Promise.all(batch.map(async ({ element, text }) => {
         try {
-          const translatedText = await translateText(text, langCode);
-          if (translatedText && translatedText !== text) {
-            // Store original
+          const translated = await translateText(text, langCode);
+          if (translated && translated !== text) {
             element.dataset.originalText = text;
-            element.textContent = translatedText;
-
-            // Add visual indicator
-            element.style.backgroundColor = 'rgba(66, 133, 244, 0.1)';
-            element.style.borderLeft = '3px solid #4285f4';
-            element.style.paddingLeft = '6px';
-            element.style.borderRadius = '2px';
-
-            // Update progress
-            setTranslatedCount(prev => prev + 1);
+            element.textContent = translated;
+            element.style.backgroundColor = '#e3f2fd';
+            count++;
+            setTranslatedCount(count);
           }
         } catch (error) {
-          console.error('Translation error:', error);
+          console.log('Skip element:', error);
         }
-      }));
 
-      // Small delay between batches
-      await new Promise(resolve => setTimeout(resolve, 100));
+        // Small delay
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
     }
 
     setIsTranslating(false);
-    console.log('Translation completed!');
   };
 
   // Simple translation API call
@@ -122,16 +95,11 @@ const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
 
   // Restore original text
   const restoreOriginalText = () => {
-    const translatedElements = document.querySelectorAll('[data-original-text]');
-    translatedElements.forEach(element => {
-      if (element.dataset.originalText) {
-        element.textContent = element.dataset.originalText;
-        element.style.backgroundColor = '';
-        element.style.borderLeft = '';
-        element.style.paddingLeft = '';
-        element.style.borderRadius = '';
-        delete element.dataset.originalText;
-      }
+    const elements = document.querySelectorAll('[data-original-text]');
+    elements.forEach(element => {
+      element.textContent = element.dataset.originalText;
+      element.style.backgroundColor = '';
+      delete element.dataset.originalText;
     });
     setTranslatedCount(0);
   };
@@ -160,71 +128,35 @@ const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
 
   return (
     <div style={getPositionStyles()}>
-      {/* Toggle Button */}
+      {/* Simple Button */}
       <div
-        onClick={() => !isTranslating && setIsVisible(!isVisible)}
+        onClick={() => setIsVisible(!isVisible)}
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
           padding: '12px 16px',
-          backgroundColor: isTranslating ? '#6c757d' : '#4285f4',
+          backgroundColor: '#4285f4',
           color: 'white',
-          border: 'none',
           borderRadius: '25px',
-          cursor: isTranslating ? 'not-allowed' : 'pointer',
-          boxShadow: '0 4px 15px rgba(66, 133, 244, 0.3)',
-          transition: 'all 0.3s ease',
+          cursor: 'pointer',
           fontSize: '14px',
-          fontWeight: '500',
-          minWidth: '160px',
-          justifyContent: 'space-between'
-        }}
-        onMouseEnter={(e) => {
-          if (!isTranslating) {
-            e.target.style.transform = 'translateY(-2px)';
-            e.target.style.boxShadow = '0 6px 20px rgba(66, 133, 244, 0.4)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isTranslating) {
-            e.target.style.transform = 'translateY(0)';
-            e.target.style.boxShadow = '0 4px 15px rgba(66, 133, 244, 0.3)';
-          }
+          fontWeight: '500'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Globe size={18} />
-          <span>{isTranslating ? 'Translating...' : 'Translate'}</span>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {translatedCount > 0 && (
-            <span style={{
-              fontSize: '12px',
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              padding: '2px 6px',
-              borderRadius: '10px'
-            }}>
-              {translatedCount}
-            </span>
-          )}
-          {isTranslating ? (
-            <div style={{
-              width: '16px',
-              height: '16px',
-              border: '2px solid rgba(255,255,255,0.3)',
-              borderTop: '2px solid white',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite'
-            }} />
-          ) : (
-            <ChevronDown size={16} style={{
-              transform: isVisible ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.3s ease'
-            }} />
-          )}
-        </div>
+        <Globe size={18} />
+        <span>Translate</span>
+        {translatedCount > 0 && (
+          <span style={{
+            fontSize: '12px',
+            backgroundColor: 'rgba(255,255,255,0.3)',
+            padding: '2px 6px',
+            borderRadius: '10px'
+          }}>
+            {translatedCount}
+          </span>
+        )}
+        <ChevronDown size={16} />
       </div>
 
       {/* Google Translate Widget */}
