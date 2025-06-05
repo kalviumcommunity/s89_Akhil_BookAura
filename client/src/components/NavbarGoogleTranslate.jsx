@@ -1,6 +1,6 @@
 // Simple Navbar Google Translate - Whole page translation with memory
 import React, { useState, useEffect } from 'react';
-import { Globe, ChevronDown } from 'lucide-react';
+import { Globe, ChevronDown, Languages } from 'lucide-react';
 
 const NavbarGoogleTranslate = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -39,9 +39,51 @@ const NavbarGoogleTranslate = () => {
     const savedLang = localStorage.getItem('translate-lang') || 'en';
     setCurrentLang(savedLang);
     if (savedLang !== 'en') {
-      setTimeout(() => translateWholePage(savedLang), 1000);
+      setTimeout(() => {
+        translateWholePage(savedLang);
+        // Remove banner after auto-translation
+        setTimeout(() => {
+          removeBanner();
+        }, 2000);
+      }, 1000);
     }
   }, []);
+
+  // Function to actively remove banner
+  const removeBanner = () => {
+    const removeElements = () => {
+      // Remove banner frame
+      const banners = document.querySelectorAll('.goog-te-banner-frame, iframe.goog-te-banner-frame');
+      banners.forEach(banner => {
+        if (banner && banner.parentNode) {
+          banner.parentNode.removeChild(banner);
+        }
+      });
+
+      // Reset body position
+      document.body.style.top = '0';
+      document.body.style.position = 'static';
+    };
+
+    // Remove immediately and keep checking
+    removeElements();
+    setTimeout(removeElements, 100);
+    setTimeout(removeElements, 500);
+    setTimeout(removeElements, 1000);
+
+    // Set up observer to catch dynamically added banners
+    const observer = new MutationObserver(() => {
+      removeElements();
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    // Stop observing after 5 seconds
+    setTimeout(() => observer.disconnect(), 5000);
+  };
 
   // Simple whole page translation
   const handleTranslate = (langCode) => {
@@ -84,6 +126,9 @@ const NavbarGoogleTranslate = () => {
             select.value = langCode;
             select.dispatchEvent(new Event('change'));
           }
+
+          // Remove Google Translate banner after translation
+          removeBanner();
         }, 500);
       }
     };
@@ -123,7 +168,7 @@ const NavbarGoogleTranslate = () => {
         }}
         title={currentLang === 'en' ? 'Translate Page' : `Translated to ${languages.find(l => l.code === currentLang)?.name}`}
       >
-        <Globe size={18} color={currentLang === 'en' ? '#333' : '#34a853'} />
+        <Languages size={20} color={currentLang === 'en' ? '#333' : '#333'} />
         {currentLang !== 'en' && (
           <span style={{
             fontSize: '10px',
@@ -202,14 +247,57 @@ const NavbarGoogleTranslate = () => {
 
       {/* CSS for hiding Google Translate banner */}
       <style jsx global>{`
+        /* Hide the main Google Translate banner completely */
         .goog-te-banner-frame {
           display: none !important;
+          visibility: hidden !important;
+          height: 0 !important;
+          overflow: hidden !important;
         }
+
+        /* Hide banner frame variations */
+        .goog-te-banner-frame.skiptranslate {
+          display: none !important;
+        }
+
+        /* Hide iframe banners */
+        iframe.goog-te-banner-frame {
+          display: none !important;
+        }
+
+        /* Prevent body from being pushed down */
         body {
           top: 0 !important;
+          position: static !important;
         }
-        .goog-te-combo {
+
+        /* Hide all Google Translate UI elements */
+        .goog-te-combo,
+        .goog-te-gadget,
+        #google_translate_element,
+        #navbar_google_translate_element {
           display: none !important;
+        }
+
+        /* Hide notification messages */
+        .goog-te-banner-frame .goog-te-banner-content,
+        .goog-te-banner-frame [jsaction],
+        .goog-te-banner-frame div {
+          display: none !important;
+        }
+
+        /* Force hide any elements starting with goog-gt */
+        [id^="goog-gt-"],
+        [class^="goog-te-"],
+        .goog-te-spinner-pos {
+          display: none !important;
+        }
+
+        /* Hide the entire banner container and children */
+        body > .goog-te-banner-frame,
+        body > .goog-te-banner-frame * {
+          display: none !important;
+          visibility: hidden !important;
         }
       `}</style>
     </div>
