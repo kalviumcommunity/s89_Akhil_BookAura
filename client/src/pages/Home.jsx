@@ -7,7 +7,7 @@ import { useCart } from './MarketPlace/cart'
 import { SafeImage, getProxiedImageUrl, handleImageError } from '../utils/imageUtils'
 import {useNavigate,useLocation} from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
-import SafeJetSpeedTranslate from '../components/SafeJetSpeedTranslate'
+import BasicGoogleTranslate from '../components/BasicGoogleTranslate'
 import ErrorBoundary from '../components/ErrorBoundary'
 import axios from 'axios';
 
@@ -110,9 +110,9 @@ const Home = () => {
     <div>
       <Navbar/>
 
-      {/* Jet Speed Translate Button */}
+      {/* Basic Google Translate Button */}
       <ErrorBoundary>
-        <SafeJetSpeedTranslate position="bottom-right" />
+        <BasicGoogleTranslate position="bottom-right" />
       </ErrorBoundary>
 
       <div className='main-box'>
