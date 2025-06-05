@@ -1,11 +1,10 @@
-// Simple Google Translate - Just language selector
-import React, { useState } from 'react';
+// Simple Google Translate - Whole page translation with memory
+import React, { useState, useEffect } from 'react';
 import { Globe, ChevronDown } from 'lucide-react';
 
 const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
   const [isVisible, setIsVisible] = useState(false);
-  const [isTranslating, setIsTranslating] = useState(false);
-  const [translatedCount, setTranslatedCount] = useState(0);
+  const [currentLang, setCurrentLang] = useState('en');
 
   // Simple language options
   const languages = [
@@ -35,73 +34,64 @@ const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
     { code: 'tr', name: 'Turkish', flag: '🇹🇷', native: 'Türkçe' }
   ];
 
-  // Simple translation
-  const handleTranslate = async (langCode) => {
-    if (langCode === 'en') {
-      restoreOriginalText();
-      return;
+  // Load saved language on page load
+  useEffect(() => {
+    const savedLang = localStorage.getItem('translate-lang') || 'en';
+    setCurrentLang(savedLang);
+    if (savedLang !== 'en') {
+      setTimeout(() => translateWholePage(savedLang), 1000);
     }
+  }, []);
 
-    setIsTranslating(true);
+  // Simple whole page translation
+  const handleTranslate = (langCode) => {
+    setCurrentLang(langCode);
+    localStorage.setItem('translate-lang', langCode);
     setIsVisible(false);
 
-    // Get all text elements - much simpler approach
-    const elements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, div, li, td, th');
-    let count = 0;
+    if (langCode === 'en') {
+      // Reset to English
+      window.location.reload();
+    } else {
+      // Translate whole page
+      translateWholePage(langCode);
+    }
+  };
 
-    for (let element of elements) {
-      const text = element.textContent?.trim();
+  // Translate entire page using Google Translate
+  const translateWholePage = (langCode) => {
+    // Add Google Translate script if not exists
+    if (!document.getElementById('google-translate-script')) {
+      const script = document.createElement('script');
+      script.id = 'google-translate-script';
+      script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+      document.head.appendChild(script);
+    }
 
-      // Simple check: has text, not already translated, no child elements
-      if (text &&
-          text.length > 3 &&
-          !element.dataset.originalText &&
-          element.children.length === 0) {
+    // Initialize Google Translate
+    window.googleTranslateElementInit = function() {
+      if (window.google && window.google.translate) {
+        new window.google.translate.TranslateElement({
+          pageLanguage: 'en',
+          includedLanguages: 'en,hi,te,ta,ml,bn,gu,kn,mr,pa,ur,es,fr,de,it,pt,ru,ja,ko,zh,ar,th,vi,tr',
+          autoDisplay: false
+        }, 'google_translate_element');
 
-        try {
-          const translated = await translateText(text, langCode);
-          if (translated && translated !== text) {
-            element.dataset.originalText = text;
-            element.textContent = translated;
-            element.style.backgroundColor = '#e3f2fd';
-            count++;
-            setTranslatedCount(count);
+        // Auto-select the language
+        setTimeout(() => {
+          const select = document.querySelector('.goog-te-combo');
+          if (select) {
+            select.value = langCode;
+            select.dispatchEvent(new Event('change'));
           }
-        } catch (error) {
-          console.log('Skip element:', error);
-        }
-
-        // Small delay
-        await new Promise(resolve => setTimeout(resolve, 50));
+        }, 500);
       }
+    };
+
+    // Trigger initialization if script already loaded
+    if (window.google && window.google.translate) {
+      window.googleTranslateElementInit();
     }
-
-    setIsTranslating(false);
-  };
-
-  // Simple translation API call
-  const translateText = async (text, targetLang) => {
-    try {
-      const response = await fetch(
-        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`
-      );
-      const data = await response.json();
-      return data?.[0]?.[0]?.[0] || text;
-    } catch (error) {
-      console.error('API translation error:', error);
-      return text;
-    }
-  };
-
-  // Restore original text
-  const restoreOriginalText = () => {
-    const elements = document.querySelectorAll('[data-original-text]');
-    elements.forEach(element => {
-      element.textContent = element.dataset.originalText;
-      element.style.backgroundColor = '';
-      delete element.dataset.originalText;
-    });
-    setTranslatedCount(0);
   };
 
   const getPositionStyles = () => {
@@ -136,7 +126,7 @@ const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
           alignItems: 'center',
           gap: '8px',
           padding: '12px 16px',
-          backgroundColor: '#4285f4',
+          backgroundColor: currentLang === 'en' ? '#4285f4' : '#34a853',
           color: 'white',
           borderRadius: '25px',
           cursor: 'pointer',
@@ -145,17 +135,7 @@ const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
         }}
       >
         <Globe size={18} />
-        <span>Translate</span>
-        {translatedCount > 0 && (
-          <span style={{
-            fontSize: '12px',
-            backgroundColor: 'rgba(255,255,255,0.3)',
-            padding: '2px 6px',
-            borderRadius: '10px'
-          }}>
-            {translatedCount}
-          </span>
-        )}
+        <span>{currentLang === 'en' ? 'Translate' : languages.find(l => l.code === currentLang)?.name || 'Translated'}</span>
         <ChevronDown size={16} />
       </div>
 
@@ -217,18 +197,21 @@ const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px',
+                  backgroundColor: currentLang === lang.code ? '#e8f5e8' : 'transparent',
                   transition: 'background-color 0.2s ease'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#f8f9fa';
+                  if (currentLang !== lang.code) {
+                    e.target.style.backgroundColor = '#f8f9fa';
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'transparent';
+                  e.target.style.backgroundColor = currentLang === lang.code ? '#e8f5e8' : 'transparent';
                 }}
               >
                 <span style={{ fontSize: '18px' }}>{lang.flag}</span>
-                <div>
-                  <div style={{ fontWeight: '500', color: '#333' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: currentLang === lang.code ? 'bold' : '500', color: '#333' }}>
                     {lang.name}
                   </div>
                   {lang.native && (
@@ -237,6 +220,9 @@ const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
                     </div>
                   )}
                 </div>
+                {currentLang === lang.code && (
+                  <span style={{ color: '#34a853', fontSize: '16px', fontWeight: 'bold' }}>✓</span>
+                )}
               </div>
             ))}
           </div>
@@ -287,11 +273,19 @@ const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
         </div>
       )}
 
-      {/* CSS Animation */}
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
+      {/* Hidden Google Translate Element */}
+      <div id="google_translate_element" style={{ display: 'none' }}></div>
+
+      {/* CSS for hiding Google Translate banner */}
+      <style jsx global>{`
+        .goog-te-banner-frame {
+          display: none !important;
+        }
+        body {
+          top: 0 !important;
+        }
+        .goog-te-combo {
+          display: none !important;
         }
       `}</style>
     </div>
