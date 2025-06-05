@@ -67,9 +67,80 @@ const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
             multilanguagePage: true
           }, 'google_translate_element');
 
-          setIsLoaded(true);
-          setShowFallback(false);
-          clearTimeout(fallbackTimeout);
+          // Wait for the widget to render and then style it
+          setTimeout(() => {
+            const element = document.getElementById('google_translate_element');
+            const widget = document.querySelector('#google_translate_element .goog-te-combo');
+            const gadget = document.querySelector('#google_translate_element .goog-te-gadget');
+
+            console.log('Checking for Google Translate elements:');
+            console.log('Element:', element);
+            console.log('Widget:', widget);
+            console.log('Gadget:', gadget);
+            console.log('Element HTML:', element?.innerHTML);
+
+            if (widget) {
+              // Force widget to be visible
+              widget.style.display = 'block';
+              widget.style.visibility = 'visible';
+              widget.style.opacity = '1';
+              widget.style.width = '100%';
+              widget.style.padding = '10px';
+              widget.style.border = '2px solid #e1e5e9';
+              widget.style.borderRadius = '8px';
+              widget.style.fontSize = '14px';
+              widget.style.backgroundColor = 'white';
+              widget.style.color = '#333';
+              widget.style.height = 'auto';
+              widget.style.minHeight = '40px';
+
+              // Force parent elements to be visible too
+              if (gadget) {
+                gadget.style.display = 'block';
+                gadget.style.visibility = 'visible';
+                gadget.style.opacity = '1';
+              }
+
+              if (element) {
+                element.style.display = 'block';
+                element.style.visibility = 'visible';
+                element.style.opacity = '1';
+              }
+
+              setIsLoaded(true);
+              setShowFallback(false);
+              clearTimeout(fallbackTimeout);
+              console.log('Google Translate widget styled and ready');
+            } else if (element && element.innerHTML.trim()) {
+              // Widget exists but selector didn't find it, still mark as loaded
+              console.log('Widget content exists, marking as loaded');
+              setIsLoaded(true);
+              setShowFallback(false);
+              clearTimeout(fallbackTimeout);
+            } else {
+              console.log('Widget not found, showing fallback');
+              setShowFallback(true);
+              setIsLoaded(false);
+            }
+          }, 1500); // Increased timeout for better loading
+
+          // Second attempt with different timing
+          setTimeout(() => {
+            const widget = document.querySelector('#google_translate_element select') ||
+                          document.querySelector('#google_translate_element .goog-te-combo') ||
+                          document.querySelector('.goog-te-combo');
+
+            if (widget && !isLoaded) {
+              console.log('Found widget on second attempt:', widget);
+              widget.style.display = 'block';
+              widget.style.visibility = 'visible';
+              widget.style.opacity = '1';
+              setIsLoaded(true);
+              setShowFallback(false);
+              clearTimeout(fallbackTimeout);
+            }
+          }, 3000);
+
           console.log('Google Translate initialized successfully');
         } catch (error) {
           console.error('Google Translate init error:', error);
@@ -261,9 +332,46 @@ const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
 
           {/* Google Translate Element */}
           {!showFallback && (
-            <div id="google_translate_element" style={{
-              textAlign: 'center'
-            }}></div>
+            <div>
+              <div id="google_translate_element" style={{
+                textAlign: 'center',
+                minHeight: '50px',
+                border: '1px dashed #ccc',
+                padding: '10px',
+                margin: '10px 0'
+              }}></div>
+
+              {/* Debug button */}
+              <button
+                onClick={() => {
+                  const element = document.getElementById('google_translate_element');
+                  const widget = document.querySelector('#google_translate_element .goog-te-combo');
+                  const allSelects = document.querySelectorAll('select');
+                  console.log('Debug - Element:', element);
+                  console.log('Debug - Widget:', widget);
+                  console.log('Debug - All selects:', allSelects);
+                  console.log('Debug - Element HTML:', element?.innerHTML);
+
+                  // Try to force show any hidden selects
+                  allSelects.forEach((select, index) => {
+                    console.log(`Select ${index}:`, select);
+                    select.style.display = 'block';
+                    select.style.visibility = 'visible';
+                    select.style.opacity = '1';
+                  });
+                }}
+                style={{
+                  padding: '5px 10px',
+                  fontSize: '12px',
+                  backgroundColor: '#f0f0f0',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Debug Widget
+              </button>
+            </div>
           )}
 
           {/* Fallback Language Selector */}
@@ -392,6 +500,19 @@ const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
           top: 0 !important;
         }
 
+        /* Force Google Translate widget to be visible */
+        #google_translate_element {
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+        }
+
+        #google_translate_element * {
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+        }
+
         /* Style the Google Translate dropdown */
         #google_translate_element .goog-te-combo {
           width: 100% !important;
@@ -404,6 +525,11 @@ const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
           outline: none !important;
           transition: all 0.3s ease !important;
           font-family: inherit !important;
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          height: auto !important;
+          min-height: 40px !important;
         }
 
         #google_translate_element .goog-te-combo:focus {
@@ -415,16 +541,31 @@ const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
           border-color: #4285f4 !important;
         }
 
-        /* Hide Google Translate branding */
+        /* Force gadget to be visible */
         .goog-te-gadget {
           font-family: inherit !important;
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
         }
 
         .goog-te-gadget .goog-te-combo {
           margin: 0 !important;
+          display: block !important;
+          visibility: visible !important;
         }
 
-        /* Style the powered by text */
+        /* Style the menu value */
+        .goog-te-gadget-simple {
+          display: block !important;
+          visibility: visible !important;
+        }
+
+        .goog-te-gadget-simple .goog-te-menu-value {
+          display: block !important;
+          visibility: visible !important;
+        }
+
         .goog-te-gadget-simple .goog-te-menu-value span:first-child {
           display: none !important;
         }
@@ -432,6 +573,14 @@ const BasicGoogleTranslate = ({ position = 'middle-right' }) => {
         .goog-te-gadget-simple .goog-te-menu-value:before {
           content: 'Select Language' !important;
           color: #666 !important;
+        }
+
+        /* Force dropdown options to be visible */
+        .goog-te-combo option {
+          display: block !important;
+          visibility: visible !important;
+          color: #333 !important;
+          background: white !important;
         }
       `}</style>
     </div>
