@@ -9,7 +9,7 @@ import './MyBooksPage.css';
 import LoadingAnimation from '../../components/LoadingAnimation';
 import api from '../../services/api';
 import SimpleEpubViewer from '../../components/SimpleEpubViewer';
-import SimpleTranslateButton from '../../components/SimpleTranslateButton';
+import JetSpeedTranslate from '../../components/JetSpeedTranslate';
 import ErrorBoundary from '../../components/ErrorBoundary';
 
 
@@ -191,9 +191,9 @@ const MyBooksPage = () => {
   if (selectedBook) {
     return (
       <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-        {/* Simple Translate Button for Book Reader */}
+        {/* Jet Speed Translate for Book Reader */}
         <ErrorBoundary>
-          <SimpleTranslateButton position="middle-right" />
+          <JetSpeedTranslate position="middle-right" />
         </ErrorBoundary>
 
         <div style={{

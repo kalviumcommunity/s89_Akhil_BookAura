@@ -1,183 +1,330 @@
-// Simple Google Translate Button - Fast and Reliable
+// Jet Speed Google Translate - Lightning Fast Translation
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, Languages, ArrowRight } from 'lucide-react';
+import { ChevronDown, Languages, ArrowRight, Zap } from 'lucide-react';
 
-const SimpleTranslateButton = ({ position = 'top-right' }) => {
+const JetSpeedTranslate = ({ position = 'middle-right' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedLang, setSelectedLang] = useState('en');
   const [isTranslating, setIsTranslating] = useState(false);
   const [translatedCount, setTranslatedCount] = useState(0);
-  const [autoTranslateEnabled, setAutoTranslateEnabled] = useState(false);
+  const [jetModeActive, setJetModeActive] = useState(false);
+  const [translationCache, setTranslationCache] = useState(new Map());
   const [observers, setObservers] = useState([]);
-  const [intervalId, setIntervalId] = useState(null);
-  const [globalTranslatedElements, setGlobalTranslatedElements] = useState(new Map());
+  const [translationQueue, setTranslationQueue] = useState([]);
 
-  // Language options
+  // Comprehensive language options - ALL major world languages
   const languages = [
     { code: 'en', name: 'English', flag: '🇺🇸' },
+    // Indian Languages
+    { code: 'hi', name: 'Hindi', flag: '🇮🇳', native: 'हिन्दी' },
     { code: 'te', name: 'Telugu', flag: '🇮🇳', native: 'తెలుగు' },
     { code: 'ta', name: 'Tamil', flag: '🇮🇳', native: 'தமிழ்' },
     { code: 'ml', name: 'Malayalam', flag: '🇮🇳', native: 'മലയാളം' },
-    { code: 'hi', name: 'Hindi', flag: '🇮🇳', native: 'हिन्दी' },
     { code: 'bn', name: 'Bengali', flag: '🇮🇳', native: 'বাংলা' },
     { code: 'gu', name: 'Gujarati', flag: '🇮🇳', native: 'ગુજરાતી' },
     { code: 'kn', name: 'Kannada', flag: '🇮🇳', native: 'ಕನ್ನಡ' },
     { code: 'mr', name: 'Marathi', flag: '🇮🇳', native: 'मराठी' },
     { code: 'pa', name: 'Punjabi', flag: '🇮🇳', native: 'ਪੰਜਾਬੀ' },
     { code: 'ur', name: 'Urdu', flag: '🇵🇰', native: 'اردو' },
+    { code: 'or', name: 'Odia', flag: '🇮🇳', native: 'ଓଡ଼ିଆ' },
+    { code: 'as', name: 'Assamese', flag: '🇮🇳', native: 'অসমীয়া' },
+    { code: 'ne', name: 'Nepali', flag: '🇳🇵', native: 'नेपाली' },
+    { code: 'si', name: 'Sinhala', flag: '🇱🇰', native: 'සිංහල' },
+    // European Languages
     { code: 'es', name: 'Spanish', flag: '🇪🇸', native: 'Español' },
     { code: 'fr', name: 'French', flag: '🇫🇷', native: 'Français' },
     { code: 'de', name: 'German', flag: '🇩🇪', native: 'Deutsch' },
     { code: 'it', name: 'Italian', flag: '🇮🇹', native: 'Italiano' },
     { code: 'pt', name: 'Portuguese', flag: '🇵🇹', native: 'Português' },
     { code: 'ru', name: 'Russian', flag: '🇷🇺', native: 'Русский' },
+    { code: 'nl', name: 'Dutch', flag: '🇳🇱', native: 'Nederlands' },
+    { code: 'sv', name: 'Swedish', flag: '🇸🇪', native: 'Svenska' },
+    { code: 'da', name: 'Danish', flag: '🇩🇰', native: 'Dansk' },
+    { code: 'no', name: 'Norwegian', flag: '🇳🇴', native: 'Norsk' },
+    { code: 'fi', name: 'Finnish', flag: '🇫🇮', native: 'Suomi' },
+    { code: 'pl', name: 'Polish', flag: '🇵🇱', native: 'Polski' },
+    { code: 'cs', name: 'Czech', flag: '🇨🇿', native: 'Čeština' },
+    { code: 'sk', name: 'Slovak', flag: '🇸🇰', native: 'Slovenčina' },
+    { code: 'hu', name: 'Hungarian', flag: '🇭🇺', native: 'Magyar' },
+    { code: 'ro', name: 'Romanian', flag: '🇷🇴', native: 'Română' },
+    { code: 'bg', name: 'Bulgarian', flag: '🇧🇬', native: 'Български' },
+    { code: 'hr', name: 'Croatian', flag: '🇭🇷', native: 'Hrvatski' },
+    { code: 'sr', name: 'Serbian', flag: '🇷🇸', native: 'Српски' },
+    { code: 'sl', name: 'Slovenian', flag: '🇸🇮', native: 'Slovenščina' },
+    { code: 'et', name: 'Estonian', flag: '🇪🇪', native: 'Eesti' },
+    { code: 'lv', name: 'Latvian', flag: '🇱🇻', native: 'Latviešu' },
+    { code: 'lt', name: 'Lithuanian', flag: '🇱🇹', native: 'Lietuvių' },
+    { code: 'el', name: 'Greek', flag: '🇬🇷', native: 'Ελληνικά' },
+    { code: 'tr', name: 'Turkish', flag: '🇹🇷', native: 'Türkçe' },
+    // Asian Languages
+    { code: 'zh', name: 'Chinese', flag: '🇨🇳', native: '中文' },
     { code: 'ja', name: 'Japanese', flag: '🇯🇵', native: '日本語' },
     { code: 'ko', name: 'Korean', flag: '🇰🇷', native: '한국어' },
-    { code: 'zh', name: 'Chinese', flag: '🇨🇳', native: '中文' }
+    { code: 'th', name: 'Thai', flag: '🇹🇭', native: 'ไทย' },
+    { code: 'vi', name: 'Vietnamese', flag: '🇻🇳', native: 'Tiếng Việt' },
+    { code: 'id', name: 'Indonesian', flag: '🇮🇩', native: 'Bahasa Indonesia' },
+    { code: 'ms', name: 'Malay', flag: '🇲🇾', native: 'Bahasa Melayu' },
+    { code: 'tl', name: 'Filipino', flag: '🇵🇭', native: 'Filipino' },
+    { code: 'my', name: 'Myanmar', flag: '🇲🇲', native: 'မြန်မာ' },
+    { code: 'km', name: 'Khmer', flag: '🇰🇭', native: 'ខ្មែរ' },
+    { code: 'lo', name: 'Lao', flag: '🇱🇦', native: 'ລາວ' },
+    // Middle Eastern & African Languages
+    { code: 'ar', name: 'Arabic', flag: '🇸🇦', native: 'العربية' },
+    { code: 'fa', name: 'Persian', flag: '🇮🇷', native: 'فارسی' },
+    { code: 'he', name: 'Hebrew', flag: '🇮🇱', native: 'עברית' },
+    { code: 'sw', name: 'Swahili', flag: '🇰🇪', native: 'Kiswahili' },
+    { code: 'am', name: 'Amharic', flag: '🇪🇹', native: 'አማርኛ' },
+    { code: 'zu', name: 'Zulu', flag: '🇿🇦', native: 'isiZulu' },
+    { code: 'af', name: 'Afrikaans', flag: '🇿🇦', native: 'Afrikaans' }
   ];
 
-  // Fast Google Translate (Unauthorized API)
-  const translateText = async (text, targetLang) => {
-    try {
-      const response = await fetch(
-        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`
-      );
-      const data = await response.json();
-      return data?.[0]?.[0]?.[0] || text;
-    } catch (error) {
-      console.error('Translation error:', error);
-      return text;
+  // JET SPEED Google Translate - Lightning Fast!
+  const jetTranslate = async (texts, targetLang) => {
+    const results = [];
+    const batchSize = 50; // Large batches for maximum speed
+
+    for (let i = 0; i < texts.length; i += batchSize) {
+      const batch = texts.slice(i, i + batchSize);
+
+      // Parallel translation for jet speed
+      const promises = batch.map(async (text) => {
+        // Check cache first for instant results
+        const cacheKey = `${text}_${targetLang}`;
+        if (translationCache.has(cacheKey)) {
+          return translationCache.get(cacheKey);
+        }
+
+        try {
+          const response = await fetch(
+            `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`,
+            {
+              method: 'GET',
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+              }
+            }
+          );
+          const data = await response.json();
+          const translation = data?.[0]?.[0]?.[0] || text;
+
+          // Cache for instant future use
+          translationCache.set(cacheKey, translation);
+          return translation;
+        } catch (error) {
+          console.error('Jet translation error:', error);
+          return text;
+        }
+      });
+
+      const batchResults = await Promise.all(promises);
+      results.push(...batchResults);
     }
+
+    return results;
   };
 
-  // Check if element should be excluded from translation
-  const shouldExcludeElement = (element) => {
-    // Skip if element or its parents contain navigation/UI keywords
-    const excludeSelectors = [
-      'button', 'nav', 'header', 'footer', 'aside', 'menu',
-      '[role="button"]', '[role="navigation"]', '[role="menubar"]',
-      '[class*="nav"]', '[class*="menu"]', '[class*="button"]', '[class*="btn"]',
-      '[class*="control"]', '[class*="toolbar"]', '[class*="header"]',
-      '[class*="footer"]', '[class*="sidebar"]', '[class*="translate"]',
-      '[id*="nav"]', '[id*="menu"]', '[id*="button"]', '[id*="btn"]',
-      '[id*="control"]', '[id*="toolbar"]', '[id*="translate"]',
-      '.react-reader__container', '.react-reader__toolbar',
-      '[aria-label*="nav"]', '[aria-label*="menu"]', '[aria-label*="button"]'
-    ];
-
-    // Check if element matches any exclude selector
-    for (const selector of excludeSelectors) {
-      if (element.matches && element.matches(selector)) {
-        return true;
-      }
-      if (element.closest && element.closest(selector)) {
-        return true;
-      }
-    }
-
-    // Skip elements with navigation-related text content
-    const navKeywords = [
-      'next', 'previous', 'prev', 'back', 'forward', 'chapter', 'contents',
-      'menu', 'close', 'open', 'settings', 'options', 'bookmark', 'search',
-      '→', '←', '▶', '◀', '»', '«', '⋯', '…'
-    ];
-
-    const textContent = element.textContent.toLowerCase().trim();
-    if (navKeywords.some(keyword => textContent === keyword || textContent.includes(keyword))) {
-      return true;
-    }
-
-    // Skip very short text that might be UI elements
-    if (textContent.length < 3 && /^[^\w]*$/.test(textContent)) {
-      return true;
-    }
-
-    return false;
-  };
-
-  // Comprehensive text element finder - finds ALL text including mixed content
-  const findAllTextElements = (doc = document) => {
+  // Lightning-fast text collection
+  const collectAllTexts = () => {
+    const allTexts = [];
     const allElements = [];
 
-    // More comprehensive selectors to catch ALL text
-    const selectors = [
-      'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'div', 'li', 'td', 'th',
-      'a', 'em', 'strong', 'i', 'b', 'u', 'small', 'big', 'sub', 'sup',
-      'blockquote', 'cite', 'code', 'pre', 'label', 'legend', 'caption',
-      'dt', 'dd', 'figcaption', 'summary', 'details', 'mark', 'time',
-      // Additional selectors for EPUB content
-      'section', 'article', 'main', 'aside', 'header', 'footer'
+    // Super-fast text collection from all sources
+    const sources = [
+      // Main document
+      document,
+      // All iframes (EPUB content)
+      ...Array.from(document.querySelectorAll('iframe')).map(iframe => {
+        try {
+          return iframe.contentDocument || iframe.contentWindow?.document;
+        } catch (e) {
+          return null;
+        }
+      }).filter(Boolean)
     ];
 
-    selectors.forEach(selector => {
-      const elements = doc.querySelectorAll(selector);
-      elements.forEach(el => {
-        // Skip excluded elements
-        if (shouldExcludeElement(el)) {
-          return;
+    sources.forEach(doc => {
+      if (!doc) return;
+
+      // Ultra-fast text extraction
+      const textElements = doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, div, li, td, th, a, em, strong, i, b, blockquote, cite');
+
+      textElements.forEach(el => {
+        const text = el.textContent?.trim();
+        if (text &&
+            text.length > 2 &&
+            !text.match(/^[\d\s\.,;:!?\-'"()→←▶◀»«⋯…]+$/) &&
+            !el.closest('button, nav, [class*="nav"], [class*="menu"], [class*="btn"], [class*="control"]')) {
+
+          allTexts.push(text);
+          allElements.push(el);
         }
-
-        // For elements with mixed content (text + child elements)
-        const textNodes = [];
-        const walker = doc.createTreeWalker(
-          el,
-          NodeFilter.SHOW_TEXT,
-          {
-            acceptNode: function(node) {
-              // Only accept text nodes with meaningful content
-              if (node.textContent.trim().length > 2 &&
-                  !shouldExcludeElement(node.parentElement)) {
-                return NodeFilter.FILTER_ACCEPT;
-              }
-              return NodeFilter.FILTER_REJECT;
-            }
-          }
-        );
-
-        let textNode;
-        while (textNode = walker.nextNode()) {
-          // Create wrapper elements for text nodes that don't have their own element
-          if (textNode.parentElement === el ||
-              (textNode.parentElement.children.length === 0 &&
-               textNode.parentElement.textContent.trim() === textNode.textContent.trim())) {
-            textNodes.push(textNode.parentElement);
-          }
-        }
-
-        // Also include elements with no children but with text
-        if (el.children.length === 0 && el.textContent.trim().length > 2) {
-          textNodes.push(el);
-        }
-
-        // Add unique elements
-        textNodes.forEach(node => {
-          if (!allElements.includes(node)) {
-            allElements.push(node);
-          }
-        });
       });
     });
 
-    return allElements;
+    return { texts: allTexts, elements: allElements };
   };
 
-  // Translate all text in the page/book
-  const translatePage = async (languageCode, isAutoTranslate = false) => {
+  // JET SPEED PAGE TRANSLATION - Translates entire page instantly!
+  const jetTranslatePage = async (languageCode) => {
     if (languageCode === 'en') {
       restoreOriginal();
-      setAutoTranslateEnabled(false);
-      stopObserving();
+      setJetModeActive(false);
+      stopJetMode();
       return;
     }
 
-    // Don't show loading state for auto-translate
-    if (!isAutoTranslate) {
-      setIsTranslating(true);
-      setTranslatedCount(0);
-      setAutoTranslateEnabled(true);
+    console.log(`🚀 JET SPEED TRANSLATION to ${languageCode} - STARTING!`);
+    setIsTranslating(true);
+    setJetModeActive(true);
+    const startTime = Date.now();
+
+    try {
+      // STEP 1: Lightning-fast text collection (0.1s)
+      const { texts, elements } = collectAllTexts();
+      console.log(`⚡ Collected ${texts.length} text elements in ${Date.now() - startTime}ms`);
+
+      if (texts.length === 0) {
+        setIsTranslating(false);
+        return;
+      }
+
+      // STEP 2: Remove duplicates for efficiency
+      const uniqueTexts = [...new Set(texts)];
+      console.log(`⚡ Deduplicated to ${uniqueTexts.length} unique texts`);
+
+      // STEP 3: JET SPEED TRANSLATION (1-3s)
+      const translations = await jetTranslate(uniqueTexts, languageCode);
+      console.log(`⚡ Translated ${translations.length} texts in ${Date.now() - startTime}ms`);
+
+      // STEP 4: Lightning-fast application (0.1s)
+      let applied = 0;
+      elements.forEach((element, index) => {
+        const originalText = texts[index];
+        const uniqueIndex = uniqueTexts.indexOf(originalText);
+        const translatedText = translations[uniqueIndex];
+
+        if (translatedText && translatedText !== originalText) {
+          // Store original for restoration
+          if (!element.dataset.originalText) {
+            element.dataset.originalText = originalText;
+          }
+
+          // Apply translation instantly
+          element.textContent = translatedText;
+
+          // Jet-speed visual indicator
+          element.style.backgroundColor = 'rgba(255, 215, 0, 0.15)'; // Gold highlight
+          element.style.borderLeft = '3px solid #FFD700';
+          element.style.paddingLeft = '6px';
+          element.style.borderRadius = '2px';
+          element.style.boxShadow = '0 1px 3px rgba(255, 215, 0, 0.3)';
+          element.style.transition = 'all 0.2s ease';
+
+          applied++;
+        }
+      });
+
+      const endTime = Date.now();
+      const duration = (endTime - startTime) / 1000;
+
+      setTranslatedCount(applied);
+      console.log(`🚀 JET SPEED COMPLETE! Translated ${applied} elements in ${duration.toFixed(2)}s`);
+
+      // Start jet-speed auto-translation for page changes
+      startJetMode(languageCode);
+
+    } catch (error) {
+      console.error('❌ Jet translation error:', error);
     }
 
-    console.log(`🚀 ${isAutoTranslate ? 'Auto-' : ''}Translating to ${languageCode}...`);
+    setIsTranslating(false);
+  };
+
+  // JET SPEED AUTO-TRANSLATION - Instantly translates new pages!
+  const startJetMode = (languageCode) => {
+    stopJetMode(); // Clear existing observers
+
+    const newObservers = [];
+
+    // Ultra-fast page change detection
+    const jetPageChangeHandler = () => {
+      if (!jetModeActive) return;
+
+      console.log('🚀 JET MODE: Page change detected - translating instantly!');
+
+      // Multiple ultra-fast attempts
+      [100, 300, 600].forEach((delay, index) => {
+        setTimeout(() => {
+          jetTranslateNewContent(languageCode);
+        }, delay);
+      });
+    };
+
+    // Main document observer
+    const mainObserver = new MutationObserver((mutations) => {
+      if (!jetModeActive) return;
+
+      let hasNewContent = false;
+      mutations.forEach(mutation => {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          mutation.addedNodes.forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const textContent = node.textContent?.trim() || '';
+              if (textContent.length > 20) { // Any meaningful content
+                hasNewContent = true;
+              }
+            }
+          });
+        }
+      });
+
+      if (hasNewContent) {
+        jetPageChangeHandler();
+      }
+    });
+
+    mainObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+    newObservers.push(mainObserver);
+
+    // Iframe observers for EPUB content
+    const iframes = document.querySelectorAll('iframe');
+    iframes.forEach((iframe, index) => {
+      try {
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (iframeDoc && iframeDoc.body) {
+          const iframeObserver = new MutationObserver((mutations) => {
+            if (!jetModeActive) return;
+
+            let hasNewContent = false;
+            mutations.forEach(mutation => {
+              if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                hasNewContent = true;
+              }
+            });
+
+            if (hasNewContent) {
+              console.log(`🚀 JET MODE: New content in iframe ${index + 1}`);
+              jetPageChangeHandler();
+            }
+          });
+
+          iframeObserver.observe(iframeDoc.body, {
+            childList: true,
+            subtree: true
+          });
+          newObservers.push(iframeObserver);
+        }
+      } catch (e) {
+        console.log(`Cannot observe iframe ${index + 1}`);
+      }
+    });
+
+    setObservers(newObservers);
+    console.log(`🚀 JET MODE ACTIVE: ${newObservers.length} observers monitoring for instant translation`);
+  };
 
     try {
       const allElements = [];
