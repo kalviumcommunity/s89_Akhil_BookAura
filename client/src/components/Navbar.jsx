@@ -154,7 +154,14 @@ const Navbar = () => {
         </li>
       </ul>
 
-      
+      {/* Always visible elements on the right */}
+      <div className="always-visible-items">
+        {/* Google Translate Widget */}
+        <div className="translate-widget-container">
+          <ErrorBoundary>
+            <NavbarGoogleTranslate />
+          </ErrorBoundary>
+        </div>
 
         {!isLoggedIn && (
           <div
@@ -185,15 +192,6 @@ const Navbar = () => {
         <div className='cart-icon' onClick={() => handleNavigation('/cart')}>
           <ShoppingCart size={20} />
           {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
-        </div>
-        {/* Always visible elements on the right */}
-      <div className="always-visible-items">
-        {/* Google Translate Widget */}
-        <div className="leaveit">
-          <Languages size={20} className="translate-icon" />
-          <ErrorBoundary>
-            <NavbarGoogleTranslate />
-          </ErrorBoundary>
         </div>
 
         {/* Mobile menu toggle button */}

@@ -1,6 +1,6 @@
 // Simple Navbar Google Translate - Whole page translation with memory
 import React, { useState, useEffect } from 'react';
-import { Globe, ChevronDown } from 'lucide-react';
+import { Globe, ChevronDown, Languages } from 'lucide-react';
 
 const NavbarGoogleTranslate = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -104,8 +104,7 @@ const NavbarGoogleTranslate = () => {
           alignItems: 'center',
           gap: '4px',
           padding: '8px 12px',
-          backgroundColor: currentLang === 'en' ? '#4285f4' : '#34a853',
-          color: 'white',
+          color: 'Black',
           borderRadius: '20px',
           cursor: 'pointer',
           fontSize: '12px',
@@ -115,7 +114,7 @@ const NavbarGoogleTranslate = () => {
         }}
         title={currentLang === 'en' ? 'Translate Page' : `Translated to ${languages.find(l => l.code === currentLang)?.name}`}
       >
-        <Globe size={14} />
+        <Languages size={14} />
         <span style={{ display: 'none' }}>
           {currentLang === 'en' ? 'EN' : currentLang.toUpperCase()}
         </span>
