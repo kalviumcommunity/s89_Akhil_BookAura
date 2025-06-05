@@ -9,7 +9,7 @@ import './MyBooksPage.css';
 import LoadingAnimation from '../../components/LoadingAnimation';
 import api from '../../services/api';
 import SimpleEpubViewer from '../../components/SimpleEpubViewer';
-import EpubContentTranslator from '../../components/EpubContentTranslator';
+import FastEpubTranslator from '../../components/FastEpubTranslator';
 import ErrorBoundary from '../../components/ErrorBoundary';
 
 
@@ -191,9 +191,9 @@ const MyBooksPage = () => {
   if (selectedBook) {
     return (
       <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-        {/* EPUB Content Translator for Book Reader */}
+        {/* Fast EPUB Translator for Book Reader */}
         <ErrorBoundary>
-          <EpubContentTranslator position="top-right" />
+          <FastEpubTranslator position="top-right" />
         </ErrorBoundary>
 
         <div style={{
