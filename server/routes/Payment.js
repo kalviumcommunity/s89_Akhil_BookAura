@@ -40,6 +40,7 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
         },
         quantity: 1,
       }));
+      //17,51,79
     } else if (book) {
       lineItems = [{
         price_data: {
