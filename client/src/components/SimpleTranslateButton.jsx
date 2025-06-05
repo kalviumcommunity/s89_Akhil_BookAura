@@ -9,6 +9,7 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
   const [translatedCount, setTranslatedCount] = useState(0);
   const [autoTranslateEnabled, setAutoTranslateEnabled] = useState(false);
   const [observers, setObservers] = useState([]);
+  const [intervalId, setIntervalId] = useState(null);
 
   // Language options
   const languages = [
@@ -48,6 +49,51 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
     }
   };
 
+  // Check if element should be excluded from translation
+  const shouldExcludeElement = (element) => {
+    // Skip if element or its parents contain navigation/UI keywords
+    const excludeSelectors = [
+      'button', 'nav', 'header', 'footer', 'aside', 'menu',
+      '[role="button"]', '[role="navigation"]', '[role="menubar"]',
+      '[class*="nav"]', '[class*="menu"]', '[class*="button"]', '[class*="btn"]',
+      '[class*="control"]', '[class*="toolbar"]', '[class*="header"]',
+      '[class*="footer"]', '[class*="sidebar"]', '[class*="translate"]',
+      '[id*="nav"]', '[id*="menu"]', '[id*="button"]', '[id*="btn"]',
+      '[id*="control"]', '[id*="toolbar"]', '[id*="translate"]',
+      '.react-reader__container', '.react-reader__toolbar',
+      '[aria-label*="nav"]', '[aria-label*="menu"]', '[aria-label*="button"]'
+    ];
+
+    // Check if element matches any exclude selector
+    for (const selector of excludeSelectors) {
+      if (element.matches && element.matches(selector)) {
+        return true;
+      }
+      if (element.closest && element.closest(selector)) {
+        return true;
+      }
+    }
+
+    // Skip elements with navigation-related text content
+    const navKeywords = [
+      'next', 'previous', 'prev', 'back', 'forward', 'chapter', 'contents',
+      'menu', 'close', 'open', 'settings', 'options', 'bookmark', 'search',
+      '→', '←', '▶', '◀', '»', '«', '⋯', '…'
+    ];
+
+    const textContent = element.textContent.toLowerCase().trim();
+    if (navKeywords.some(keyword => textContent === keyword || textContent.includes(keyword))) {
+      return true;
+    }
+
+    // Skip very short text that might be UI elements
+    if (textContent.length < 3 && /^[^\w]*$/.test(textContent)) {
+      return true;
+    }
+
+    return false;
+  };
+
   // Comprehensive text element finder
   const findAllTextElements = (doc = document) => {
     const allElements = [];
@@ -63,6 +109,11 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
     selectors.forEach(selector => {
       const elements = doc.querySelectorAll(selector);
       elements.forEach(el => {
+        // Skip excluded elements
+        if (shouldExcludeElement(el)) {
+          return;
+        }
+
         // Check if element has direct text content (not just child elements)
         const hasDirectText = Array.from(el.childNodes).some(node =>
           node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0
@@ -82,7 +133,7 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
   };
 
   // Translate all text in the page/book
-  const translatePage = async (languageCode) => {
+  const translatePage = async (languageCode, isAutoTranslate = false) => {
     if (languageCode === 'en') {
       restoreOriginal();
       setAutoTranslateEnabled(false);
@@ -90,10 +141,14 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
       return;
     }
 
-    setIsTranslating(true);
-    setTranslatedCount(0);
-    setAutoTranslateEnabled(true);
-    console.log(`🚀 Translating to ${languageCode}...`);
+    // Don't show loading state for auto-translate
+    if (!isAutoTranslate) {
+      setIsTranslating(true);
+      setTranslatedCount(0);
+      setAutoTranslateEnabled(true);
+    }
+
+    console.log(`🚀 ${isAutoTranslate ? 'Auto-' : ''}Translating to ${languageCode}...`);
 
     try {
       const allElements = [];
@@ -116,16 +171,9 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
         }
       });
 
-      // Check main document
+      // Check main document (already filtered by findAllTextElements)
       const mainElements = findAllTextElements(document);
-      // Filter out translation UI elements
-      const filteredMainElements = mainElements.filter(el =>
-        !el.closest('[class*="translate"]') &&
-        !el.closest('[id*="translate"]') &&
-        !el.closest('button') &&
-        !el.closest('nav')
-      );
-      allElements.push(...filteredMainElements);
+      allElements.push(...mainElements);
 
       console.log(`📝 Total found ${allElements.length} text elements`);
 
@@ -186,16 +234,21 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
         }
       }
 
-      console.log(`✅ Translated ${translated} elements`);
+      console.log(`✅ ${isAutoTranslate ? 'Auto-' : ''}Translated ${translated} elements`);
 
-      // Start observing for new content
-      startObserving(languageCode);
+      // Start observing for new content (only on initial translation)
+      if (!isAutoTranslate) {
+        startObserving(languageCode);
+      }
 
     } catch (error) {
       console.error('Translation error:', error);
     }
 
-    setIsTranslating(false);
+    // Only update loading state for manual translation
+    if (!isAutoTranslate) {
+      setIsTranslating(false);
+    }
   };
 
   // Auto-translate new content when pages change
@@ -204,25 +257,43 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
 
     const newObservers = [];
 
+    // Function to handle page changes and translate new content
+    const handlePageChange = () => {
+      if (!autoTranslateEnabled) return;
+
+      console.log('🔄 Page change detected, auto-translating new content...');
+
+      // Small delay to let content load
+      setTimeout(() => {
+        translatePage(languageCode, true); // true = auto-translate mode
+      }, 500);
+    };
+
     // Observe main document changes
     const mainObserver = new MutationObserver((mutations) => {
       if (!autoTranslateEnabled) return;
 
-      let hasNewText = false;
+      let hasSignificantChange = false;
+
       mutations.forEach(mutation => {
         if (mutation.type === 'childList') {
+          // Check for significant content changes
           mutation.addedNodes.forEach(node => {
             if (node.nodeType === Node.ELEMENT_NODE) {
+              // Look for content containers or multiple new elements
               const newElements = findAllTextElements(node);
-              if (newElements.length > 0) {
-                hasNewText = true;
-                console.log(`🔄 Found ${newElements.length} new text elements, auto-translating...`);
-                translateNewElements(newElements, languageCode);
+              if (newElements.length > 5) { // Significant content change
+                hasSignificantChange = true;
               }
             }
           });
         }
       });
+
+      if (hasSignificantChange) {
+        console.log('🔄 Significant content change detected in main document');
+        handlePageChange();
+      }
     });
 
     mainObserver.observe(document.body, {
@@ -231,30 +302,35 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
     });
     newObservers.push(mainObserver);
 
-    // Observe iframe content changes
-    const iframes = document.querySelectorAll('iframe');
-    iframes.forEach((iframe, index) => {
+    // Observe iframe content changes with better detection
+    const setupIframeObserver = (iframe, index) => {
       try {
         const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
         if (iframeDoc && iframeDoc.body) {
+
+          // Observer for content changes
           const iframeObserver = new MutationObserver((mutations) => {
             if (!autoTranslateEnabled) return;
 
-            let hasNewText = false;
+            let hasSignificantChange = false;
+
             mutations.forEach(mutation => {
               if (mutation.type === 'childList') {
                 mutation.addedNodes.forEach(node => {
                   if (node.nodeType === Node.ELEMENT_NODE) {
                     const newElements = findAllTextElements(node);
-                    if (newElements.length > 0) {
-                      hasNewText = true;
-                      console.log(`🔄 Found ${newElements.length} new elements in iframe ${index + 1}, auto-translating...`);
-                      translateNewElements(newElements, languageCode);
+                    if (newElements.length > 3) { // Page change threshold
+                      hasSignificantChange = true;
                     }
                   }
                 });
               }
             });
+
+            if (hasSignificantChange) {
+              console.log(`🔄 Page change detected in iframe ${index + 1}`);
+              handlePageChange();
+            }
           });
 
           iframeObserver.observe(iframeDoc.body, {
@@ -262,22 +338,129 @@ const SimpleTranslateButton = ({ position = 'top-right' }) => {
             subtree: true
           });
           newObservers.push(iframeObserver);
+
+          // Also observe for attribute changes that might indicate page changes
+          const attrObserver = new MutationObserver((mutations) => {
+            if (!autoTranslateEnabled) return;
+
+            mutations.forEach(mutation => {
+              if (mutation.type === 'attributes' &&
+                  (mutation.attributeName === 'src' ||
+                   mutation.attributeName === 'data-page' ||
+                   mutation.attributeName === 'class')) {
+                console.log(`🔄 Attribute change detected in iframe ${index + 1}`);
+                handlePageChange();
+              }
+            });
+          });
+
+          attrObserver.observe(iframeDoc.documentElement, {
+            attributes: true,
+            subtree: true
+          });
+          newObservers.push(attrObserver);
+
           console.log(`👁️ Started observing iframe ${index + 1} for changes`);
         }
       } catch (e) {
         console.log(`❌ Cannot observe iframe ${index + 1}:`, e.message);
       }
+    };
+
+    // Setup observers for existing iframes
+    const iframes = document.querySelectorAll('iframe');
+    iframes.forEach(setupIframeObserver);
+
+    // Also observe for new iframes being added
+    const iframeWatcher = new MutationObserver((mutations) => {
+      mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            if (node.tagName === 'IFRAME') {
+              console.log('🆕 New iframe detected, setting up observer');
+              setupIframeObserver(node, iframes.length);
+            }
+            // Also check for iframes within added nodes
+            const newIframes = node.querySelectorAll && node.querySelectorAll('iframe');
+            if (newIframes) {
+              newIframes.forEach((iframe, index) => {
+                setupIframeObserver(iframe, iframes.length + index);
+              });
+            }
+          }
+        });
+      });
     });
 
+    iframeWatcher.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+    newObservers.push(iframeWatcher);
+
     setObservers(newObservers);
-    console.log(`👁️ Started ${newObservers.length} observers for auto-translation`);
+
+    // Also start periodic checking as backup
+    const id = setInterval(() => {
+      if (autoTranslateEnabled) {
+        checkForUntranslatedContent(languageCode);
+      }
+    }, 2000); // Check every 2 seconds
+
+    setIntervalId(id);
+    console.log(`👁️ Started ${newObservers.length} observers + periodic check for auto-translation`);
+  };
+
+  // Periodic check for untranslated content
+  const checkForUntranslatedContent = (languageCode) => {
+    try {
+      const allElements = [];
+
+      // Check iframes
+      const iframes = document.querySelectorAll('iframe');
+      iframes.forEach(iframe => {
+        try {
+          const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+          if (iframeDoc) {
+            const elements = findAllTextElements(iframeDoc);
+            allElements.push(...elements);
+          }
+        } catch (e) {
+          // Ignore iframe access errors
+        }
+      });
+
+      // Check main document
+      const mainElements = findAllTextElements(document);
+      allElements.push(...mainElements);
+
+      // Find untranslated elements
+      const untranslated = allElements.filter(el =>
+        !el.dataset.originalText &&
+        el.textContent.trim().length > 2 &&
+        !shouldExcludeElement(el)
+      );
+
+      if (untranslated.length > 0) {
+        console.log(`🔍 Found ${untranslated.length} untranslated elements, auto-translating...`);
+        translateNewElements(untranslated, languageCode);
+      }
+    } catch (error) {
+      console.error('Error in periodic check:', error);
+    }
   };
 
   // Stop observing changes
   const stopObserving = () => {
     observers.forEach(observer => observer.disconnect());
     setObservers([]);
-    console.log('🛑 Stopped all observers');
+
+    if (intervalId) {
+      clearInterval(intervalId);
+      setIntervalId(null);
+    }
+
+    console.log('🛑 Stopped all observers and periodic check');
   };
 
   // Translate new elements that appear
