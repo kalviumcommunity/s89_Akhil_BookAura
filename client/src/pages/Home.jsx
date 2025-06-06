@@ -110,7 +110,6 @@ const Home = () => {
     <div>
       <Navbar/>
 
-      {/* Basic Google Translate Button */}
       <ErrorBoundary>
         <BasicGoogleTranslate position="bottom-right" />
       </ErrorBoundary>
