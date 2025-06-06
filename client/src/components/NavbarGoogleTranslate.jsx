@@ -49,98 +49,40 @@ const NavbarGoogleTranslate = () => {
     }
   }, []);
 
-  // Aggressive function to remove all Google Translate UI
+  // Function to actively remove banner
   const removeBanner = () => {
     const removeElements = () => {
-      // Remove all Google Translate elements
-      const selectors = [
-        '.goog-te-banner-frame',
-        'iframe.goog-te-banner-frame',
-        '.goog-te-banner-frame.skiptranslate',
-        '[id^="goog-gt-"]',
-        '[class^="goog-te-"]',
-        '[class*="goog-te-"]',
-        'div[jsaction*="translate"]'
-      ];
-
-      selectors.forEach(selector => {
-        const elements = document.querySelectorAll(selector);
-        elements.forEach(element => {
-          if (element && element.parentNode) {
-            element.parentNode.removeChild(element);
-          }
-        });
-      });
-
-      // Remove any fixed/sticky positioned elements that might be Google Translate
-      const fixedElements = document.querySelectorAll('body > div[style*="position: fixed"], body > div[style*="position: sticky"], body > iframe[style*="position: fixed"]');
-      fixedElements.forEach(element => {
-        if (element.textContent && (
-          element.textContent.includes('Google Translate') ||
-          element.textContent.includes('Translated into') ||
-          element.textContent.includes('Show original')
-        )) {
-          if (element.parentNode) {
-            element.parentNode.removeChild(element);
-          }
+      // Remove banner frame
+      const banners = document.querySelectorAll('.goog-te-banner-frame, iframe.goog-te-banner-frame');
+      banners.forEach(banner => {
+        if (banner && banner.parentNode) {
+          banner.parentNode.removeChild(banner);
         }
       });
 
-      // Force reset body styles
+      // Reset body position
       document.body.style.top = '0';
       document.body.style.position = 'static';
-      document.body.style.marginTop = '0';
-      document.body.style.paddingTop = '0';
-
-      // Ensure navbar stays on top
-      const navbar = document.querySelector('.navbar');
-      if (navbar) {
-        navbar.style.zIndex = '9999';
-        navbar.style.position = 'relative';
-      }
     };
 
-    // Immediate removal
+    // Remove immediately and keep checking
     removeElements();
-
-    // Multiple timed removals
-    setTimeout(removeElements, 50);
     setTimeout(removeElements, 100);
-    setTimeout(removeElements, 200);
     setTimeout(removeElements, 500);
     setTimeout(removeElements, 1000);
-    setTimeout(removeElements, 2000);
 
-    // Set up aggressive observer
-    const observer = new MutationObserver((mutations) => {
-      let shouldRemove = false;
-      mutations.forEach(mutation => {
-        mutation.addedNodes.forEach(node => {
-          if (node.nodeType === 1) { // Element node
-            if (node.className && (
-              node.className.includes('goog-te-') ||
-              node.id && node.id.includes('goog-gt-')
-            )) {
-              shouldRemove = true;
-            }
-          }
-        });
-      });
-
-      if (shouldRemove) {
-        setTimeout(removeElements, 10);
-      }
+    // Set up observer to catch dynamically added banners
+    const observer = new MutationObserver(() => {
+      removeElements();
     });
 
     observer.observe(document.body, {
       childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['style', 'class', 'id']
+      subtree: true
     });
 
-    // Stop observing after 10 seconds
-    setTimeout(() => observer.disconnect(), 10000);
+    // Stop observing after 5 seconds
+    setTimeout(() => observer.disconnect(), 5000);
   };
 
   // Simple whole page translation
@@ -303,80 +245,59 @@ const NavbarGoogleTranslate = () => {
       {/* Hidden Google Translate Element */}
       <div id="navbar_google_translate_element" style={{ display: 'none' }}></div>
 
-      {/* CSS for completely hiding Google Translate banner */}
+      {/* CSS for hiding Google Translate banner */}
       <style jsx global>{`
-        /* AGGRESSIVE HIDING - Remove all Google Translate UI */
-        .goog-te-banner-frame,
-        .goog-te-banner-frame.skiptranslate,
-        iframe.goog-te-banner-frame,
-        .goog-te-banner-frame * {
+        /* Hide the main Google Translate banner completely */
+        .goog-te-banner-frame {
           display: none !important;
           visibility: hidden !important;
-          opacity: 0 !important;
           height: 0 !important;
-          width: 0 !important;
-          margin: 0 !important;
-          padding: 0 !important;
-          border: none !important;
-          position: absolute !important;
-          top: -9999px !important;
-          left: -9999px !important;
-          z-index: -1 !important;
           overflow: hidden !important;
         }
 
-        /* Force body to stay in normal position */
+        /* Hide banner frame variations */
+        .goog-te-banner-frame.skiptranslate {
+          display: none !important;
+        }
+
+        /* Hide iframe banners */
+        iframe.goog-te-banner-frame {
+          display: none !important;
+        }
+
+        /* Prevent body from being pushed down */
         body {
           top: 0 !important;
           position: static !important;
-          margin-top: 0 !important;
-          padding-top: 0 !important;
         }
 
-        /* Hide all Google Translate elements */
+        /* Hide all Google Translate UI elements */
         .goog-te-combo,
         .goog-te-gadget,
-        .goog-te-gadget-simple,
-        .goog-te-menu-value,
-        .goog-te-spinner-pos,
         #google_translate_element,
-        #navbar_google_translate_element,
+        #navbar_google_translate_element {
+          display: none !important;
+        }
+
+        /* Hide notification messages */
+        .goog-te-banner-frame .goog-te-banner-content,
+        .goog-te-banner-frame [jsaction],
+        .goog-te-banner-frame div {
+          display: none !important;
+        }
+
+        /* Force hide any elements starting with goog-gt */
         [id^="goog-gt-"],
         [class^="goog-te-"],
-        [class*="goog-te-"],
-        div[jsaction*="translate"] {
+        .goog-te-spinner-pos {
+          display: none !important;
+        }
+
+        /* Hide the entire banner container and children */
+        body > .goog-te-banner-frame,
+        body > .goog-te-banner-frame * {
           display: none !important;
           visibility: hidden !important;
-          opacity: 0 !important;
-        }
-
-        /* Remove any fixed/sticky positioning from Google elements */
-        body > div[style*="position: fixed"],
-        body > div[style*="position: sticky"],
-        body > iframe[style*="position: fixed"],
-        body > iframe[style*="position: sticky"] {
-          display: none !important;
-        }
-
-        /* Specifically target the notification bar */
-        body > div[style*="background-color: rgb(245, 245, 245)"],
-        body > div[style*="border-bottom"],
-        body > div[style*="font-size: 13px"] {
-          display: none !important;
-        }
-
-        /* Hide any element that contains Google Translate text */
-        div:contains("Google Translate"),
-        div:contains("Translated into"),
-        div:contains("Show original"),
-        div:contains("Options") {
-          display: none !important;
-        }
-
-        /* Ensure navbar stays on top */
-        .navbar {
-          z-index: 9999 !important;
-          position: relative !important;
         }
       `}</style>
     </div>

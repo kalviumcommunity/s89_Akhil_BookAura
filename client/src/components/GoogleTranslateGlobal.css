@@ -1,60 +1,13 @@
-/* Global Google Translate Styles - AGGRESSIVE BANNER HIDING */
+/* Global Google Translate Styles */
 
-/* COMPLETELY HIDE ALL GOOGLE TRANSLATE UI ELEMENTS */
-.goog-te-banner-frame,
-.goog-te-banner-frame.skiptranslate,
-iframe.goog-te-banner-frame,
-.goog-te-banner-frame *,
-[id^="goog-gt-"],
-[class^="goog-te-banner"],
-[class*="goog-te-banner"],
-div[jsaction*="translate"],
-div[style*="background-color: rgb(245, 245, 245)"] {
+/* Hide the Google Translate banner */
+.goog-te-banner-frame {
   display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  height: 0 !important;
-  width: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: none !important;
-  position: absolute !important;
-  top: -9999px !important;
-  left: -9999px !important;
-  z-index: -1 !important;
-  overflow: hidden !important;
-  pointer-events: none !important;
 }
 
-/* Force body to stay in normal position */
+/* Prevent body from being pushed down */
 body {
   top: 0 !important;
-  position: static !important;
-  margin-top: 0 !important;
-  padding-top: 0 !important;
-}
-
-/* Remove any fixed/sticky positioning from Google elements */
-body > div[style*="position: fixed"],
-body > div[style*="position: sticky"],
-body > iframe[style*="position: fixed"],
-body > iframe[style*="position: sticky"] {
-  display: none !important;
-}
-
-/* Hide elements containing Google Translate text */
-div:contains("Google Translate"),
-div:contains("Translated into"),
-div:contains("Show original"),
-div:contains("Options"),
-div:contains("Close") {
-  display: none !important;
-}
-
-/* Ensure navbar stays on top */
-.navbar {
-  z-index: 9999 !important;
-  position: relative !important;
 }
 
 /* Style the Google Translate dropdown */
