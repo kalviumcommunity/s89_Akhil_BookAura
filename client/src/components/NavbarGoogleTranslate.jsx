@@ -1,12 +1,11 @@
-// Simple Navbar Google Translate - Whole page translation with memory
+// Enhanced NavbarGoogleTranslate Component
 import React, { useState, useEffect } from 'react';
-import { Globe, ChevronDown, Languages } from 'lucide-react';
+import { Languages } from 'lucide-react';
 
 const NavbarGoogleTranslate = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [currentLang, setCurrentLang] = useState('en');
 
-  // Simple language options
   const languages = [
     { code: 'en', name: 'English', flag: '🇺🇸' },
     { code: 'hi', name: 'Hindi', flag: '🇮🇳', native: 'हिन्दी' },
@@ -34,75 +33,45 @@ const NavbarGoogleTranslate = () => {
     { code: 'tr', name: 'Turkish', flag: '🇹🇷', native: 'Türkçe' }
   ];
 
-  // Load saved language on page load
   useEffect(() => {
     const savedLang = localStorage.getItem('translate-lang') || 'en';
     setCurrentLang(savedLang);
     if (savedLang !== 'en') {
       setTimeout(() => {
         translateWholePage(savedLang);
-        // Remove banner after auto-translation
-        setTimeout(() => {
-          removeBanner();
-        }, 2000);
       }, 1000);
     }
   }, []);
 
-  // Function to actively remove banner
   const removeBanner = () => {
     const removeElements = () => {
-      // Remove banner frame
       const banners = document.querySelectorAll('.goog-te-banner-frame, iframe.goog-te-banner-frame');
       banners.forEach(banner => {
-        if (banner && banner.parentNode) {
-          banner.parentNode.removeChild(banner);
-        }
+        if (banner?.parentNode) banner.parentNode.removeChild(banner);
       });
 
-      // Reset body position
       document.body.style.top = '0';
       document.body.style.position = 'static';
     };
 
-    // Remove immediately and keep checking
-    removeElements();
-    setTimeout(removeElements, 100);
-    setTimeout(removeElements, 500);
-    setTimeout(removeElements, 1000);
+    // Repeat removal every 500ms for 5 seconds
+    const interval = setInterval(removeElements, 500);
+    setTimeout(() => clearInterval(interval), 5000);
 
-    // Set up observer to catch dynamically added banners
-    const observer = new MutationObserver(() => {
-      removeElements();
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-
-    // Stop observing after 5 seconds
+    // Observer for late-injected banners
+    const observer = new MutationObserver(removeElements);
+    observer.observe(document.body, { childList: true, subtree: true });
     setTimeout(() => observer.disconnect(), 5000);
   };
 
-  // Simple whole page translation
   const handleTranslate = (langCode) => {
     setCurrentLang(langCode);
     localStorage.setItem('translate-lang', langCode);
     setIsVisible(false);
-
-    if (langCode === 'en') {
-      // Reset to English
-      window.location.reload();
-    } else {
-      // Translate whole page
-      translateWholePage(langCode);
-    }
+    langCode === 'en' ? window.location.reload() : translateWholePage(langCode);
   };
 
-  // Translate entire page using Google Translate
   const translateWholePage = (langCode) => {
-    // Add Google Translate script if not exists
     if (!document.getElementById('google-translate-script')) {
       const script = document.createElement('script');
       script.id = 'google-translate-script';
@@ -110,38 +79,30 @@ const NavbarGoogleTranslate = () => {
       document.head.appendChild(script);
     }
 
-    // Initialize Google Translate
-    window.googleTranslateElementInit = function() {
-      if (window.google && window.google.translate) {
-        new window.google.translate.TranslateElement({
-          pageLanguage: 'en',
-          includedLanguages: 'en,hi,te,ta,ml,bn,gu,kn,mr,pa,ur,es,fr,de,it,pt,ru,ja,ko,zh,ar,th,vi,tr',
-          autoDisplay: false
-        }, 'navbar_google_translate_element');
+    window.googleTranslateElementInit = function () {
+      new window.google.translate.TranslateElement({
+        pageLanguage: 'en',
+        includedLanguages: languages.map(l => l.code).join(','),
+        autoDisplay: false
+      }, 'navbar_google_translate_element');
 
-        // Auto-select the language
-        setTimeout(() => {
-          const select = document.querySelector('.goog-te-combo');
-          if (select) {
-            select.value = langCode;
-            select.dispatchEvent(new Event('change'));
-          }
-
-          // Remove Google Translate banner after translation
-          removeBanner();
-        }, 500);
-      }
+      setTimeout(() => {
+        const select = document.querySelector('.goog-te-combo');
+        if (select) {
+          select.value = langCode;
+          select.dispatchEvent(new Event('change'));
+        }
+        removeBanner();
+      }, 500);
     };
 
-    // Trigger initialization if script already loaded
-    if (window.google && window.google.translate) {
+    if (window.google?.translate) {
       window.googleTranslateElementInit();
     }
   };
 
   return (
     <div style={{ position: 'relative' }}>
-      {/* Compact Navbar Button */}
       <div
         onClick={() => setIsVisible(!isVisible)}
         style={{
@@ -155,33 +116,15 @@ const NavbarGoogleTranslate = () => {
           cursor: 'pointer',
           fontSize: '12px',
           fontWeight: '500',
-          minWidth: '40px',
-          justifyContent: 'center',
-          border: currentLang !== 'en' ? '2px solid #34a853' : 'none',
-          transition: 'all 0.2s ease'
+          border: currentLang !== 'en' ? '2px solid #34a853' : 'none'
         }}
-        onMouseEnter={(e) => {
-          e.target.style.backgroundColor = '#f5f5f5';
-        }}
-        onMouseLeave={(e) => {
-          e.target.style.backgroundColor = 'transparent';
-        }}
-        title={currentLang === 'en' ? 'Translate Page' : `Translated to ${languages.find(l => l.code === currentLang)?.name}`}
       >
-        <Languages size={20} color={currentLang === 'en' ? '#333' : '#333'} />
+        <Languages size={20} />
         {currentLang !== 'en' && (
-          <span style={{
-            fontSize: '10px',
-            color: '#34a853',
-            fontWeight: 'bold',
-            textTransform: 'uppercase'
-          }}>
-            {currentLang}
-          </span>
+          <span style={{ fontSize: '10px', color: '#34a853', fontWeight: 'bold' }}>{currentLang}</span>
         )}
       </div>
 
-      {/* Compact Dropdown */}
       {isVisible && (
         <div style={{
           position: 'absolute',
@@ -207,27 +150,19 @@ const NavbarGoogleTranslate = () => {
             Translate Page
           </div>
 
-          {languages.slice(0, 12).map((lang) => (
+          {languages.map((lang) => (
             <div
               key={lang.code}
               onClick={() => handleTranslate(lang.code)}
               style={{
                 padding: '8px 12px',
                 cursor: 'pointer',
-                borderBottom: '1px solid #f0f0f0',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
                 fontSize: '12px',
-                backgroundColor: currentLang === lang.code ? '#e8f5e8' : 'white'
-              }}
-              onMouseEnter={(e) => {
-                if (currentLang !== lang.code) {
-                  e.target.style.backgroundColor = '#f5f5f5';
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = currentLang === lang.code ? '#e8f5e8' : 'white';
+                backgroundColor: currentLang === lang.code ? '#e8f5e8' : 'white',
+                borderBottom: '1px solid #f0f0f0'
               }}
             >
               <span style={{ fontSize: '14px' }}>{lang.flag}</span>
@@ -235,65 +170,41 @@ const NavbarGoogleTranslate = () => {
                 {lang.name}
               </span>
               {currentLang === lang.code && (
-                <span style={{ marginLeft: 'auto', color: '#34a853', fontSize: '12px' }}>✓</span>
+                <span style={{ marginLeft: 'auto', color: '#34a853' }}>✓</span>
               )}
             </div>
           ))}
         </div>
       )}
 
-      {/* Hidden Google Translate Element */}
       <div id="navbar_google_translate_element" style={{ display: 'none' }}></div>
 
-      {/* CSS for hiding Google Translate banner */}
       <style jsx global>{`
-        /* Hide the main Google Translate banner completely */
-        .goog-te-banner-frame {
+        html, body {
+          margin-top: 0 !important;
+          padding-top: 0 !important;
+          top: 0 !important;
+          position: static !important;
+        }
+
+        .goog-te-banner-frame,
+        .goog-te-banner-frame.skiptranslate,
+        iframe.goog-te-banner-frame,
+        .goog-te-gadget,
+        .goog-te-combo,
+        .goog-te-spinner-pos,
+        .goog-te-banner-content,
+        .goog-te-banner-frame * {
           display: none !important;
           visibility: hidden !important;
           height: 0 !important;
           overflow: hidden !important;
         }
 
-        /* Hide banner frame variations */
-        .goog-te-banner-frame.skiptranslate {
+        [id^="goog-gt-"], [class^="goog-te-"] {
           display: none !important;
         }
 
-        /* Hide iframe banners */
-        iframe.goog-te-banner-frame {
-          display: none !important;
-        }
-
-        /* Prevent body from being pushed down */
-        body {
-          top: 0 !important;
-          position: static !important;
-        }
-
-        /* Hide all Google Translate UI elements */
-        .goog-te-combo,
-        .goog-te-gadget,
-        #google_translate_element,
-        #navbar_google_translate_element {
-          display: none !important;
-        }
-
-        /* Hide notification messages */
-        .goog-te-banner-frame .goog-te-banner-content,
-        .goog-te-banner-frame [jsaction],
-        .goog-te-banner-frame div {
-          display: none !important;
-        }
-
-        /* Force hide any elements starting with goog-gt */
-        [id^="goog-gt-"],
-        [class^="goog-te-"],
-        .goog-te-spinner-pos {
-          display: none !important;
-        }
-
-        /* Hide the entire banner container and children */
         body > .goog-te-banner-frame,
         body > .goog-te-banner-frame * {
           display: none !important;
