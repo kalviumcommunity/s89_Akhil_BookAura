@@ -1,12 +1,14 @@
 .navbar {
     position: fixed;
+    top: 0;
+    
     border-bottom: 1px solid rgba(0, 0, 0, 0.2);
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 10px 20px;
     flex-wrap: wrap;
-    background-color: rgba(230, 217, 204, 0.95); /* Using the #E6D9CC background with opacity */
+    background-color: rgba(230, 217, 204, 0.95);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     z-index: 1000;
