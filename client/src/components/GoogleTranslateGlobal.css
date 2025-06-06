@@ -1,13 +1,45 @@
-/* Global Google Translate Styles */
+/* Global Google Translate Styles - NUCLEAR BANNER HIDING */
 
-/* Hide the Google Translate banner */
-.goog-te-banner-frame {
+/* COMPLETELY DESTROY ALL GOOGLE TRANSLATE UI */
+.goog-te-banner-frame,
+.goog-te-banner-frame.skiptranslate,
+iframe.goog-te-banner-frame,
+.goog-te-banner-frame *,
+.goog-te-gadget,
+.goog-te-gadget *,
+.goog-te-spinner-pos,
+.goog-te-banner-content,
+[id^="goog-gt-"],
+[class^="goog-te-"],
+[class*="goog-te-"],
+div[jsaction*="translate"],
+body > div[style*="position: fixed"],
+body > div[style*="position: sticky"],
+body > iframe[style*="position: fixed"],
+body > iframe[style*="position: sticky"] {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  z-index: -1 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  transform: scale(0) !important;
 }
 
-/* Prevent body from being pushed down */
-body {
+/* Force body and html to normal position */
+html, body {
   top: 0 !important;
+  position: static !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
 }
 
 /* Style the Google Translate dropdown */

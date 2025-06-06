@@ -44,24 +44,53 @@ const NavbarGoogleTranslate = () => {
   }, []);
 
   const removeBanner = () => {
-    const removeElements = () => {
-      const banners = document.querySelectorAll('.goog-te-banner-frame, iframe.goog-te-banner-frame');
-      banners.forEach(banner => {
-        if (banner?.parentNode) banner.parentNode.removeChild(banner);
+    const nukeGoogleElements = () => {
+      // NUCLEAR OPTION - Remove everything Google Translate
+      const selectors = [
+        '.goog-te-banner-frame',
+        'iframe.goog-te-banner-frame',
+        '.goog-te-banner-frame.skiptranslate',
+        '[id^="goog-gt-"]',
+        '[class^="goog-te-"]',
+        '[class*="goog-te-"]',
+        'div[jsaction*="translate"]',
+        'body > div[style*="position: fixed"]',
+        'body > div[style*="position: sticky"]',
+        'body > iframe[style*="position: fixed"]'
+      ];
+
+      selectors.forEach(selector => {
+        try {
+          document.querySelectorAll(selector).forEach(element => {
+            if (element) {
+              // Multiple destruction methods
+              element.remove();
+              element.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important; height: 0 !important; width: 0 !important; position: absolute !important; top: -9999px !important; left: -9999px !important; z-index: -1 !important;';
+              if (element.parentNode) element.parentNode.removeChild(element);
+            }
+          });
+        } catch (e) {}
       });
 
-      document.body.style.top = '0';
-      document.body.style.position = 'static';
+      // Force body reset
+      document.body.style.cssText = 'top: 0 !important; position: static !important; margin-top: 0 !important; padding-top: 0 !important;';
+      document.documentElement.style.cssText = 'top: 0 !important; position: static !important; margin-top: 0 !important; padding-top: 0 !important;';
     };
 
-    // Repeat removal every 500ms for 5 seconds
-    const interval = setInterval(removeElements, 500);
-    setTimeout(() => clearInterval(interval), 5000);
+    // Immediate and repeated removal
+    nukeGoogleElements();
+    const interval = setInterval(nukeGoogleElements, 100);
+    setTimeout(() => clearInterval(interval), 10000);
 
-    // Observer for late-injected banners
-    const observer = new MutationObserver(removeElements);
-    observer.observe(document.body, { childList: true, subtree: true });
-    setTimeout(() => observer.disconnect(), 5000);
+    // Aggressive observer
+    const observer = new MutationObserver(nukeGoogleElements);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style', 'class', 'id']
+    });
+    setTimeout(() => observer.disconnect(), 10000);
   };
 
   const handleTranslate = (langCode) => {
