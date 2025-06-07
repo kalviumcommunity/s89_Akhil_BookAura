@@ -1,5 +1,14 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import api from '../services/api';
+import {
+  isAuthenticated,
+  getAuthToken,
+  getUserData,
+  setUserData,
+  clearAuthData,
+  handleAuthError,
+  refreshAuthStatus
+} from '../utils/authUtils';
 
 // Create the context
 const AuthContext = createContext();
@@ -187,8 +196,8 @@ export const AuthProvider = ({ children }) => {
     try {
       await api.get('/router/logout');
 
-      // Clear auth data
-      localStorage.removeItem('authToken');
+      // Clear all auth data using utility
+      clearAuthData();
       setUser(null);
       setIsLoggedIn(false);
 
@@ -198,7 +207,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Error logging out:', error);
 
       // Even if the server request fails, clear local auth state
-      localStorage.removeItem('authToken');
+      clearAuthData();
       setUser(null);
       setIsLoggedIn(false);
     }

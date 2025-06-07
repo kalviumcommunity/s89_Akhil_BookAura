@@ -31,6 +31,7 @@ import GoogleAuthTest from './pages/GoogleAuthTest';
 import Flashcards from './pages/studyhub/Flashcards';
 import WorkingEpubTest from './pages/WorkingEpubTest';
 import AllBooksPage from './pages/AllBooksPage';
+import TestFixes from './components/TestFixes';
 
 const pageTransition = {
   initial: { opacity: 0, x: -100 },
@@ -200,6 +201,10 @@ const AllRouting = () => {
         <Route
           path="/reader/:bookId"
           element={<BookReader />}
+        />
+        <Route
+          path="/test-fixes"
+          element={<TestFixes />}
         />
       </Routes>
     </AnimatePresence>

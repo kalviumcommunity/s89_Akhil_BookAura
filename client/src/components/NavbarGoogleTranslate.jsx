@@ -34,12 +34,19 @@ const NavbarGoogleTranslate = () => {
   ];
 
   useEffect(() => {
-    const savedLang = localStorage.getItem('translate-lang') || 'en';
+    // Use a more specific key to avoid conflicts between accounts
+    const userSpecificKey = `translate-lang-${window.location.hostname}`;
+    const savedLang = localStorage.getItem(userSpecificKey) || 'en';
     setCurrentLang(savedLang);
+
+    // Clear any existing Google Translate elements first
+    const existingElements = document.querySelectorAll('#google_translate_element, #navbar_google_translate_element, .goog-te-banner-frame');
+    existingElements.forEach(el => el.remove());
+
     if (savedLang !== 'en') {
       setTimeout(() => {
         translateWholePage(savedLang);
-      }, 1000);
+      }, 1500); // Increased delay for better reliability
     }
   }, []);
 
@@ -164,39 +171,95 @@ const NavbarGoogleTranslate = () => {
 
   const handleTranslate = (langCode) => {
     setCurrentLang(langCode);
-    localStorage.setItem('translate-lang', langCode);
+    // Use user-specific key to avoid conflicts
+    const userSpecificKey = `translate-lang-${window.location.hostname}`;
+    localStorage.setItem(userSpecificKey, langCode);
     setIsVisible(false);
-    langCode === 'en' ? window.location.reload() : translateWholePage(langCode);
+
+    if (langCode === 'en') {
+      // Clear translation and reload
+      localStorage.removeItem(userSpecificKey);
+      window.location.reload();
+    } else {
+      // Clear existing translation first
+      const existingElements = document.querySelectorAll('.goog-te-combo');
+      existingElements.forEach(el => {
+        if (el.value !== 'en') {
+          el.value = 'en';
+          el.dispatchEvent(new Event('change'));
+        }
+      });
+
+      // Apply new translation after a short delay
+      setTimeout(() => {
+        translateWholePage(langCode);
+      }, 500);
+    }
   };
 
   const translateWholePage = (langCode) => {
-    if (!document.getElementById('google-translate-script')) {
-      const script = document.createElement('script');
-      script.id = 'google-translate-script';
-      script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-      document.head.appendChild(script);
-    }
+    // Clean up any existing Google Translate elements
+    const cleanup = () => {
+      const existingScripts = document.querySelectorAll('#google-translate-script');
+      existingScripts.forEach(script => script.remove());
 
-    window.googleTranslateElementInit = function () {
-      new window.google.translate.TranslateElement({
-        pageLanguage: 'en',
-        includedLanguages: languages.map(l => l.code).join(','),
-        autoDisplay: false
-      }, 'navbar_google_translate_element');
-
-      setTimeout(() => {
-        const select = document.querySelector('.goog-te-combo');
-        if (select) {
-          select.value = langCode;
-          select.dispatchEvent(new Event('change'));
-        }
-        removeBanner();
-      }, 500);
+      const existingElements = document.querySelectorAll('#navbar_google_translate_element');
+      existingElements.forEach(el => {
+        el.innerHTML = '';
+      });
     };
 
-    if (window.google?.translate) {
-      window.googleTranslateElementInit();
-    }
+    cleanup();
+
+    // Create fresh script element
+    const script = document.createElement('script');
+    script.id = 'google-translate-script';
+    script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+
+    // Define the initialization function
+    window.googleTranslateElementInit = function () {
+      try {
+        // Remove any existing banner immediately
+        removeBanner();
+
+        new window.google.translate.TranslateElement({
+          pageLanguage: 'en',
+          includedLanguages: languages.map(l => l.code).join(','),
+          autoDisplay: false,
+          layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE
+        }, 'navbar_google_translate_element');
+
+        // Apply translation after element is created
+        setTimeout(() => {
+          const select = document.querySelector('.goog-te-combo');
+          if (select) {
+            select.value = langCode;
+            select.dispatchEvent(new Event('change'));
+
+            // Aggressive banner removal after translation starts
+            setTimeout(() => {
+              removeBanner();
+            }, 100);
+          }
+        }, 800);
+
+      } catch (error) {
+        console.error('Translation initialization error:', error);
+      }
+    };
+
+    // Load the script
+    script.onload = () => {
+      if (window.google?.translate) {
+        window.googleTranslateElementInit();
+      }
+    };
+
+    script.onerror = () => {
+      console.error('Failed to load Google Translate script');
+    };
+
+    document.head.appendChild(script);
   };
 
   return (
