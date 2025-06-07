@@ -4,6 +4,7 @@ import {useCart} from '../pages/MarketPlace/cart'
 import { ShoppingCart } from 'lucide-react';
 import { SafeImage } from '../utils/imageUtils';
 import { getAuthHeaders } from '../utils/authUtils';
+import { processBookCoverUrl } from '../utils/bookImageUtils';
 
 const ProductCard = ({ book }) => {
   const { addToCart, cartItems } = useCart();
@@ -27,12 +28,14 @@ const ProductCard = ({ book }) => {
     setImageError(true);
   };
 
-  // Get image source with fallback
+  // Get image source with fallback using utility function
   const getImageSrc = () => {
-    if (imageError || !book.coverimage) {
-      return 'https://via.placeholder.com/300x400/f0f0f0/666666?text=Book+Cover';
+    if (imageError) {
+      return 'https://dummyimage.com/300x400/f0f0f0/666666&text=Book+Cover';
     }
-    return book.coverimage;
+
+    // Use the utility function to process the book cover URL
+    return processBookCoverUrl(book.coverimage, book.title);
   };
 
   return (

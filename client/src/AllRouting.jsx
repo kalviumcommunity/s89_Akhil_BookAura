@@ -211,6 +211,10 @@ const AllRouting = () => {
           path="/simple-test"
           element={<SimpleTestPage />}
         />
+        <Route
+          path="/book-status-test"
+          element={<BookStatusTest />}
+        />
       </Routes>
     </AnimatePresence>
   );

@@ -70,7 +70,16 @@ router.post('/upload', upload.fields([
       });
     }
 
-    const { title, author, description, genre, price } = req.body;
+    const {
+      title,
+      author,
+      description,
+      genre,
+      price,
+      isBestSeller,
+      isFeatured,
+      isNewRelease
+    } = req.body;
 
     // Validate required fields
     if (!title || !author || !description || !genre || !price) {
@@ -102,7 +111,7 @@ router.post('/upload', upload.fields([
     console.log('📚 EPUB uploaded to Cloudinary:', epubResult.secure_url);
     console.log('🖼️ Cover uploaded to Cloudinary:', coverResult.secure_url);
 
-    // Create book in database with direct Cloudinary URLs
+    // Create book in database with direct Cloudinary URLs and status fields
     const newBook = new Book({
       title,
       author,
@@ -114,6 +123,9 @@ router.post('/upload', upload.fields([
       coverimage: coverResult.secure_url, // Direct Cloudinary URL
       cloudinaryPublicId: epubResult.public_id, // Store for future reference
       storageType: 'cloudinary', // Mark as Cloudinary storage
+      isBestSeller: isBestSeller === 'true' || isBestSeller === true,
+      isFeatured: isFeatured === 'true' || isFeatured === true,
+      isNewRelease: isNewRelease === 'true' || isNewRelease === true,
       createdAt: new Date()
     });
 
@@ -148,6 +160,25 @@ router.get('/', async (req, res) => {
       error: 'Failed to fetch books: ' + error.message
     });
   }
+});
+
+// Serve book files (for backward compatibility with existing books)
+router.get('/file/:filename', (req, res) => {
+  const { filename } = req.params;
+  console.log('📁 File request for:', filename);
+
+  // For now, return a placeholder image for missing files
+  // This prevents 404 errors and provides a fallback
+  const placeholderSvg = `
+    <svg width="300" height="400" viewBox="0 0 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="300" height="400" fill="#F0F0F0"/>
+      <text x="150" y="200" text-anchor="middle" fill="#666666" font-family="Arial" font-size="18">Book Cover</text>
+      <text x="150" y="230" text-anchor="middle" fill="#999999" font-family="Arial" font-size="12">File: ${filename}</text>
+    </svg>
+  `;
+
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.send(placeholderSvg);
 });
 
 // Get single book by ID

@@ -35,10 +35,13 @@ export const handleImageError = (event) => {
   // Mark that we've attempted fallback
   img.dataset.fallbackAttempted = 'true';
 
-  // Try multiple fallback strategies
+  // Try multiple fallback strategies with working URLs
   const fallbackImages = [
-    'https://via.placeholder.com/300x400/f0f0f0/666666?text=Book+Cover',
-    'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=300&h=400&fit=crop',
+    // Use a working placeholder service
+    'https://picsum.photos/300/400?random=1',
+    // Backup placeholder
+    'https://dummyimage.com/300x400/f0f0f0/666666&text=Book+Cover',
+    // SVG fallback that always works
     'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDMwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjBGMEYwIi8+Cjx0ZXh0IHg9IjE1MCIgeT0iMjAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2NjY2IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiPkJvb2sgQ292ZXI8L3RleHQ+Cjwvc3ZnPgo='
   ];
 
@@ -85,6 +88,15 @@ export const SafeImage = ({ src, alt, style, className, ...rest }) => {
   // Initialize source with proxy if needed
   useEffect(() => {
     if (src) {
+      // Check if this is a problematic local file reference
+      if (src.includes('/api/books/file/')) {
+        console.warn('Detected local file reference, using fallback:', src);
+        setCurrentSrc('https://dummyimage.com/300x400/f0f0f0/666666&text=Book+Cover');
+        setError(true);
+        setIsLoading(false);
+        return;
+      }
+
       const proxiedSrc = getProxiedImageUrl(src);
       setCurrentSrc(proxiedSrc);
       setIsLoading(true);

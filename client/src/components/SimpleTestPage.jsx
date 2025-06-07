@@ -19,12 +19,12 @@ const SimpleTestPage = () => {
           <div style={{ width: '200px' }}>
             <h4>Valid Image</h4>
             <SafeImage
-              src="https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=300&h=400"
+              src="https://picsum.photos/300/400?random=1"
               alt="Valid book cover"
               style={{ width: '100%', height: '200px', objectFit: 'cover' }}
             />
           </div>
-          
+
           <div style={{ width: '200px' }}>
             <h4>Invalid Image</h4>
             <SafeImage
@@ -33,7 +33,16 @@ const SimpleTestPage = () => {
               style={{ width: '100%', height: '200px', objectFit: 'cover' }}
             />
           </div>
-          
+
+          <div style={{ width: '200px' }}>
+            <h4>Local File Reference</h4>
+            <SafeImage
+              src="https://s89-akhil-bookaura-3.onrender.com/api/books/file/1748865858441_cover"
+              alt="Local file reference"
+              style={{ width: '100%', height: '200px', objectFit: 'cover' }}
+            />
+          </div>
+
           <div style={{ width: '200px' }}>
             <h4>No Image</h4>
             <SafeImage

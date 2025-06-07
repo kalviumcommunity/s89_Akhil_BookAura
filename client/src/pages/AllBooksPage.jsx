@@ -7,6 +7,7 @@ import SimpleEpubViewer from '../components/SimpleEpubViewer';
 import BookReaderGoogleTranslate from '../components/BookReaderGoogleTranslate';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { Book, Calendar, ArrowLeft, FileText, Upload } from 'lucide-react';
+import { fixBooksArray, processBookCoverUrl } from '../utils/bookImageUtils';
 
 const AllBooksPage = () => {
   const navigate = useNavigate();
@@ -24,8 +25,12 @@ const AllBooksPage = () => {
       setLoading(true);
       setError('');
       const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/books');
-      setBooks(response.data);
+
+      // Fix book cover images before setting state
+      const fixedBooks = fixBooksArray(response.data);
+      setBooks(fixedBooks);
       console.log('📚 Fetched books:', response.data);
+      console.log('🔧 Fixed book covers:', fixedBooks);
     } catch (error) {
       console.error('❌ Error fetching books:', error);
       setError('Failed to fetch books. Please try again.');
@@ -241,10 +246,9 @@ const AllBooksPage = () => {
                     gap: '15px',
                     marginBottom: '15px'
                   }}>
-                    {book.coverimage && (
-                      <img
-                        src={book.coverimage}
-                        alt={book.title}
+                    <img
+                      src={processBookCoverUrl(book.coverimage, book.title)}
+                      alt={book.title}
                         style={{
                           width: '60px',
                           height: '80px',
@@ -253,7 +257,6 @@ const AllBooksPage = () => {
                           border: '1px solid #ddd'
                         }}
                       />
-                    )}
                     <div style={{ flex: 1 }}>
                       <h3 style={{
                         margin: '0 0 8px 0',
@@ -274,6 +277,40 @@ const AllBooksPage = () => {
                           fontWeight: 'bold'
                         }}>₹{book.price}</p>
                       )}
+
+                      {/* Status indicators */}
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '8px' }}>
+                        {book.isBestSeller && (
+                          <span style={{
+                            padding: '2px 6px',
+                            backgroundColor: '#fff3e0',
+                            color: '#f57c00',
+                            fontSize: '10px',
+                            borderRadius: '8px',
+                            fontWeight: 'bold'
+                          }}>🏆 Best Seller</span>
+                        )}
+                        {book.isFeatured && (
+                          <span style={{
+                            padding: '2px 6px',
+                            backgroundColor: '#f3e5f5',
+                            color: '#7b1fa2',
+                            fontSize: '10px',
+                            borderRadius: '8px',
+                            fontWeight: 'bold'
+                          }}>⭐ Featured</span>
+                        )}
+                        {book.isNewRelease && (
+                          <span style={{
+                            padding: '2px 6px',
+                            backgroundColor: '#ffebee',
+                            color: '#c62828',
+                            fontSize: '10px',
+                            borderRadius: '8px',
+                            fontWeight: 'bold'
+                          }}>🆕 New</span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
