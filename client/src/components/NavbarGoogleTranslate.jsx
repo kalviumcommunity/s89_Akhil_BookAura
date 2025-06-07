@@ -44,53 +44,15 @@ const NavbarGoogleTranslate = () => {
   }, []);
 
   const removeBanner = () => {
-    const nukeGoogleElements = () => {
-      // NUCLEAR OPTION - Remove everything Google Translate
-      const selectors = [
-        '.goog-te-banner-frame',
-        'iframe.goog-te-banner-frame',
-        '.goog-te-banner-frame.skiptranslate',
-        '[id^="goog-gt-"]',
-        '[class^="goog-te-"]',
-        '[class*="goog-te-"]',
-        'div[jsaction*="translate"]',
-        'body > div[style*="position: fixed"]',
-        'body > div[style*="position: sticky"]',
-        'body > iframe[style*="position: fixed"]'
-      ];
-
-      selectors.forEach(selector => {
-        try {
-          document.querySelectorAll(selector).forEach(element => {
-            if (element) {
-              // Multiple destruction methods
-              element.remove();
-              element.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important; height: 0 !important; width: 0 !important; position: absolute !important; top: -9999px !important; left: -9999px !important; z-index: -1 !important;';
-              if (element.parentNode) element.parentNode.removeChild(element);
-            }
-          });
-        } catch (e) {}
-      });
-
-      // Force body reset
-      document.body.style.cssText = 'top: 0 !important; position: static !important; margin-top: 0 !important; padding-top: 0 !important;';
-      document.documentElement.style.cssText = 'top: 0 !important; position: static !important; margin-top: 0 !important; padding-top: 0 !important;';
-    };
-
-    // Immediate and repeated removal
-    nukeGoogleElements();
-    const interval = setInterval(nukeGoogleElements, 100);
-    setTimeout(() => clearInterval(interval), 10000);
-
-    // Aggressive observer
-    const observer = new MutationObserver(nukeGoogleElements);
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['style', 'class', 'id']
-    });
-    setTimeout(() => observer.disconnect(), 10000);
+    // Simple, non-aggressive banner removal
+    setTimeout(() => {
+      const banner = document.querySelector('.goog-te-banner-frame');
+      if (banner && banner.parentNode) {
+        banner.parentNode.removeChild(banner);
+      }
+      document.body.style.top = '0';
+      document.body.style.position = 'static';
+    }, 2000);
   };
 
   const handleTranslate = (langCode) => {
@@ -209,35 +171,13 @@ const NavbarGoogleTranslate = () => {
       <div id="navbar_google_translate_element" style={{ display: 'none' }}></div>
 
       <style jsx global>{`
-        html, body {
-          margin-top: 0 !important;
-          padding-top: 0 !important;
+        .goog-te-banner-frame {
+          display: none !important;
+        }
+
+        body {
           top: 0 !important;
           position: static !important;
-        }
-
-        .goog-te-banner-frame,
-        .goog-te-banner-frame.skiptranslate,
-        iframe.goog-te-banner-frame,
-        .goog-te-gadget,
-        .goog-te-combo,
-        .goog-te-spinner-pos,
-        .goog-te-banner-content,
-        .goog-te-banner-frame * {
-          display: none !important;
-          visibility: hidden !important;
-          height: 0 !important;
-          overflow: hidden !important;
-        }
-
-        [id^="goog-gt-"], [class^="goog-te-"] {
-          display: none !important;
-        }
-
-        body > .goog-te-banner-frame,
-        body > .goog-te-banner-frame * {
-          display: none !important;
-          visibility: hidden !important;
         }
       `}</style>
     </div>
