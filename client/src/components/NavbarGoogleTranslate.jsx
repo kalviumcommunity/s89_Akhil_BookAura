@@ -43,25 +43,123 @@ const NavbarGoogleTranslate = () => {
     }
   }, []);
 
-  const removeBanner = () => {
-    const removeElements = () => {
-      const banners = document.querySelectorAll('.goog-te-banner-frame, iframe.goog-te-banner-frame');
-      banners.forEach(banner => {
-        if (banner?.parentNode) banner.parentNode.removeChild(banner);
+  // Continuous banner monitoring and removal
+  useEffect(() => {
+    const continuousRemoval = () => {
+      const bannerSelectors = [
+        '.goog-te-banner-frame',
+        'iframe.goog-te-banner-frame',
+        '.goog-te-banner',
+        '[id^="goog-gt-"]'
+      ];
+
+      bannerSelectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+          if (element && element.parentNode) {
+            element.remove();
+          }
+        });
       });
 
+      // Reset body positioning
       document.body.style.top = '0';
       document.body.style.position = 'static';
+      document.body.style.marginTop = '0';
     };
 
-    // Repeat removal every 500ms for 5 seconds
-    const interval = setInterval(removeElements, 500);
-    setTimeout(() => clearInterval(interval), 5000);
+    // Run immediately
+    continuousRemoval();
+
+    // Set up continuous monitoring
+    const interval = setInterval(continuousRemoval, 1000);
+
+    // Cleanup on unmount
+    return () => clearInterval(interval);
+  }, []);
+
+  const removeBanner = () => {
+    const removeElements = () => {
+      // More comprehensive banner removal
+      const selectors = [
+        '.goog-te-banner-frame',
+        'iframe.goog-te-banner-frame',
+        '.goog-te-banner',
+        '.goog-te-banner-content',
+        '.goog-te-gadget',
+        '.goog-te-combo',
+        '.goog-te-spinner-pos',
+        '[id^="goog-gt-"]',
+        '[class^="goog-te-"]',
+        '.skiptranslate'
+      ];
+
+      selectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+          if (element && element.parentNode) {
+            element.style.display = 'none !important';
+            element.style.visibility = 'hidden !important';
+            element.style.height = '0 !important';
+            element.style.overflow = 'hidden !important';
+            element.remove();
+          }
+        });
+      });
+
+      // Reset body styles
+      document.body.style.top = '0 !important';
+      document.body.style.position = 'static !important';
+      document.body.style.marginTop = '0 !important';
+      document.body.style.paddingTop = '0 !important';
+
+      // Reset html styles
+      document.documentElement.style.top = '0 !important';
+      document.documentElement.style.position = 'static !important';
+      document.documentElement.style.marginTop = '0 !important';
+      document.documentElement.style.paddingTop = '0 !important';
+    };
+
+    // Immediate removal
+    removeElements();
+
+    // Repeat removal more frequently for first few seconds
+    const quickInterval = setInterval(removeElements, 100);
+    setTimeout(() => clearInterval(quickInterval), 2000);
+
+    // Continue with slower interval
+    const slowInterval = setInterval(removeElements, 500);
+    setTimeout(() => clearInterval(slowInterval), 10000);
 
     // Observer for late-injected banners
-    const observer = new MutationObserver(removeElements);
-    observer.observe(document.body, { childList: true, subtree: true });
-    setTimeout(() => observer.disconnect(), 5000);
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === 1) { // Element node
+              if (node.classList && (
+                node.classList.contains('goog-te-banner-frame') ||
+                node.classList.contains('goog-te-banner') ||
+                node.tagName === 'IFRAME' && node.className.includes('goog-te')
+              )) {
+                node.remove();
+              }
+            }
+          });
+        }
+      });
+      removeElements();
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style']
+    });
+
+    // Keep observer running longer
+    setTimeout(() => observer.disconnect(), 15000);
   };
 
   const handleTranslate = (langCode) => {
@@ -180,35 +278,80 @@ const NavbarGoogleTranslate = () => {
       <div id="navbar_google_translate_element" style={{ display: 'none' }}></div>
 
       <style jsx global>{`
+        /* Reset body and html positioning */
         html, body {
           margin-top: 0 !important;
           padding-top: 0 !important;
           top: 0 !important;
           position: static !important;
+          transform: none !important;
         }
 
+        /* Hide all Google Translate banner elements */
         .goog-te-banner-frame,
         .goog-te-banner-frame.skiptranslate,
         iframe.goog-te-banner-frame,
+        .goog-te-banner,
+        .goog-te-banner-content,
         .goog-te-gadget,
         .goog-te-combo,
         .goog-te-spinner-pos,
-        .goog-te-banner-content,
-        .goog-te-banner-frame * {
+        .goog-te-banner-frame *,
+        .skiptranslate,
+        .goog-te-ftab,
+        .goog-te-menu-frame {
           display: none !important;
           visibility: hidden !important;
           height: 0 !important;
+          width: 0 !important;
           overflow: hidden !important;
+          opacity: 0 !important;
+          position: absolute !important;
+          left: -9999px !important;
+          top: -9999px !important;
+          z-index: -1 !important;
         }
 
-        [id^="goog-gt-"], [class^="goog-te-"] {
-          display: none !important;
-        }
-
-        body > .goog-te-banner-frame,
-        body > .goog-te-banner-frame * {
+        /* Hide elements by ID and class patterns */
+        [id^="goog-gt-"],
+        [class^="goog-te-"],
+        [class*="goog-te-"],
+        [id*="google_translate"] {
           display: none !important;
           visibility: hidden !important;
+          height: 0 !important;
+          width: 0 !important;
+        }
+
+        /* Specific targeting for banner frames */
+        body > .goog-te-banner-frame,
+        body > .goog-te-banner-frame *,
+        body > iframe.goog-te-banner-frame,
+        html > .goog-te-banner-frame,
+        html > iframe.goog-te-banner-frame {
+          display: none !important;
+          visibility: hidden !important;
+          height: 0 !important;
+          width: 0 !important;
+        }
+
+        /* Prevent any iframe with Google Translate */
+        iframe[src*="translate.google"],
+        iframe[src*="translate.googleapis"] {
+          display: none !important;
+          visibility: hidden !important;
+          height: 0 !important;
+          width: 0 !important;
+        }
+
+        /* Override any inline styles */
+        body[style*="top:"] {
+          top: 0 !important;
+        }
+
+        /* Additional safety measures */
+        .notranslate {
+          transform: none !important;
         }
       `}</style>
     </div>
