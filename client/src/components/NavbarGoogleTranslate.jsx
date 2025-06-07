@@ -44,15 +44,24 @@ const NavbarGoogleTranslate = () => {
   }, []);
 
   const removeBanner = () => {
-    // Simple, non-aggressive banner removal
-    setTimeout(() => {
-      const banner = document.querySelector('.goog-te-banner-frame');
-      if (banner && banner.parentNode) {
-        banner.parentNode.removeChild(banner);
-      }
+    const removeElements = () => {
+      const banners = document.querySelectorAll('.goog-te-banner-frame, iframe.goog-te-banner-frame');
+      banners.forEach(banner => {
+        if (banner?.parentNode) banner.parentNode.removeChild(banner);
+      });
+
       document.body.style.top = '0';
       document.body.style.position = 'static';
-    }, 2000);
+    };
+
+    // Repeat removal every 500ms for 5 seconds
+    const interval = setInterval(removeElements, 500);
+    setTimeout(() => clearInterval(interval), 5000);
+
+    // Observer for late-injected banners
+    const observer = new MutationObserver(removeElements);
+    observer.observe(document.body, { childList: true, subtree: true });
+    setTimeout(() => observer.disconnect(), 5000);
   };
 
   const handleTranslate = (langCode) => {
@@ -171,13 +180,35 @@ const NavbarGoogleTranslate = () => {
       <div id="navbar_google_translate_element" style={{ display: 'none' }}></div>
 
       <style jsx global>{`
-        .goog-te-banner-frame {
+        html, body {
+          margin-top: 0 !important;
+          padding-top: 0 !important;
+          top: 0 !important;
+          position: static !important;
+        }
+
+        .goog-te-banner-frame,
+        .goog-te-banner-frame.skiptranslate,
+        iframe.goog-te-banner-frame,
+        .goog-te-gadget,
+        .goog-te-combo,
+        .goog-te-spinner-pos,
+        .goog-te-banner-content,
+        .goog-te-banner-frame * {
+          display: none !important;
+          visibility: hidden !important;
+          height: 0 !important;
+          overflow: hidden !important;
+        }
+
+        [id^="goog-gt-"], [class^="goog-te-"] {
           display: none !important;
         }
 
-        body {
-          top: 0 !important;
-          position: static !important;
+        body > .goog-te-banner-frame,
+        body > .goog-te-banner-frame * {
+          display: none !important;
+          visibility: hidden !important;
         }
       `}</style>
     </div>
