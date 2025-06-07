@@ -163,46 +163,76 @@ const NavbarGoogleTranslate = () => {
   };
 
   const handleTranslate = (langCode) => {
+    console.log('🌐 Language selected:', langCode);
     setCurrentLang(langCode);
     localStorage.setItem('translate-lang', langCode);
     setIsVisible(false);
 
     if (langCode === 'en') {
+      console.log('🌐 Resetting to English');
       window.location.reload();
     } else {
+      console.log('🌐 Translating to:', langCode);
       translateWholePage(langCode);
     }
   };
 
   const translateWholePage = (langCode) => {
-    // Simple translation without affecting other components
-    if (!document.getElementById('google-translate-script')) {
-      const script = document.createElement('script');
-      script.id = 'google-translate-script';
-      script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-      document.head.appendChild(script);
+    console.log('🌐 Starting translation to:', langCode);
+
+    // Remove existing script and element to start fresh
+    const existingScript = document.getElementById('google-translate-script');
+    if (existingScript) {
+      existingScript.remove();
     }
 
+    const existingElement = document.getElementById('navbar_google_translate_element');
+    if (existingElement) {
+      existingElement.innerHTML = '';
+    }
+
+    // Create new script
+    const script = document.createElement('script');
+    script.id = 'google-translate-script';
+    script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+
     window.googleTranslateElementInit = function () {
+      console.log('🌐 Google Translate initialized');
+
       new window.google.translate.TranslateElement({
         pageLanguage: 'en',
         includedLanguages: languages.map(l => l.code).join(','),
         autoDisplay: false
       }, 'navbar_google_translate_element');
 
+      // Wait for the element to be created, then trigger translation
       setTimeout(() => {
         const select = document.querySelector('.goog-te-combo');
+        console.log('🌐 Found translate select:', !!select);
+
         if (select) {
+          console.log('🌐 Setting language to:', langCode);
           select.value = langCode;
           select.dispatchEvent(new Event('change'));
+
+          // Hide banner after translation starts
+          setTimeout(removeBanner, 200);
         }
-        removeBanner();
-      }, 500);
+      }, 1000);
     };
 
-    if (window.google?.translate) {
-      window.googleTranslateElementInit();
-    }
+    script.onload = () => {
+      console.log('🌐 Google Translate script loaded');
+      if (window.google?.translate) {
+        window.googleTranslateElementInit();
+      }
+    };
+
+    script.onerror = () => {
+      console.error('❌ Failed to load Google Translate script');
+    };
+
+    document.head.appendChild(script);
   };
 
   return (
