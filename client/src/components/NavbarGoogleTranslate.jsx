@@ -170,9 +170,7 @@ const NavbarGoogleTranslate = () => {
 
     if (langCode === 'en') {
       console.log('🌐 Resetting to English');
-      // Remove any translate parameters from URL and reload
-      const cleanUrl = window.location.origin + window.location.pathname;
-      window.location.href = cleanUrl;
+      window.location.reload();
     } else {
       console.log('🌐 Translating to:', langCode);
       translateWholePage(langCode);
@@ -182,59 +180,36 @@ const NavbarGoogleTranslate = () => {
   const translateWholePage = (langCode) => {
     console.log('🌐 Starting translation to:', langCode);
 
-    // Try embedded Google Translate first
+    // Simple embedded Google Translate - no redirects
     if (!document.getElementById('google-translate-script')) {
       const script = document.createElement('script');
       script.id = 'google-translate-script';
       script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-
-      window.googleTranslateElementInit = function () {
-        try {
-          new window.google.translate.TranslateElement({
-            pageLanguage: 'en',
-            includedLanguages: languages.map(l => l.code).join(','),
-            autoDisplay: false
-          }, 'navbar_google_translate_element');
-
-          setTimeout(() => {
-            const select = document.querySelector('.goog-te-combo');
-            if (select) {
-              select.value = langCode;
-              select.dispatchEvent(new Event('change'));
-              removeBanner();
-            } else {
-              // Fallback to Google Translate page
-              console.log('🌐 Fallback: Using Google Translate page');
-              const currentUrl = window.location.href.split('?')[0]; // Remove existing params
-              const translateUrl = `https://translate.google.com/translate?sl=en&tl=${langCode}&u=${encodeURIComponent(currentUrl)}`;
-              window.open(translateUrl, '_blank');
-            }
-          }, 1000);
-        } catch (error) {
-          console.error('🌐 Embedded translate failed, using fallback');
-          // Fallback to Google Translate page
-          const currentUrl = window.location.href.split('?')[0];
-          const translateUrl = `https://translate.google.com/translate?sl=en&tl=${langCode}&u=${encodeURIComponent(currentUrl)}`;
-          window.open(translateUrl, '_blank');
-        }
-      };
-
-      script.onerror = () => {
-        console.log('🌐 Script failed, using Google Translate page');
-        const currentUrl = window.location.href.split('?')[0];
-        const translateUrl = `https://translate.google.com/translate?sl=en&tl=${langCode}&u=${encodeURIComponent(currentUrl)}`;
-        window.open(translateUrl, '_blank');
-      };
-
       document.head.appendChild(script);
-    } else if (window.google?.translate) {
-      // Script already loaded, just trigger translation
-      const select = document.querySelector('.goog-te-combo');
-      if (select) {
-        select.value = langCode;
-        select.dispatchEvent(new Event('change'));
-        removeBanner();
-      }
+    }
+
+    window.googleTranslateElementInit = function () {
+      console.log('🌐 Google Translate initialized');
+
+      new window.google.translate.TranslateElement({
+        pageLanguage: 'en',
+        includedLanguages: languages.map(l => l.code).join(','),
+        autoDisplay: false
+      }, 'navbar_google_translate_element');
+
+      setTimeout(() => {
+        const select = document.querySelector('.goog-te-combo');
+        if (select) {
+          console.log('🌐 Setting language to:', langCode);
+          select.value = langCode;
+          select.dispatchEvent(new Event('change'));
+          removeBanner();
+        }
+      }, 500);
+    };
+
+    if (window.google?.translate) {
+      window.googleTranslateElementInit();
     }
   };
 
