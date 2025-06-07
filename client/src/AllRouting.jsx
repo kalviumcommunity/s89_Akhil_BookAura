@@ -32,6 +32,7 @@ import Flashcards from './pages/studyhub/Flashcards';
 import WorkingEpubTest from './pages/WorkingEpubTest';
 import AllBooksPage from './pages/AllBooksPage';
 import TestFixes from './components/TestFixes';
+import SimpleTestPage from './components/SimpleTestPage';
 
 const pageTransition = {
   initial: { opacity: 0, x: -100 },
@@ -205,6 +206,10 @@ const AllRouting = () => {
         <Route
           path="/test-fixes"
           element={<TestFixes />}
+        />
+        <Route
+          path="/simple-test"
+          element={<SimpleTestPage />}
         />
       </Routes>
     </AnimatePresence>

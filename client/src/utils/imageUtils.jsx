@@ -1,3 +1,5 @@
+import React, { useState, useEffect } from 'react';
+
 /**
  * Utility function to proxy image URLs through our server to avoid CORS issues
  * @param {string} url - The original image URL
@@ -74,7 +76,6 @@ export const handleImageError = (event) => {
  * @param {string} props.className - Optional CSS class name
  * @returns {JSX.Element} - The image element
  */
-import React, { useState } from 'react';
 
 export const SafeImage = ({ src, alt, style, className, ...rest }) => {
   const [isLoading, setIsLoading] = useState(true);
