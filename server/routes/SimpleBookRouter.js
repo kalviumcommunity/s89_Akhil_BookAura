@@ -81,6 +81,13 @@ router.post('/upload', upload.fields([
       isNewRelease
     } = req.body;
 
+    // Debug: Log what we received
+    console.log('📋 Status fields received:', {
+      isBestSeller,
+      isFeatured,
+      isNewRelease
+    });
+
     // Validate required fields
     if (!title || !author || !description || !genre || !price) {
       return res.status(400).json({

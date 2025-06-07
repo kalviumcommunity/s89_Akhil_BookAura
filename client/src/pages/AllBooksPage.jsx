@@ -277,40 +277,6 @@ const AllBooksPage = () => {
                           fontWeight: 'bold'
                         }}>₹{book.price}</p>
                       )}
-
-                      {/* Status indicators */}
-                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '8px' }}>
-                        {book.isBestSeller && (
-                          <span style={{
-                            padding: '2px 6px',
-                            backgroundColor: '#fff3e0',
-                            color: '#f57c00',
-                            fontSize: '10px',
-                            borderRadius: '8px',
-                            fontWeight: 'bold'
-                          }}>🏆 Best Seller</span>
-                        )}
-                        {book.isFeatured && (
-                          <span style={{
-                            padding: '2px 6px',
-                            backgroundColor: '#f3e5f5',
-                            color: '#7b1fa2',
-                            fontSize: '10px',
-                            borderRadius: '8px',
-                            fontWeight: 'bold'
-                          }}>⭐ Featured</span>
-                        )}
-                        {book.isNewRelease && (
-                          <span style={{
-                            padding: '2px 6px',
-                            backgroundColor: '#ffebee',
-                            color: '#c62828',
-                            fontSize: '10px',
-                            borderRadius: '8px',
-                            fontWeight: 'bold'
-                          }}>🆕 New</span>
-                        )}
-                      </div>
                     </div>
                   </div>
 
