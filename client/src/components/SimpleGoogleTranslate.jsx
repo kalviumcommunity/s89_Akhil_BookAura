@@ -33,17 +33,57 @@ const SimpleGoogleTranslate = () => {
     { code: 'tr', name: 'Türkçe', flag: '🇹🇷' }
   ];
 
-  // Hide banner continuously
+  // Aggressively hide banner
   useEffect(() => {
     const hideBanner = () => {
-      document.querySelectorAll('.goog-te-banner-frame, .goog-te-banner').forEach(el => {
-        el.style.display = 'none';
-        el.remove();
+      // Hide all possible banner elements
+      const bannerSelectors = [
+        '.goog-te-banner-frame',
+        '.goog-te-banner',
+        'iframe[src*="translate.google"]',
+        '.goog-te-banner-content',
+        '.goog-te-gadget-simple',
+        '[id^="goog-gt-"]',
+        '.skiptranslate'
+      ];
+
+      bannerSelectors.forEach(selector => {
+        document.querySelectorAll(selector).forEach(el => {
+          el.style.display = 'none !important';
+          el.style.visibility = 'hidden !important';
+          el.style.height = '0 !important';
+          el.style.width = '0 !important';
+          el.style.opacity = '0 !important';
+          el.remove();
+        });
       });
-      document.body.style.top = '0';
+
+      // Reset body positioning
+      document.body.style.top = '0 !important';
+      document.body.style.position = 'static !important';
+      document.body.style.marginTop = '0 !important';
+      document.documentElement.style.top = '0 !important';
     };
-    const interval = setInterval(hideBanner, 200);
-    return () => clearInterval(interval);
+
+    // Run immediately and continuously
+    hideBanner();
+    const interval = setInterval(hideBanner, 100);
+
+    // Also use MutationObserver to catch dynamically added banners
+    const observer = new MutationObserver(() => {
+      hideBanner();
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true
+    });
+
+    return () => {
+      clearInterval(interval);
+      observer.disconnect();
+    };
   }, []);
 
   // Load saved language
@@ -163,12 +203,38 @@ const SimpleGoogleTranslate = () => {
       )}
 
       <style jsx global>{`
+        /* Completely hide Google Translate banner */
         .goog-te-banner-frame,
-        .goog-te-banner {
+        .goog-te-banner,
+        .goog-te-banner-content,
+        iframe[src*="translate.google"],
+        .goog-te-gadget-simple,
+        [id^="goog-gt-"],
+        .skiptranslate {
           display: none !important;
+          visibility: hidden !important;
+          height: 0 !important;
+          width: 0 !important;
+          opacity: 0 !important;
+          position: absolute !important;
+          left: -9999px !important;
+          top: -9999px !important;
         }
+
+        /* Reset body positioning */
         body {
           top: 0 !important;
+          position: static !important;
+          margin-top: 0 !important;
+        }
+
+        html {
+          top: 0 !important;
+        }
+
+        /* Hide the translate combo when not needed */
+        .goog-te-combo {
+          display: none !important;
         }
       `}</style>
     </div>
