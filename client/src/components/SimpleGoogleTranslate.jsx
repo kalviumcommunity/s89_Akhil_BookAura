@@ -69,83 +69,164 @@ const SimpleGoogleTranslate = () => {
     }
   }, []);
 
-  const translatePage = (langCode) => {
+  const translatePage = async (langCode) => {
     console.log('🌐 Starting translation to:', langCode);
 
-    // Clean up existing elements
-    document.querySelectorAll('#google-translate-script, #google_translate_element').forEach(el => el.remove());
+    // Try multiple approaches for maximum compatibility
 
-    // Create visible translate element (required for translation to work)
-    const translateDiv = document.createElement('div');
-    translateDiv.id = 'google_translate_element';
-    translateDiv.style.position = 'absolute';
-    translateDiv.style.left = '-9999px';
-    translateDiv.style.top = '-9999px';
-    translateDiv.style.width = '1px';
-    translateDiv.style.height = '1px';
-    translateDiv.style.overflow = 'hidden';
-    document.body.appendChild(translateDiv);
+    // Approach 1: Try Google Translate API directly
+    try {
+      await tryGoogleTranslateAPI(langCode);
+      return;
+    } catch (error) {
+      console.log('🌐 Google Translate API failed, trying alternative...');
+    }
 
-    // Load Google Translate script
-    const script = document.createElement('script');
-    script.id = 'google-translate-script';
-    script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+    // Approach 2: Use free translation API
+    try {
+      await tryFreeTranslationAPI(langCode);
+      return;
+    } catch (error) {
+      console.log('🌐 Free API failed, trying direct URL...');
+    }
 
-    window.googleTranslateElementInit = function() {
-      console.log('🌐 Google Translate initialized');
+    // Approach 3: Direct Google Translate URL (works everywhere)
+    tryDirectTranslation(langCode);
+  };
 
-      try {
-        new window.google.translate.TranslateElement({
-          pageLanguage: 'en',
-          includedLanguages: languages.map(l => l.code).join(','),
-          autoDisplay: false,
-          layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE
-        }, 'google_translate_element');
+  const tryGoogleTranslateAPI = (langCode) => {
+    return new Promise((resolve, reject) => {
+      // Clean up existing elements
+      document.querySelectorAll('#google-translate-script, #google_translate_element').forEach(el => el.remove());
 
-        // Wait for element to be ready, then trigger translation
-        let attempts = 0;
-        const maxAttempts = 20;
+      // Create translate element
+      const translateDiv = document.createElement('div');
+      translateDiv.id = 'google_translate_element';
+      translateDiv.style.position = 'absolute';
+      translateDiv.style.left = '-9999px';
+      translateDiv.style.top = '-9999px';
+      translateDiv.style.width = '1px';
+      translateDiv.style.height = '1px';
+      translateDiv.style.overflow = 'hidden';
+      document.body.appendChild(translateDiv);
 
-        const tryTranslate = () => {
-          attempts++;
-          console.log(`🌐 Translation attempt ${attempts}/${maxAttempts}`);
+      // Load Google Translate script with timeout
+      const script = document.createElement('script');
+      script.id = 'google-translate-script';
+      script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
 
-          const select = document.querySelector('.goog-te-combo');
-          if (select && select.options.length > 1) {
-            console.log('🌐 Found translate select, triggering translation');
-            select.value = langCode;
+      const timeout = setTimeout(() => {
+        reject(new Error('Script load timeout'));
+      }, 5000);
 
-            // Trigger multiple events to ensure translation works
-            const events = ['change', 'input', 'click'];
-            events.forEach(eventType => {
-              const event = new Event(eventType, { bubbles: true, cancelable: true });
-              select.dispatchEvent(event);
-            });
+      window.googleTranslateElementInit = function() {
+        clearTimeout(timeout);
+        console.log('🌐 Google Translate API loaded successfully');
 
-            // Hide banner after translation starts
-            setTimeout(() => {
+        try {
+          new window.google.translate.TranslateElement({
+            pageLanguage: 'en',
+            includedLanguages: languages.map(l => l.code).join(','),
+            autoDisplay: false,
+            layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE
+          }, 'google_translate_element');
+
+          // Trigger translation
+          setTimeout(() => {
+            const select = document.querySelector('.goog-te-combo');
+            if (select && select.options.length > 1) {
+              select.value = langCode;
+              select.dispatchEvent(new Event('change'));
               hideBannerElements();
-            }, 200);
+              resolve();
+            } else {
+              reject(new Error('Translation select not found'));
+            }
+          }, 1000);
 
-          } else if (attempts < maxAttempts) {
-            setTimeout(tryTranslate, 300);
-          } else {
-            console.error('🌐 Translation failed after', maxAttempts, 'attempts');
-          }
-        };
+        } catch (error) {
+          reject(error);
+        }
+      };
 
-        setTimeout(tryTranslate, 800);
+      script.onerror = () => {
+        clearTimeout(timeout);
+        reject(new Error('Failed to load Google Translate script'));
+      };
 
-      } catch (error) {
-        console.error('🌐 Translation error:', error);
+      document.head.appendChild(script);
+    });
+  };
+
+  const tryFreeTranslationAPI = async (langCode) => {
+    console.log('🌐 Using free translation API');
+
+    // Get all text content
+    const textElements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, div, a, button, label');
+    const textsToTranslate = [];
+    const elementMap = new Map();
+
+    textElements.forEach((element, index) => {
+      const text = element.textContent?.trim();
+      if (text && text.length > 0 && text.length < 200 && !text.match(/^[\d\s\W]*$/)) {
+        textsToTranslate.push(text);
+        elementMap.set(index, element);
+      }
+    });
+
+    if (textsToTranslate.length === 0) return;
+
+    // Translate using LibreTranslate
+    const translateText = async (text) => {
+      try {
+        const response = await fetch('https://libretranslate.de/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            q: text,
+            source: 'en',
+            target: langCode,
+            format: 'text'
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          return data.translatedText || text;
+        }
+        return text;
+      } catch {
+        return text;
       }
     };
 
-    script.onerror = () => {
-      console.error('🌐 Failed to load Google Translate script');
-    };
+    // Translate all texts
+    const translatedTexts = await Promise.all(textsToTranslate.map(translateText));
 
-    document.head.appendChild(script);
+    // Apply translations
+    let index = 0;
+    elementMap.forEach((element) => {
+      if (translatedTexts[index]) {
+        element.textContent = translatedTexts[index];
+        index++;
+      }
+    });
+
+    console.log(`🌐 Translated ${index} elements using free API`);
+  };
+
+  const tryDirectTranslation = (langCode) => {
+    console.log('🌐 Using direct Google Translate URL');
+
+    // Create a simple redirect to Google Translate
+    const currentUrl = window.location.href.split('?')[0].split('#')[0];
+    const translateUrl = `https://translate.google.com/translate?sl=en&tl=${langCode}&u=${encodeURIComponent(currentUrl)}`;
+
+    // Show user a choice
+    const userChoice = confirm(`Translation service is blocked. Would you like to open Google Translate in a new tab?`);
+    if (userChoice) {
+      window.open(translateUrl, '_blank');
+    }
   };
 
   // Separate function to hide banner elements without affecting functionality
