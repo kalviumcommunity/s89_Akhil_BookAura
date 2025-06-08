@@ -6,7 +6,7 @@ import { ShoppingCart, Home, BookOpen, GraduationCap, Menu, X ,Languages} from '
 import { useCart } from '../pages/MarketPlace/cart';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import NavbarGoogleTranslate from './NavbarGoogleTranslate';
+import SimpleGoogleTranslate from './SimpleGoogleTranslate';
 import ErrorBoundary from './ErrorBoundary';
 
 const Navbar = () => {
@@ -159,7 +159,7 @@ const Navbar = () => {
         {/* Google Translate Widget */}
         <div className="translate-widget-container">
           <ErrorBoundary>
-            <NavbarGoogleTranslate />
+            <SimpleGoogleTranslate />
           </ErrorBoundary>
         </div>
 
