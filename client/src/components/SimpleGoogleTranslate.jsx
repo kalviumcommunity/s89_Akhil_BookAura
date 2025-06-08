@@ -33,10 +33,10 @@ const SimpleGoogleTranslate = () => {
     { code: 'tr', name: 'Türkçe', flag: '🇹🇷' }
   ];
 
-  // Smart banner hiding - only hide visual banner, not functional elements
+  // Position banner under navbar instead of hiding it
   useEffect(() => {
-    const smartHideBanner = () => {
-      // Only hide the visual banner elements, not the functional ones
+    const positionBanner = () => {
+      // Position banner under navbar instead of removing it
       const bannerSelectors = [
         '.goog-te-banner-frame',
         '.goog-te-banner'
@@ -44,18 +44,28 @@ const SimpleGoogleTranslate = () => {
 
       bannerSelectors.forEach(selector => {
         document.querySelectorAll(selector).forEach(el => {
-          el.style.display = 'none !important';
-          el.style.visibility = 'hidden !important';
+          // Position under navbar (assuming navbar height is around 70px)
+          el.style.position = 'fixed !important';
+          el.style.top = '70px !important';
+          el.style.left = '0 !important';
+          el.style.right = '0 !important';
+          el.style.zIndex = '999 !important';
+          el.style.height = '40px !important';
+          el.style.backgroundColor = '#f8f9fa !important';
+          el.style.borderBottom = '1px solid #ddd !important';
         });
       });
 
-      // Reset body positioning
-      document.body.style.top = '0 !important';
-      document.body.style.position = 'static !important';
+      // Adjust body positioning to account for banner
+      if (document.querySelector('.goog-te-banner-frame')) {
+        document.body.style.paddingTop = '110px !important'; // navbar + banner
+      } else {
+        document.body.style.paddingTop = '70px !important'; // just navbar
+      }
     };
 
-    // Run periodically but less aggressively
-    const interval = setInterval(smartHideBanner, 500);
+    // Run periodically to catch when banner appears
+    const interval = setInterval(positionBanner, 500);
 
     return () => clearInterval(interval);
   }, []);
@@ -99,15 +109,18 @@ const SimpleGoogleTranslate = () => {
       // Clean up existing elements
       document.querySelectorAll('#google-translate-script, #google_translate_element').forEach(el => el.remove());
 
-      // Create translate element
+      // Create translate element - make it visible but positioned under navbar
       const translateDiv = document.createElement('div');
       translateDiv.id = 'google_translate_element';
-      translateDiv.style.position = 'absolute';
-      translateDiv.style.left = '-9999px';
-      translateDiv.style.top = '-9999px';
-      translateDiv.style.width = '1px';
-      translateDiv.style.height = '1px';
-      translateDiv.style.overflow = 'hidden';
+      translateDiv.style.position = 'fixed';
+      translateDiv.style.top = '70px';
+      translateDiv.style.right = '20px';
+      translateDiv.style.zIndex = '1000';
+      translateDiv.style.backgroundColor = 'white';
+      translateDiv.style.padding = '10px';
+      translateDiv.style.border = '1px solid #ddd';
+      translateDiv.style.borderRadius = '5px';
+      translateDiv.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
       document.body.appendChild(translateDiv);
 
       // Load Google Translate script with timeout
@@ -137,7 +150,7 @@ const SimpleGoogleTranslate = () => {
             if (select && select.options.length > 1) {
               select.value = langCode;
               select.dispatchEvent(new Event('change'));
-              hideBannerElements();
+              positionBannerElements();
               resolve();
             } else {
               reject(new Error('Translation select not found'));
@@ -229,8 +242,8 @@ const SimpleGoogleTranslate = () => {
     }
   };
 
-  // Separate function to hide banner elements without affecting functionality
-  const hideBannerElements = () => {
+  // Position banner elements under navbar instead of hiding
+  const positionBannerElements = () => {
     const bannerSelectors = [
       '.goog-te-banner-frame',
       '.goog-te-banner'
@@ -238,14 +251,17 @@ const SimpleGoogleTranslate = () => {
 
     bannerSelectors.forEach(selector => {
       document.querySelectorAll(selector).forEach(el => {
-        el.style.display = 'none !important';
-        el.style.visibility = 'hidden !important';
+        // Position under navbar instead of hiding
+        el.style.position = 'fixed !important';
+        el.style.top = '70px !important';
+        el.style.left = '0 !important';
+        el.style.right = '0 !important';
+        el.style.zIndex = '999 !important';
+        el.style.height = '40px !important';
+        el.style.backgroundColor = '#f8f9fa !important';
+        el.style.borderBottom = '1px solid #ddd !important';
       });
     });
-
-    // Reset body positioning
-    document.body.style.top = '0 !important';
-    document.body.style.position = 'static !important';
   };
 
   const handleTranslate = (langCode) => {
@@ -323,28 +339,43 @@ const SimpleGoogleTranslate = () => {
       )}
 
       <style jsx global>{`
-        /* Hide only the visual banner, keep functional elements */
+        /* Position banner under navbar instead of hiding */
         .goog-te-banner-frame,
         .goog-te-banner {
-          display: none !important;
-          visibility: hidden !important;
+          position: fixed !important;
+          top: 70px !important;
+          left: 0 !important;
+          right: 0 !important;
+          z-index: 999 !important;
+          height: 40px !important;
+          background-color: #f8f9fa !important;
+          border-bottom: 1px solid #ddd !important;
         }
 
-        /* Reset body positioning */
+        /* Adjust body for navbar + banner */
         body {
-          top: 0 !important;
-          position: static !important;
-          margin-top: 0 !important;
+          padding-top: 110px !important;
         }
 
-        /* Keep translate element hidden but functional */
+        /* Style the translate element */
         #google_translate_element {
-          position: absolute !important;
-          left: -9999px !important;
-          top: -9999px !important;
-          width: 1px !important;
-          height: 1px !important;
-          overflow: hidden !important;
+          position: fixed !important;
+          top: 70px !important;
+          right: 20px !important;
+          z-index: 1000 !important;
+          background: white !important;
+          padding: 10px !important;
+          border: 1px solid #ddd !important;
+          border-radius: 5px !important;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1) !important;
+        }
+
+        /* Style the translate dropdown */
+        .goog-te-combo {
+          padding: 5px !important;
+          border: 1px solid #ccc !important;
+          border-radius: 3px !important;
+          font-size: 14px !important;
         }
       `}</style>
     </div>
