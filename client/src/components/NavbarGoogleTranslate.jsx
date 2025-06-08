@@ -219,13 +219,16 @@ const NavbarGoogleTranslate = () => {
           layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE
         }, 'navbar_google_translate_element');
 
-        // FORCE MULTIPLE ATTEMPTS
+        // FORCE MULTIPLE ATTEMPTS WITH DIFFERENT STRATEGIES
         let attempts = 0;
         const forceTranslate = () => {
           attempts++;
           console.log(`🌐 FORCE ATTEMPT ${attempts}`);
 
+          // Strategy 1: Look for select element
           const select = document.querySelector('.goog-te-combo');
+          console.log('🌐 Select found:', !!select, 'Options:', select?.options?.length);
+
           if (select && select.options.length > 1) {
             console.log('🌐 FORCE SETTING LANGUAGE:', langCode);
             select.value = langCode;
@@ -245,10 +248,28 @@ const NavbarGoogleTranslate = () => {
               document.body.style.top = '0px';
             }, 100);
 
-          } else if (attempts < 10) {
-            setTimeout(forceTranslate, 300);
+          } else if (attempts < 15) {
+            // Strategy 2: Force recreate the element
+            if (attempts > 5) {
+              console.log('🌐 FORCE RECREATING ELEMENT');
+              const translateEl = document.getElementById('navbar_google_translate_element');
+              if (translateEl) {
+                translateEl.innerHTML = '';
+                new window.google.translate.TranslateElement({
+                  pageLanguage: 'en',
+                  includedLanguages: languages.map(l => l.code).join(','),
+                  autoDisplay: false,
+                  layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE
+                }, 'navbar_google_translate_element');
+              }
+            }
+            setTimeout(forceTranslate, 500);
           } else {
-            console.error('🌐 FORCE FAILED after 10 attempts');
+            console.error('🌐 FORCE FAILED - Using direct URL method');
+            // ULTIMATE FALLBACK: Direct URL translation
+            const currentUrl = window.location.href.split('?')[0].split('#')[0];
+            const translateUrl = `https://translate.google.com/translate?sl=en&tl=${langCode}&u=${encodeURIComponent(currentUrl)}`;
+            window.location.href = translateUrl;
           }
         };
 
