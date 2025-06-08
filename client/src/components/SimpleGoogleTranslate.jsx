@@ -171,6 +171,7 @@ const SimpleGoogleTranslate = () => {
           top: 0 !important;
         }
       `}</style>
+    </div>
   );
 };
 
