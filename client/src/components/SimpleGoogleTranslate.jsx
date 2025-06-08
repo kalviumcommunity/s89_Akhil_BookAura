@@ -33,57 +33,31 @@ const SimpleGoogleTranslate = () => {
     { code: 'tr', name: 'Türkçe', flag: '🇹🇷' }
   ];
 
-  // Aggressively hide banner
+  // Smart banner hiding - only hide visual banner, not functional elements
   useEffect(() => {
-    const hideBanner = () => {
-      // Hide all possible banner elements
+    const smartHideBanner = () => {
+      // Only hide the visual banner elements, not the functional ones
       const bannerSelectors = [
         '.goog-te-banner-frame',
-        '.goog-te-banner',
-        'iframe[src*="translate.google"]',
-        '.goog-te-banner-content',
-        '.goog-te-gadget-simple',
-        '[id^="goog-gt-"]',
-        '.skiptranslate'
+        '.goog-te-banner'
       ];
 
       bannerSelectors.forEach(selector => {
         document.querySelectorAll(selector).forEach(el => {
           el.style.display = 'none !important';
           el.style.visibility = 'hidden !important';
-          el.style.height = '0 !important';
-          el.style.width = '0 !important';
-          el.style.opacity = '0 !important';
-          el.remove();
         });
       });
 
       // Reset body positioning
       document.body.style.top = '0 !important';
       document.body.style.position = 'static !important';
-      document.body.style.marginTop = '0 !important';
-      document.documentElement.style.top = '0 !important';
     };
 
-    // Run immediately and continuously
-    hideBanner();
-    const interval = setInterval(hideBanner, 100);
+    // Run periodically but less aggressively
+    const interval = setInterval(smartHideBanner, 500);
 
-    // Also use MutationObserver to catch dynamically added banners
-    const observer = new MutationObserver(() => {
-      hideBanner();
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true
-    });
-
-    return () => {
-      clearInterval(interval);
-      observer.disconnect();
-    };
+    return () => clearInterval(interval);
   }, []);
 
   // Load saved language
@@ -96,36 +70,101 @@ const SimpleGoogleTranslate = () => {
   }, []);
 
   const translatePage = (langCode) => {
-    // Clean up
+    console.log('🌐 Starting translation to:', langCode);
+
+    // Clean up existing elements
     document.querySelectorAll('#google-translate-script, #google_translate_element').forEach(el => el.remove());
 
-    // Create elements
+    // Create visible translate element (required for translation to work)
     const translateDiv = document.createElement('div');
     translateDiv.id = 'google_translate_element';
-    translateDiv.style.display = 'none';
+    translateDiv.style.position = 'absolute';
+    translateDiv.style.left = '-9999px';
+    translateDiv.style.top = '-9999px';
+    translateDiv.style.width = '1px';
+    translateDiv.style.height = '1px';
+    translateDiv.style.overflow = 'hidden';
     document.body.appendChild(translateDiv);
 
+    // Load Google Translate script
     const script = document.createElement('script');
     script.id = 'google-translate-script';
     script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
 
     window.googleTranslateElementInit = function() {
-      new window.google.translate.TranslateElement({
-        pageLanguage: 'en',
-        includedLanguages: languages.map(l => l.code).join(','),
-        autoDisplay: false
-      }, 'google_translate_element');
+      console.log('🌐 Google Translate initialized');
 
-      setTimeout(() => {
-        const select = document.querySelector('.goog-te-combo');
-        if (select) {
-          select.value = langCode;
-          select.dispatchEvent(new Event('change'));
-        }
-      }, 500);
+      try {
+        new window.google.translate.TranslateElement({
+          pageLanguage: 'en',
+          includedLanguages: languages.map(l => l.code).join(','),
+          autoDisplay: false,
+          layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE
+        }, 'google_translate_element');
+
+        // Wait for element to be ready, then trigger translation
+        let attempts = 0;
+        const maxAttempts = 20;
+
+        const tryTranslate = () => {
+          attempts++;
+          console.log(`🌐 Translation attempt ${attempts}/${maxAttempts}`);
+
+          const select = document.querySelector('.goog-te-combo');
+          if (select && select.options.length > 1) {
+            console.log('🌐 Found translate select, triggering translation');
+            select.value = langCode;
+
+            // Trigger multiple events to ensure translation works
+            const events = ['change', 'input', 'click'];
+            events.forEach(eventType => {
+              const event = new Event(eventType, { bubbles: true, cancelable: true });
+              select.dispatchEvent(event);
+            });
+
+            // Hide banner after translation starts
+            setTimeout(() => {
+              hideBannerElements();
+            }, 200);
+
+          } else if (attempts < maxAttempts) {
+            setTimeout(tryTranslate, 300);
+          } else {
+            console.error('🌐 Translation failed after', maxAttempts, 'attempts');
+          }
+        };
+
+        setTimeout(tryTranslate, 800);
+
+      } catch (error) {
+        console.error('🌐 Translation error:', error);
+      }
+    };
+
+    script.onerror = () => {
+      console.error('🌐 Failed to load Google Translate script');
     };
 
     document.head.appendChild(script);
+  };
+
+  // Separate function to hide banner elements without affecting functionality
+  const hideBannerElements = () => {
+    const bannerSelectors = [
+      '.goog-te-banner-frame',
+      '.goog-te-banner'
+    ];
+
+    bannerSelectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(el => {
+        el.style.display = 'none !important';
+        el.style.visibility = 'hidden !important';
+      });
+    });
+
+    // Reset body positioning
+    document.body.style.top = '0 !important';
+    document.body.style.position = 'static !important';
   };
 
   const handleTranslate = (langCode) => {
@@ -203,22 +242,11 @@ const SimpleGoogleTranslate = () => {
       )}
 
       <style jsx global>{`
-        /* Completely hide Google Translate banner */
+        /* Hide only the visual banner, keep functional elements */
         .goog-te-banner-frame,
-        .goog-te-banner,
-        .goog-te-banner-content,
-        iframe[src*="translate.google"],
-        .goog-te-gadget-simple,
-        [id^="goog-gt-"],
-        .skiptranslate {
+        .goog-te-banner {
           display: none !important;
           visibility: hidden !important;
-          height: 0 !important;
-          width: 0 !important;
-          opacity: 0 !important;
-          position: absolute !important;
-          left: -9999px !important;
-          top: -9999px !important;
         }
 
         /* Reset body positioning */
@@ -228,13 +256,14 @@ const SimpleGoogleTranslate = () => {
           margin-top: 0 !important;
         }
 
-        html {
-          top: 0 !important;
-        }
-
-        /* Hide the translate combo when not needed */
-        .goog-te-combo {
-          display: none !important;
+        /* Keep translate element hidden but functional */
+        #google_translate_element {
+          position: absolute !important;
+          left: -9999px !important;
+          top: -9999px !important;
+          width: 1px !important;
+          height: 1px !important;
+          overflow: hidden !important;
         }
       `}</style>
     </div>
