@@ -217,8 +217,19 @@ const NavbarGoogleTranslate = () => {
       textElements.forEach((element, index) => {
         const text = element.textContent?.trim();
         if (text && text.length > 0 && !text.match(/^[\d\s\W]*$/)) {
-          textsToTranslate.push(text);
-          elementMap.set(index, element);
+          // Split long texts into chunks of max 400 characters
+          if (text.length > 400) {
+            const chunks = text.match(/.{1,400}(\s|$)/g) || [text];
+            chunks.forEach((chunk, chunkIndex) => {
+              if (chunk.trim()) {
+                textsToTranslate.push(chunk.trim());
+                elementMap.set(`${index}-${chunkIndex}`, { element, isChunk: true, chunkIndex });
+              }
+            });
+          } else {
+            textsToTranslate.push(text);
+            elementMap.set(index, { element, isChunk: false });
+          }
         }
       });
 
@@ -252,8 +263,8 @@ const NavbarGoogleTranslate = () => {
         }
       };
 
-      // Translate in batches to avoid rate limits
-      const batchSize = 5;
+      // Translate in smaller batches to avoid rate limits
+      const batchSize = 3; // Reduced batch size
       const translatedTexts = [];
 
       for (let i = 0; i < textsToTranslate.length; i += batchSize) {
@@ -262,18 +273,40 @@ const NavbarGoogleTranslate = () => {
         const batchResults = await Promise.all(batchPromises);
         translatedTexts.push(...batchResults);
 
-        // Small delay between batches
+        // Longer delay between batches to avoid rate limiting
         if (i + batchSize < textsToTranslate.length) {
-          await new Promise(resolve => setTimeout(resolve, 200));
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
 
       // Apply translations to elements
       let translatedCount = 0;
-      elementMap.forEach((element) => {
+      const chunkTexts = new Map(); // Store chunks for reassembly
+
+      elementMap.forEach((elementData, key) => {
         if (translatedTexts[translatedCount]) {
-          element.textContent = translatedTexts[translatedCount];
+          if (elementData.isChunk) {
+            // Handle chunked text
+            const baseKey = key.split('-')[0];
+            if (!chunkTexts.has(baseKey)) {
+              chunkTexts.set(baseKey, []);
+            }
+            chunkTexts.get(baseKey)[elementData.chunkIndex] = translatedTexts[translatedCount];
+          } else {
+            // Handle normal text
+            elementData.element.textContent = translatedTexts[translatedCount];
+          }
           translatedCount++;
+        }
+      });
+
+      // Reassemble chunked texts
+      chunkTexts.forEach((chunks, baseKey) => {
+        const elementData = Array.from(elementMap.values()).find(data =>
+          data.isChunk && elementMap.has(`${baseKey}-0`)
+        );
+        if (elementData) {
+          elementData.element.textContent = chunks.join(' ');
         }
       });
 
