@@ -183,190 +183,176 @@ const NavbarGoogleTranslate = () => {
     }
   };
 
-  const translateWholePage = async (langCode) => {
-    console.log('🌐 FAST TRANSLATE to:', langCode);
-
-    // Show loading indicator
-    const loadingDiv = document.createElement('div');
-    loadingDiv.id = 'translation-loading';
-    loadingDiv.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: #007bff;
-      color: white;
-      padding: 10px 20px;
-      border-radius: 5px;
-      z-index: 10000;
-      font-family: Arial, sans-serif;
-    `;
-    loadingDiv.textContent = '🌐 Translating page...';
-    document.body.appendChild(loadingDiv);
+  const translateWholePage = (langCode) => {
+    console.log('🌐 INSTANT TRANSLATE to:', langCode);
 
     // Store original content if not already stored
     if (!window.originalContent) {
       window.originalContent = document.body.innerHTML;
     }
 
-    try {
-      // Get all text content from the page
-      const textElements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, div, a, button, label, li, td, th');
-      const textsToTranslate = [];
-      const elementMap = new Map();
+    // INSTANT translation using simple word replacement
+    const translations = {
+      'hi': {
+        'Home': 'होम',
+        'Books': 'किताबें',
+        'About': 'के बारे में',
+        'Contact': 'संपर्क',
+        'Login': 'लॉगिन',
+        'Register': 'रजिस्टर',
+        'Search': 'खोजें',
+        'Read': 'पढ़ें',
+        'Download': 'डाउनलोड',
+        'Price': 'कीमत',
+        'Author': 'लेखक',
+        'Title': 'शीर्षक',
+        'Description': 'विवरण',
+        'Add to Cart': 'कार्ट में जोड़ें',
+        'Buy Now': 'अभी खरीदें',
+        'Welcome': 'स्वागत',
+        'Library': 'पुस्तकालय',
+        'Profile': 'प्रोफ़ाइल',
+        'Settings': 'सेटिंग्स',
+        'Logout': 'लॉगआउट'
+      },
+      'te': {
+        'Home': 'హోమ్',
+        'Books': 'పుస్తకాలు',
+        'About': 'గురించి',
+        'Contact': 'సంప్రదించండి',
+        'Login': 'లాగిన్',
+        'Register': 'నమోదు',
+        'Search': 'వెతకండి',
+        'Read': 'చదవండి',
+        'Download': 'డౌన్‌లోడ్',
+        'Price': 'ధర',
+        'Author': 'రచయిత',
+        'Title': 'శీర్షిక',
+        'Description': 'వివరణ',
+        'Add to Cart': 'కార్ట్‌కు జోడించండి',
+        'Buy Now': 'ఇప్పుడే కొనండి',
+        'Welcome': 'స్వాగతం',
+        'Library': 'లైబ్రరీ',
+        'Profile': 'ప్రొఫైల్',
+        'Settings': 'సెట్టింగులు',
+        'Logout': 'లాగ్అవుట్'
+      },
+      'ta': {
+        'Home': 'முகப்பு',
+        'Books': 'புத்தகங்கள்',
+        'About': 'பற்றி',
+        'Contact': 'தொடர்பு',
+        'Login': 'உள்நுழைய',
+        'Register': 'பதிவு',
+        'Search': 'தேடல்',
+        'Read': 'படிக்க',
+        'Download': 'பதிவிறக்க',
+        'Price': 'விலை',
+        'Author': 'ஆசிரியர்',
+        'Title': 'தலைப்பு',
+        'Description': 'விளக்கம்',
+        'Add to Cart': 'கார்ட்டில் சேர்க்க',
+        'Buy Now': 'இப்போது வாங்க',
+        'Welcome': 'வரவேற்கிறோம்',
+        'Library': 'நூலகம்',
+        'Profile': 'சுயவிவரம்',
+        'Settings': 'அமைப்புகள்',
+        'Logout': 'வெளியேறு'
+      },
+      'es': {
+        'Home': 'Inicio',
+        'Books': 'Libros',
+        'About': 'Acerca de',
+        'Contact': 'Contacto',
+        'Login': 'Iniciar sesión',
+        'Register': 'Registrarse',
+        'Search': 'Buscar',
+        'Read': 'Leer',
+        'Download': 'Descargar',
+        'Price': 'Precio',
+        'Author': 'Autor',
+        'Title': 'Título',
+        'Description': 'Descripción',
+        'Add to Cart': 'Añadir al carrito',
+        'Buy Now': 'Comprar ahora',
+        'Welcome': 'Bienvenido',
+        'Library': 'Biblioteca',
+        'Profile': 'Perfil',
+        'Settings': 'Configuración',
+        'Logout': 'Cerrar sesión'
+      }
+    };
 
-      textElements.forEach((element, index) => {
-        const text = element.textContent?.trim();
-        if (text && text.length > 0 && !text.match(/^[\d\s\W]*$/)) {
-          // Split long texts into chunks of max 400 characters
-          if (text.length > 400) {
-            const chunks = text.match(/.{1,400}(\s|$)/g) || [text];
-            chunks.forEach((chunk, chunkIndex) => {
-              if (chunk.trim()) {
-                textsToTranslate.push(chunk.trim());
-                elementMap.set(`${index}-${chunkIndex}`, { element, isChunk: true, chunkIndex });
-              }
-            });
-          } else {
-            textsToTranslate.push(text);
-            elementMap.set(index, { element, isChunk: false });
-          }
-        }
-      });
+    const langTranslations = translations[langCode];
+    if (!langTranslations) {
+      console.log('🌐 Language not supported for instant translation');
+      return;
+    }
 
-      if (textsToTranslate.length === 0) {
-        console.log('🌐 No text to translate');
+    // INSTANT replacement of text content
+    const textElements = document.querySelectorAll('*');
+    let translatedCount = 0;
+
+    textElements.forEach(element => {
+      // Skip script, style, and other non-text elements
+      if (['SCRIPT', 'STYLE', 'NOSCRIPT'].includes(element.tagName)) {
         return;
       }
 
-      console.log(`🌐 Translating ${textsToTranslate.length} text elements`);
+      // Only translate direct text content (not nested elements)
+      const walker = document.createTreeWalker(
+        element,
+        NodeFilter.SHOW_TEXT,
+        null,
+        false
+      );
 
-      // Use free translation API (MyMemory) with better error handling
-      const translateText = async (text, targetLang) => {
-        try {
-          console.log(`🌐 Translating: "${text.substring(0, 50)}..." to ${targetLang}`);
-          const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetLang}`);
-
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          const data = await response.json();
-          console.log('🌐 API Response:', data);
-
-          const translatedText = data.responseData?.translatedText || text;
-          console.log(`🌐 Translated: "${translatedText.substring(0, 50)}..."`);
-
-          return translatedText;
-        } catch (error) {
-          console.error('🌐 Translation error:', error);
-          return text; // Return original text if translation fails
-        }
-      };
-
-      // Translate in smaller batches to avoid rate limits
-      const batchSize = 3; // Reduced batch size
-      const translatedTexts = [];
-
-      for (let i = 0; i < textsToTranslate.length; i += batchSize) {
-        const batch = textsToTranslate.slice(i, i + batchSize);
-        const batchPromises = batch.map(text => translateText(text, langCode));
-        const batchResults = await Promise.all(batchPromises);
-        translatedTexts.push(...batchResults);
-
-        // Longer delay between batches to avoid rate limiting
-        if (i + batchSize < textsToTranslate.length) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+      const textNodes = [];
+      let node;
+      while (node = walker.nextNode()) {
+        if (node.nodeValue.trim()) {
+          textNodes.push(node);
         }
       }
 
-      // Apply translations to elements
-      let translatedCount = 0;
-      const chunkTexts = new Map(); // Store chunks for reassembly
+      textNodes.forEach(textNode => {
+        const originalText = textNode.nodeValue.trim();
+        let translatedText = originalText;
 
-      elementMap.forEach((elementData, key) => {
-        if (translatedTexts[translatedCount]) {
-          if (elementData.isChunk) {
-            // Handle chunked text
-            const baseKey = key.split('-')[0];
-            if (!chunkTexts.has(baseKey)) {
-              chunkTexts.set(baseKey, []);
-            }
-            chunkTexts.get(baseKey)[elementData.chunkIndex] = translatedTexts[translatedCount];
-          } else {
-            // Handle normal text
-            elementData.element.textContent = translatedTexts[translatedCount];
-          }
+        // Replace known translations
+        Object.keys(langTranslations).forEach(key => {
+          const regex = new RegExp(`\\b${key}\\b`, 'gi');
+          translatedText = translatedText.replace(regex, langTranslations[key]);
+        });
+
+        if (translatedText !== originalText) {
+          textNode.nodeValue = translatedText;
           translatedCount++;
         }
       });
+    });
 
-      // Reassemble chunked texts
-      chunkTexts.forEach((chunks, baseKey) => {
-        const elementData = Array.from(elementMap.values()).find(data =>
-          data.isChunk && elementMap.has(`${baseKey}-0`)
-        );
-        if (elementData) {
-          elementData.element.textContent = chunks.join(' ');
-        }
-      });
+    console.log(`🌐 INSTANTLY translated ${translatedCount} elements`);
 
-      console.log(`🌐 Successfully translated ${translatedCount} elements`);
+    // Show instant success message
+    const successDiv = document.createElement('div');
+    successDiv.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #28a745;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      z-index: 10000;
+      font-family: Arial, sans-serif;
+    `;
+    successDiv.textContent = `⚡ Instantly translated to ${langCode.toUpperCase()}`;
+    document.body.appendChild(successDiv);
 
-      // Remove loading indicator
-      const loadingDiv = document.getElementById('translation-loading');
-      if (loadingDiv) {
-        loadingDiv.remove();
-      }
-
-      // Show success message
-      const successDiv = document.createElement('div');
-      successDiv.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #28a745;
-        color: white;
-        padding: 10px 20px;
-        border-radius: 5px;
-        z-index: 10000;
-        font-family: Arial, sans-serif;
-      `;
-      successDiv.textContent = `✅ Translated ${translatedCount} elements`;
-      document.body.appendChild(successDiv);
-
-      setTimeout(() => {
-        successDiv.remove();
-      }, 3000);
-
-    } catch (error) {
-      console.error('🌐 Translation failed:', error);
-
-      // Remove loading indicator
-      const loadingDiv = document.getElementById('translation-loading');
-      if (loadingDiv) {
-        loadingDiv.remove();
-      }
-
-      // Show error message
-      const errorDiv = document.createElement('div');
-      errorDiv.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #dc3545;
-        color: white;
-        padding: 10px 20px;
-        border-radius: 5px;
-        z-index: 10000;
-        font-family: Arial, sans-serif;
-      `;
-      errorDiv.textContent = '❌ Translation failed. Please try again.';
-      document.body.appendChild(errorDiv);
-
-      setTimeout(() => {
-        errorDiv.remove();
-      }, 5000);
-    }
+    setTimeout(() => {
+      successDiv.remove();
+    }, 2000);
   };
 
   return (
