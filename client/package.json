@@ -5,9 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:localhost": "vite --host localhost --port 5173",
     "build": "vite build",
+    "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "npm run dev",
+    "localhost": "npm run dev:localhost"
   },
   "dependencies": {
     "@fortawesome/react-fontawesome": "^0.2.2",

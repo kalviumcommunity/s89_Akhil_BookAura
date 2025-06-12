@@ -60,6 +60,24 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
 
     const totalAmount = (books || [book]).reduce((sum, b) => sum + b.price, 0);
     const purchaseId = new mongoose.Types.ObjectId();
+    const cartData = books || [book];
+
+    // Store cart data in user document for recovery
+    try {
+      const User = require('../model/usermodel');
+      await User.findByIdAndUpdate(req.user.id, {
+        pendingPurchase: {
+          purchaseId: purchaseId.toString(),
+          books: cartData,
+          totalAmount,
+          createdAt: new Date()
+        }
+      });
+      console.log('💾 Stored pending purchase in user document:', purchaseId.toString());
+    } catch (storeError) {
+      console.error('Error storing pending purchase:', storeError);
+      // Continue - this is just a backup mechanism
+    }
 
     // Get frontend URL from environment variable or use default
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -72,7 +90,8 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
       metadata: {
         purchaseId: purchaseId.toString(),
         userId: req.user.id,
-        totalAmount: totalAmount.toString()
+        totalAmount: totalAmount.toString(),
+        bookCount: cartData.length.toString()
       }
     });
 
@@ -82,7 +101,7 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
         req.session.pendingPurchase = {
           _id: purchaseId,
           userId: req.user.id,
-          books: books || [book],
+          books: cartData,
           totalAmount,
           paymentStatus: 'pending'
         };
@@ -257,6 +276,17 @@ router.post("/save-purchase", verifyToken, async (req, res) => {
 
     await purchase.save();
 
+    // Clean up pending purchase data after successful save
+    try {
+      await User.findByIdAndUpdate(userId, {
+        $unset: { pendingPurchase: 1 }
+      });
+      console.log('🧹 Cleaned up pending purchase data');
+    } catch (cleanupError) {
+      console.error('Error cleaning up pending purchase:', cleanupError);
+      // Continue - this is not critical
+    }
+
     console.log('💰 Purchase saved successfully!');
     console.log('💰 Sample book in user purchased books:', {
       title: newBooks[0]?.title,
@@ -319,6 +349,93 @@ router.get("/my-purchases", verifyToken, async (req, res) => {
   } catch (error) {
     console.error('📚 Error fetching purchased books:', error);
     res.status(500).json({ error: "Failed to fetch purchased books" });
+  }
+});
+
+// Get pending purchase data for recovery
+router.get("/get-pending-purchase", verifyToken, async (req, res) => {
+  try {
+    const { purchaseId } = req.query;
+    const userId = req.user.id;
+
+    if (!purchaseId) {
+      return res.status(400).json({ error: "Missing purchase ID" });
+    }
+
+    console.log('🔍 Looking for pending purchase:', purchaseId, 'for user:', userId);
+
+    // First check if purchase already exists
+    const existingPurchase = await Purchase.findOne({ _id: purchaseId, userId });
+    if (existingPurchase) {
+      console.log('✅ Purchase already exists, returning success');
+      return res.status(200).json({
+        success: true,
+        alreadyExists: true,
+        purchase: {
+          _id: existingPurchase._id,
+          totalAmount: existingPurchase.totalAmount,
+          purchaseDate: existingPurchase.purchaseDate,
+          bookCount: existingPurchase.books.length
+        }
+      });
+    }
+
+    // Look for pending purchase data
+    const User = require('../model/usermodel');
+    const user = await User.findById(userId);
+
+    if (user?.pendingPurchase?.purchaseId === purchaseId) {
+      console.log('📦 Found pending purchase data in user document');
+      return res.status(200).json({
+        success: true,
+        pendingPurchase: user.pendingPurchase
+      });
+    }
+
+    // Check session if available
+    if (req.session?.pendingPurchase?._id?.toString() === purchaseId) {
+      console.log('📦 Found pending purchase data in session');
+      return res.status(200).json({
+        success: true,
+        pendingPurchase: req.session.pendingPurchase
+      });
+    }
+
+    console.log('❌ No pending purchase data found');
+    return res.status(404).json({
+      success: false,
+      message: "No pending purchase data found"
+    });
+
+  } catch (error) {
+    console.error('Error getting pending purchase:', error);
+    res.status(500).json({ error: "Failed to get pending purchase data" });
+  }
+});
+
+// Clean up old pending purchases (older than 24 hours)
+router.post("/cleanup-pending-purchases", verifyToken, async (req, res) => {
+  try {
+    const User = require('../model/usermodel');
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const result = await User.updateMany(
+      {
+        'pendingPurchase.createdAt': { $lt: twentyFourHoursAgo }
+      },
+      {
+        $unset: { pendingPurchase: 1 }
+      }
+    );
+
+    console.log(`🧹 Cleaned up ${result.modifiedCount} old pending purchases`);
+    res.status(200).json({
+      success: true,
+      message: `Cleaned up ${result.modifiedCount} old pending purchases`
+    });
+  } catch (error) {
+    console.error('Error cleaning up pending purchases:', error);
+    res.status(500).json({ error: "Failed to cleanup pending purchases" });
   }
 });
 

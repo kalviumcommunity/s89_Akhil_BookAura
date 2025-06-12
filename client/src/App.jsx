@@ -6,9 +6,12 @@ import { CartProvider } from './pages/MarketPlace/cart'
 import { ScheduleProvider } from './context/ScheduleContext'
 import { AuthProvider } from './context/AuthContext'
 
+import LibreTranslate from './components/LibreTranslate';
+
 function App() {
   return (
     <div>
+      <LibreTranslate />
       <BrowserRouter>
         <AuthProvider>
           <CartProvider>

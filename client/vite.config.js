@@ -16,10 +16,18 @@ export default defineConfig(({ command, mode }) => {
     server: {
       port: 5173,
       strictPort: false,
+      host: true, // Allow external connections
       cors: true,
       proxy: {
         // Proxy API requests to backend during development
         '/api': {
+          target: env.VITE_API_URL || 'http://localhost:5000',
+          changeOrigin: true,
+          secure: false,
+          ws: true, // Enable WebSocket proxying
+        },
+        // Proxy router requests to backend
+        '/router': {
           target: env.VITE_API_URL || 'http://localhost:5000',
           changeOrigin: true,
           secure: false,

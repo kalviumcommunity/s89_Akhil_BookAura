@@ -33,6 +33,8 @@ import WorkingEpubTest from './pages/WorkingEpubTest';
 import AllBooksPage from './pages/AllBooksPage';
 import TestFixes from './components/TestFixes';
 import SimpleTestPage from './components/SimpleTestPage';
+import StudyTechniques from './pages/studyhub/StudyTechniques';
+import Pomodoro from './pages/studyhub/Pomodoro';
 
 const pageTransition = {
   initial: { opacity: 0, x: -100 },
@@ -210,6 +212,14 @@ const AllRouting = () => {
         <Route
           path="/simple-test"
           element={<SimpleTestPage />}
+        />
+        <Route 
+        path='/studytechniques'
+        element={<StudyTechniques />}
+        />
+        <Route 
+        path='/pomodoro'
+        element={<Pomodoro />}
         />
       </Routes>
     </AnimatePresence>

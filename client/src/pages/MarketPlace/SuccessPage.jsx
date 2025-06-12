@@ -33,26 +33,71 @@ const SuccessPage = () => {
     setErrorDetails(null);
 
     try {
-      // First check if the purchase already exists
-      const verifyResponse = await api.get(
-        `/api/payment/verify-purchase?purchaseId=${purchaseId}`
+      // First check if the purchase already exists or get pending data
+      const pendingResponse = await api.get(
+        `/api/payment/get-pending-purchase?purchaseId=${purchaseId}`
       );
 
-      if (verifyResponse.data.success) {
-        setOrderDetails(verifyResponse.data.purchase);
-        setSaveStatus('success');
-        clearCart();
-        setIsLoading(false);
-        return;
+      if (pendingResponse.data.success) {
+        if (pendingResponse.data.alreadyExists) {
+          // Purchase already exists
+          setOrderDetails(pendingResponse.data.purchase);
+          setSaveStatus('success');
+          clearCart();
+          setIsLoading(false);
+          return;
+        } else if (pendingResponse.data.pendingPurchase) {
+          // Found pending purchase data, use it for recovery
+          console.log('📦 Using pending purchase data for manual recovery');
+          const pendingBooks = pendingResponse.data.pendingPurchase.books;
+
+          const processedCartItems = pendingBooks.map(book => {
+            const requiredFields = ['_id', 'title', 'author', 'coverimage', 'price'];
+            const missing = requiredFields.filter(field => {
+              if (field === 'price') {
+                return book[field] === undefined || book[field] === null;
+              }
+              return !book[field];
+            });
+            if (missing.length > 0) {
+              console.error('Missing book fields:', missing, 'Book:', book);
+              throw new Error(`Missing book fields: ${missing.join(', ')}`);
+            }
+
+            return {
+              ...book,
+              url: book.url || 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1746792433/bookstore/bookFiles/zspcnbobqoimglk83yz6'
+            };
+          });
+
+          // Save purchase with pending data
+          const response = await api.post(
+            '/api/payment/save-purchase',
+            {
+              sessionId: sessionId || 'manual-recovery',
+              purchaseId,
+              books: processedCartItems
+            }
+          );
+
+          if (response.data.success) {
+            setSaveStatus('success');
+            clearCart();
+            setIsLoading(false);
+            return;
+          } else {
+            throw new Error('Server returned error during recovery');
+          }
+        }
       }
     } catch (error) {
-      console.log('Purchase not found, will attempt to create it');
+      console.log('No pending purchase data found, trying with cart items');
     }
 
-    // If we get here, the purchase doesn't exist and needs to be created
+    // Fallback to cart items if no pending data found
     if (!cartItems || cartItems.length === 0) {
       setErrorDetails({
-        message: 'Cart is empty. Cannot recover purchase without cart data.',
+        message: 'Cart is empty and no pending purchase data found. Cannot recover purchase.',
         timestamp: new Date().toISOString()
       });
       setSaveStatus('error');
@@ -148,23 +193,69 @@ const SuccessPage = () => {
           return;
         }
 
-        // Check if purchase already exists
+        // Check if purchase already exists or get pending purchase data
         try {
-          const verifyResponse = await api.get(
-            `/api/payment/verify-purchase?purchaseId=${purchaseId}`
+          const pendingResponse = await api.get(
+            `/api/payment/get-pending-purchase?purchaseId=${purchaseId}`
           );
 
-          if (verifyResponse.data.success) {
-            setOrderDetails(verifyResponse.data.purchase);
-            setSaveStatus('success');
-            clearCart(); // ✅ Clear cart only after handling
-            setIsLoading(false);
-            return;
+          if (pendingResponse.data.success) {
+            if (pendingResponse.data.alreadyExists) {
+              // Purchase already exists
+              setOrderDetails(pendingResponse.data.purchase);
+              setSaveStatus('success');
+              clearCart(); // ✅ Clear cart only after handling
+              setIsLoading(false);
+              return;
+            } else if (pendingResponse.data.pendingPurchase) {
+              // Found pending purchase data, use it instead of cart
+              console.log('📦 Using pending purchase data for recovery');
+              const pendingBooks = pendingResponse.data.pendingPurchase.books;
+
+              const processedCartItems = pendingBooks.map(book => {
+                const requiredFields = ['_id', 'title', 'author', 'coverimage', 'price'];
+                const missing = requiredFields.filter(field => {
+                  if (field === 'price') {
+                    return book[field] === undefined || book[field] === null;
+                  }
+                  return !book[field];
+                });
+                if (missing.length > 0) {
+                  console.error('Missing book fields:', missing, 'Book:', book);
+                  throw new Error(`Missing book fields: ${missing.join(', ')}`);
+                }
+
+                return {
+                  ...book,
+                  url: book.url || 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1746792433/bookstore/bookFiles/zspcnbobqoimglk83yz6'
+                };
+              });
+
+              // Save purchase with pending data
+              const response = await api.post(
+                '/api/payment/save-purchase',
+                {
+                  sessionId,
+                  purchaseId,
+                  books: processedCartItems
+                }
+              );
+
+              if (response.data.success) {
+                setSaveStatus('success');
+                clearCart();
+                setIsLoading(false);
+                return;
+              } else {
+                throw new Error('Server returned error during save');
+              }
+            }
           }
-        } catch {
-          // Continue if purchase not found
+        } catch (pendingError) {
+          console.log('No pending purchase data found, trying with cart items');
         }
 
+        // Fallback to cart items if no pending data found
         if (cartItems.length === 0) {
           setSaveStatus('error');
           setErrorDetails({

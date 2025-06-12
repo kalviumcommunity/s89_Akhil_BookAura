@@ -7,7 +7,7 @@
 }
 
 .study-content {
-  margin-left: 200px; /* Match the width of StudyHubNavbar */
+  margin-left: 100px; /* Match the width of StudyHubNavbar */
   width: calc(100% - 200px);
   padding: 30px;
   overflow-y: auto;

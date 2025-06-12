@@ -1,11 +1,22 @@
 import axios from 'axios';
 
 // Determine the API base URL based on environment
-const getBaseUrl = 'https://s89-akhil-bookaura-3.onrender.com';
+const getBaseUrl = () => {
+  // Check if we're in development mode
+  const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+  if (isDevelopment) {
+    // Use localhost for development
+    return import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  } else {
+    // Use production URL for production
+    return import.meta.env.VITE_API_URL || 'https://s89-akhil-bookaura-3.onrender.com';
+  }
+};
 
 // Create a base axios instance with common configuration
 const api = axios.create({
-  baseURL: getBaseUrl,
+  baseURL: getBaseUrl(),
   withCredentials: true, // Always send cookies with requests
   timeout: 30000, // 30 second timeout
   headers: {

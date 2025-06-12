@@ -43,7 +43,7 @@ const NavbarGoogleTranslate = () => {
     }
   }, []);
 
-  // Continuous banner monitoring and removal
+  
   useEffect(() => {
     const continuousRemoval = () => {
       const bannerSelectors = [
@@ -93,6 +93,7 @@ const NavbarGoogleTranslate = () => {
         '[class^="goog-te-"]',
         '.skiptranslate'
       ];
+      
 
       selectors.forEach(selector => {
         const elements = document.querySelectorAll(selector);
