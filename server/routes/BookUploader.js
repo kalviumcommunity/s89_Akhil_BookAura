@@ -121,6 +121,15 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+router.get('/bestseller', async (req, res) => {
+  try {
+    const books = await Book.find({ isBestSeller: true });
+    res.json(books);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 
 router.get('/', async (req, res) => {
   const books = await Book.find().sort({ createdAt: -1 });

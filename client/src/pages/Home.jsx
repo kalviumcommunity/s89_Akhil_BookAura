@@ -11,11 +11,13 @@ import BasicGoogleTranslate from '../components/BasicGoogleTranslate'
 import ErrorBoundary from '../components/ErrorBoundary'
 import axios from 'axios';
 
+
 const Home = () => {
   const { syncCartWithServer } = useCart();
   const navigate = useNavigate();
   const [featuredBooks, setFeaturedBooks] = useState([]);
   const location = useLocation();
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   // Check if we need to sync cart after Google login and handle token from URL
   useEffect(() => {
@@ -107,6 +109,93 @@ const Home = () => {
   }, [location.state, syncCartWithServer]);
 
   const [fadeKey, setFadeKey] = useState(0);
+
+  // Simple and effective zoom detection for main-books
+  useEffect(() => {
+    const handleZoom = () => {
+      const zoom = window.devicePixelRatio || 1;
+      setZoomLevel(zoom);
+
+      // Apply dynamic CSS variables based on zoom level
+      const root = document.documentElement;
+
+      // Get current screen size to determine base values
+      const isLargeScreen = window.innerWidth >= 1200;
+      const isMediumScreen = window.innerWidth >= 992 && window.innerWidth < 1200;
+      const isTabletScreen = window.innerWidth >= 768 && window.innerWidth < 992;
+      const isSmallScreen = window.innerWidth >= 480 && window.innerWidth < 768;
+      // Set base values based on screen size - increased sizes
+      let baseWidth, baseSpacingX, baseSpacingY, baseMarginTop;
+
+      if (isLargeScreen) {
+        baseWidth = 240; // Increased from 180
+        baseSpacingX = 300; // Increased from 250
+        baseSpacingY = 200; // Increased from 170
+        baseMarginTop = 120;
+      } else if (isMediumScreen) {
+        baseWidth = 180; // Increased from 150
+        baseSpacingX = 220; // Increased from 180
+        baseSpacingY = 170; // Increased from 150
+        baseMarginTop = 120;
+      } else if (isTabletScreen) {
+        baseWidth = 140; // Increased from 120
+        baseSpacingX = 25; // Increased from 20
+        baseSpacingY = 0;
+        baseMarginTop = 0;
+      } else if (isSmallScreen) {
+        baseWidth = 120; // Increased from 100
+        baseSpacingX = 25; // Increased from 20
+        baseSpacingY = 0;
+        baseMarginTop = 0;
+      } else { // Very small screens
+        baseWidth = 110; // Increased from 90
+        baseSpacingX = 15; // Increased from 10
+        baseSpacingY = 0;
+        baseMarginTop = 0;
+      }
+
+      // Simple zoom-responsive scaling for individual books and quote
+      const isZoomed = zoom > 1.0;
+
+      // Quote container scaling
+      const quoteScale = isZoomed ? Math.max(0.5, 0.8 / zoom) : 1;
+      const quoteMaxWidth = isZoomed ? Math.max(250, 500 / zoom) : 500;
+
+      // Change photo width directly based on zoom level
+      const photoWidth = isZoomed ? Math.max(120, baseWidth / zoom) : baseWidth;
+      const bookSpacingReduction = isZoomed ? Math.max(0.7, 0.9 / zoom) : 1;
+
+      // Keep main-books container stable - no scaling
+      const mainBooksScale = 1;
+
+      // Set CSS variables
+      root.style.setProperty('--zoom-factor', zoom);
+      root.style.setProperty('--book-width', `${photoWidth}px`); // Dynamic photo width based on zoom
+      root.style.setProperty('--book-spacing-x', `${baseSpacingX}px`);
+      root.style.setProperty('--book-spacing-y', `${baseSpacingY}px`);
+      root.style.setProperty('--book-margin-top', `${baseMarginTop}px`);
+      root.style.setProperty('--quote-scale', quoteScale);
+      root.style.setProperty('--quote-max-width', `${quoteMaxWidth}px`);
+      root.style.setProperty('--book-spacing-reduction', bookSpacingReduction);
+      root.style.setProperty('--main-books-scale', mainBooksScale);
+
+      // Positioning for desktop only - no container scaling
+      const mainBooksLeft = isTabletScreen || isSmallScreen ? 'auto' : '50%';
+      const mainBooksTransform = isTabletScreen || isSmallScreen ?
+        'none' :
+        'translateX(-1%)'; // No scaling, just positioning
+
+      root.style.setProperty('--main-books-left', mainBooksLeft);
+      root.style.setProperty('--main-books-transform', mainBooksTransform);
+
+      console.log(`Zoom: ${zoom.toFixed(2)}, Photo width: ${photoWidth.toFixed(0)}px, Spacing reduction: ${bookSpacingReduction.toFixed(3)}`);
+    };
+
+    handleZoom(); // Run once on mount
+    window.addEventListener('resize', handleZoom);
+
+    return () => window.removeEventListener('resize', handleZoom);
+  }, []);
 
   const genres = [
   {
@@ -270,6 +359,7 @@ const Home = () => {
     },8000)
     return()=> clearInterval(interval);
   },[]);
+  
 
   return (
     <div>
@@ -303,7 +393,7 @@ const Home = () => {
         </div>
 
         <div className="main-books">
-  {Object.entries(genres[currentGenreIndex].books).map(([key, book], index) => (
+  {Object.entries(genres[currentGenreIndex].books).map(([key, book]) => (
     <img
       key={book.id}
       className={`photo ${key}`} // will be "photo book1", "photo book2", etc.

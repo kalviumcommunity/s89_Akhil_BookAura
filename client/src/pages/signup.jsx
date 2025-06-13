@@ -37,12 +37,13 @@ const Signup = () => {
   return (
     <div className="boxes">
       <div className="colourbox">
-        <img className='logoimage' onClick={()=>navigate('/')} src={logo} alt="logo" />
+        
         <img className='authimage' src={AuthImage} alt="Signup" />
         <br />
       </div>
       <div className="loginbox">
         <div className="login-form">
+          <img className='logoimage' onClick={()=>navigate('/')} src={logo} alt="logo" />
           <h1>Sign Up</h1>
           {error && <div className="error-message">{error}</div>}
           <form onSubmit={handleSubmit}>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 
 const StudyHubNavbar = () => {
   const navigate = useNavigate();

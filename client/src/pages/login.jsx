@@ -113,12 +113,13 @@ const Login = () => {
   return (
     <div className='boxes'>
       <div className='colourbox'>
-        <img className='logoimage' onClick={()=>navigate('/')} src={logo} alt="logo" />
+        
         <img className='authimage' src={AuthImage} alt="Login" />
         <br />
       </div>
       <div className='loginbox'>
         <div className='login-form'>
+          <img className='logoimage' onClick={()=>navigate('/')} src={logo} alt="logo" />
           <h1>Sign In</h1>
           <form onSubmit={handleSubmit}>
             <label>Email</label>
