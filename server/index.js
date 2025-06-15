@@ -97,6 +97,7 @@ app.use(cors({
     maxAge: 86400, // 24 hours in seconds - how long the browser should cache CORS response
     preflightContinue: true // Allow preflight requests to pass through to the next handler
 }));
+app.options('*', cors());
 app.use(express.json());
 app.use(cookieParser());
 
