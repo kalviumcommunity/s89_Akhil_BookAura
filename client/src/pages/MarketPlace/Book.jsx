@@ -102,20 +102,36 @@ const Book = () => {
         setBooks(unpurchasedBooks);
 
       } catch (error) {
-        console.error('❌ Failed to fetch unpurchased books:', error);
+        console.error('❌ Failed to fetch unpurchased books from dedicated endpoint:', error);
 
-        // IMPORTANT: Never fallback to showing all books
-        // This ensures purchased books are never displayed
-        setBooks([]);
+        // Fallback to the working /router/not-purchased endpoint
+        try {
+          console.log('🔄 Trying fallback endpoint: /router/not-purchased');
+          const fallbackEndpoint = `/router/not-purchased${queryString ? `?${queryString}` : ''}`;
+          const fallbackResponse = await api.get(fallbackEndpoint);
 
-        // Handle different error types
-        if (error.response?.status === 401) {
-          console.error('🔐 Authentication error - clearing token and showing login message');
-          localStorage.removeItem('authToken');
-        } else if (error.response?.status === 403) {
-          console.error('🚫 Access forbidden - user may not have permission');
-        } else {
-          console.error('🌐 Network or server error:', error.message);
+          console.log('✅ Fallback endpoint worked:', fallbackResponse.data);
+          const unpurchasedBooks = fallbackResponse.data.data || fallbackResponse.data || [];
+          setBooks(unpurchasedBooks);
+
+          console.log(`📚 Displaying ${unpurchasedBooks.length} unpurchased books from fallback`);
+
+        } catch (fallbackError) {
+          console.error('❌ Fallback endpoint also failed:', fallbackError);
+
+          // IMPORTANT: Never fallback to showing all books
+          // This ensures purchased books are never displayed
+          setBooks([]);
+
+          // Handle different error types
+          if (error.response?.status === 401 || fallbackError.response?.status === 401) {
+            console.error('🔐 Authentication error - clearing token and showing login message');
+            localStorage.removeItem('authToken');
+          } else if (error.response?.status === 403 || fallbackError.response?.status === 403) {
+            console.error('🚫 Access forbidden - user may not have permission');
+          } else {
+            console.error('🌐 Network or server error:', error.message);
+          }
         }
       }
       setLoading(false);

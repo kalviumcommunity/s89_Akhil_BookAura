@@ -10,6 +10,9 @@ dotenv.config();
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
 
+// Test the Book model import
+console.log('📚 Book model imported:', typeof Book);
+
 // Configure multer for multiple files
 const uploadFields = upload.fields([
   { name: 'epub', maxCount: 1 },
@@ -138,6 +141,15 @@ router.get('/', async (req, res) => {
   res.json(books);
 });
 
+// Test endpoint to verify router is working
+router.get('/test', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'BookUploader router is working!',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // DEDICATED ROUTE: Get ONLY unpurchased books for authenticated user
 router.get('/unpurchased', verifyToken, async (req, res) => {
   try {
@@ -164,33 +176,55 @@ router.get('/unpurchased', verifyToken, async (req, res) => {
     // Add optional filters from query parameters
     const { bestseller, featured, newrelease, category, genre } = req.query;
 
+    console.log('🔍 Received query parameters:', { bestseller, featured, newrelease, category, genre });
+
+    // Use correct field names from Book model
     if (bestseller === 'true') {
       query.isBestSeller = true;
+      console.log('✅ Added isBestSeller filter');
     }
 
     if (featured === 'true') {
       query.isFeatured = true;
+      console.log('✅ Added isFeatured filter');
     }
 
     if (newrelease === 'true') {
       query.isNewRelease = true;
+      console.log('✅ Added isNewRelease filter');
     }
 
     if (category) {
       query.genre = new RegExp(category, 'i'); // Case-insensitive match
+      console.log('✅ Added category filter:', category);
     }
 
     if (genre) {
       query.genre = new RegExp(genre, 'i'); // Case-insensitive match
+      console.log('✅ Added genre filter:', genre);
     }
 
     console.log('🔍 Final query for unpurchased books:', JSON.stringify(query, null, 2));
 
+    // Verify Book model is available
+    if (!Book) {
+      console.error('❌ Book model is not available!');
+      return res.status(500).json({
+        success: false,
+        message: 'Book model not found'
+      });
+    }
+
     // Find ONLY unpurchased books
+    console.log('📡 Executing Book.find query...');
     const unpurchasedBooks = await Book.find(query).sort({ createdAt: -1 });
 
     console.log(`✅ Found ${unpurchasedBooks.length} unpurchased books`);
-    console.log('📚 Unpurchased book titles:', unpurchasedBooks.map(book => book.title));
+    if (unpurchasedBooks.length > 0) {
+      console.log('📚 Unpurchased book titles:', unpurchasedBooks.map(book => book.title));
+    } else {
+      console.log('📚 No unpurchased books found with current filters');
+    }
 
     // Verify no purchased books are included (double-check)
     const returnedBookIds = unpurchasedBooks.map(book => book._id.toString());

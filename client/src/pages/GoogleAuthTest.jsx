@@ -116,14 +116,9 @@ const GoogleAuthTest = () => {
     const serverUrl = 'https://s89-akhil-bookaura-3.onrender.com';
     const googleAuthUrl = `${serverUrl}/router/auth/google?t=${timestamp}&test=true`;
 
-    // Show options to the user
-    if (confirm('The server might be experiencing issues. Choose an option:\n\nOK: Try Google authentication (might fail)\nCancel: Use direct authentication (mock data)')) {
-      // Redirect to Google auth endpoint
-      window.location.href = googleAuthUrl;
-    } else {
-      // Use direct authentication
-      handleDirectAuth();
-    }
+    // Directly try Google authentication without showing popup
+    // Redirect to Google auth endpoint
+    window.location.href = googleAuthUrl;
   };
 
   return (

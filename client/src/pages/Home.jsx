@@ -60,22 +60,22 @@ const Home = () => {
             // Sync cart with server
             syncCartWithServer();
 
-            // Show success message
-            alert('Google login successful!');
+            // Log success message instead of showing alert
+            console.log('Google login successful!');
 
             // Reload page to apply authentication
             window.location.reload();
           } catch (error) {
             console.error('Error parsing user data:', error);
-            alert('Error parsing user data. Please try logging in again.');
+            // Removed alert box - just log the error
           }
         } else {
           console.error('No user data received from Google auth');
-          alert('Error: No user data received. Please try logging in again.');
+          // Removed alert box - just log the error
         }
       } catch (error) {
         console.error('Error during Google authentication:', error);
-        alert(`Authentication error: ${error.message}`);
+        // Removed alert box - just log the error
       }
     }
 
