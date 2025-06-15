@@ -2,8 +2,9 @@ services:
   - type: web
     name: bookaura-backend
     env: node
-    buildCommand: cd server && npm install
-    startCommand: cd server && NODE_ENV=production npm start
+    rootDir: server
+    buildCommand: npm install
+    startCommand: NODE_ENV=production npm start
     envVars:
       - key: NODE_ENV
         value: production
