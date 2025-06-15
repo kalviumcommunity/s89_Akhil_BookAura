@@ -29,7 +29,6 @@ const AddProducts = () => {
       try {
         setLoading(true);
 
-        // Using api service which automatically handles tokens from both localStorage and cookies
         const response = await api.get('/router/check-admin');
 
         if (response.data.isAdmin) {

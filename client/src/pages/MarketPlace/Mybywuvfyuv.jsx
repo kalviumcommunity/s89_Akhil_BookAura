@@ -16,7 +16,7 @@ function getCookie(name) {
   }, '');
 }
 
-const SimpleEpubViewer = ({ epubUrl }) => {
+const Mybywuvfyuv = ({ epubUrl }) => {
   const navigate = useNavigate();
 
   const renditionRef = useRef(null);
@@ -337,4 +337,4 @@ const SimpleEpubViewer = ({ epubUrl }) => {
   );
 };
 
-export default SimpleEpubViewer;
+export default Mybywuvfyuv;

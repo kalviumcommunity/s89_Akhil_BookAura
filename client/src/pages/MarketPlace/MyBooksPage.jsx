@@ -330,6 +330,7 @@ const MyBooksPage = () => {
       <Footer />
     </>
   );
+  
 };
 
 export default MyBooksPage;
