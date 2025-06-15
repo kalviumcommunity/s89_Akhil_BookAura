@@ -35,7 +35,6 @@ import TestFixes from './components/TestFixes';
 import SimpleTestPage from './components/SimpleTestPage';
 import StudyTechniques from './pages/studyhub/StudyTechniques';
 import Pomodoro from './pages/studyhub/Pomodoro';
-import Mybywuvfyuv from './pages/MarketPlace/mybywuvfyuv';
 
 const pageTransition = {
   initial: { opacity: 0, x: -100 },
@@ -48,10 +47,7 @@ const AllRouting = () => {
  return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route 
-        path='/test1'
-        element={<Mybywuvfyuv/>}
-        ></Route>
+        
         <Route
           path="/"
           element={
