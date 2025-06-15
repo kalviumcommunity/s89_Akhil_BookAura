@@ -267,15 +267,7 @@ const SimpleEpubViewer = ({ epubUrl }) => {
 
   return (
     <div className={`w-screen h-screen ${darkMode ? 'dark' : ''} relative font-sans bg-white text-black dark:bg-gray-900 dark:text-white`}>
-      {/* Close Button */}
-      <button
-        onClick={handleClose}
-        aria-label="Close Reader"
-        className="close-button"
-        type="button"
-      >
-        <X size={20} />
-      </button>
+      
 
       <div className="top-bar">
         <div className="controls">
