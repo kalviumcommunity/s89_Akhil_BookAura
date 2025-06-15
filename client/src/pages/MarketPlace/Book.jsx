@@ -203,8 +203,10 @@ const Book = () => {
 
               <div className='range-box'>
                 <p>Price Range</p>
-                <label>0</label>
+                <label htmlFor="price-range">0</label>
                 <input
+                  id="price-range"
+                  name="price-range"
                   className='range-input-bar'
                   type='range'
                   min={0}
@@ -244,6 +246,8 @@ const Book = () => {
                 <div className='search1'>
                   <Search size={20} />
                   <input
+                    id="book-search"
+                    name="book-search"
                     type='text'
                     placeholder='Search for books, authors, or genres...'
                     value={searchText}

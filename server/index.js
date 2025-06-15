@@ -171,6 +171,21 @@ app.use('/router', userRouter);
 app.use('/api/books', simpleBookRouter); // Main book API - now using Cloudinary
 app.use('/api/simple-books', simpleBookRouter); // Alias for compatibility
 
+// Global OPTIONS handler for any unhandled preflight requests
+app.options('*', (req, res) => {
+    const origin = req.headers.origin;
+
+    // Match the main CORS configuration
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Cache-Control, Pragma, Expires, Cookie');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Type, Set-Cookie');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+    console.log('🌐 Global OPTIONS handler - Origin:', origin, 'Path:', req.path);
+    res.status(200).end();
+});
+
 // Health check endpoint
 app.get('/health', (_, res) => {
     res.status(200).json({ status: 'ok', message: 'Server is running' });

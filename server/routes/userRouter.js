@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const passport = require('passport'); // <-- Added import for passport
 const User = require('../model/usermodel');
+const Book = require('../models/Book'); // Add Book model for not-purchased endpoint
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
@@ -660,6 +661,44 @@ router.post('/make-admin', verifyToken, async (req, res) => {
       message: 'Failed to update user role',
       error: error.message
     });
+  }
+});
+
+// Handle OPTIONS requests for CORS preflight for /not-purchased
+router.options('/not-purchased', (req, res) => {
+  const origin = req.headers.origin;
+
+  // Match the main CORS configuration
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Cache-Control, Pragma, Expires, Cookie');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Type, Set-Cookie');
+  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+  res.status(200).end();
+});
+
+// Get books NOT purchased by the user
+router.get('/not-purchased', verifyToken, async (req, res) => {
+  try {
+    console.log('📚 Fetching unpurchased books for user:', req.user.id);
+
+    const userId = req.user.id;
+    // Get user's purchased book IDs
+    const user = await User.findById(userId);
+    const purchasedBookIds = user.purchasedBooks?.map(b => b.bookId.toString()) || [];
+
+    console.log('🛒 User has purchased', purchasedBookIds.length, 'books');
+
+    // Find books not in purchasedBookIds
+    const books = await Book.find({ _id: { $nin: purchasedBookIds } });
+
+    console.log('📖 Found', books.length, 'unpurchased books');
+
+    res.status(200).json({ success: true, data: books });
+  } catch (error) {
+    console.error('❌ Error fetching unpurchased books:', error);
+    res.status(500).json({ success: false, message: 'Error fetching books', error: error.message });
   }
 });
 
