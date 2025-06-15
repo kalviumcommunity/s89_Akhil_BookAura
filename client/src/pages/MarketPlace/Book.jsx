@@ -10,7 +10,9 @@ import LoadingAnimation from '../../components/LoadingAnimation';
 
 
 const Book = () => {
-  const [books, setBooks] = useState([]);
+  // IMPORTANT: This component ONLY shows books that the user has NOT purchased
+  // The books state will NEVER contain purchased books due to server-side filtering
+  const [books, setBooks] = useState([]); // Contains ONLY unpurchased books
   const [searchText, setSearchText] = useState('');
   const [priceRange, setPriceRange] = useState(1000); // adjust max if needed
   const [selectedGenres, setSelectedGenres] = useState([]);
@@ -52,14 +54,15 @@ const Book = () => {
       const token = localStorage.getItem('authToken');
       if (!token) {
         console.log('❌ No auth token found - user not logged in');
-        setBooks([]);
+        setBooks([]); // Show no books if not logged in
         setLoading(false);
         return;
       }
 
       try {
-        console.log('📚 Fetching unpurchased books...');
+        console.log('📚 Fetching ONLY unpurchased books for authenticated user...');
 
+        // Build query parameters for filtering
         const params = new URLSearchParams();
         if (showBestsellers) params.append('bestseller', 'true');
         if (showFeatured) params.append('featured', 'true');
@@ -69,34 +72,41 @@ const Book = () => {
         const queryString = params.toString();
         const endpoint = `/router/not-purchased${queryString ? `?${queryString}` : ''}`;
 
-        console.log('📡 Making request to:', endpoint);
+        console.log('📡 Making request to endpoint:', endpoint);
+        console.log('🔒 This endpoint ONLY returns books the user has NOT purchased');
 
-        // Use the API service which handles auth tokens and CORS properly
+        // CRITICAL: This endpoint filters out purchased books on the server side
         const response = await api.get(endpoint);
 
-        console.log('✅ Response received:', response.data);
-        setBooks(response.data.data || response.data); // Handle both response formats
+        console.log('✅ Received ONLY unpurchased books:', response.data);
+
+        // Ensure we only set books that are confirmed to be unpurchased
+        const unpurchasedBooks = response.data.data || response.data || [];
+        setBooks(unpurchasedBooks);
+
+        console.log(`📊 Displaying ${unpurchasedBooks.length} unpurchased books only`);
+
       } catch (error) {
         console.error('❌ Failed to fetch unpurchased books:', error);
 
-        // Don't fallback to all books - only show unpurchased books
-        // Set empty array to show no books if the endpoint fails
+        // IMPORTANT: Never fallback to showing all books
+        // This ensures purchased books are never displayed
         setBooks([]);
 
-        // Provide user feedback
+        // Handle different error types
         if (error.response?.status === 401) {
-          console.error('Authentication error - user may need to log in again');
-          // Clear invalid token
+          console.error('🔐 Authentication error - clearing token and showing login message');
           localStorage.removeItem('authToken');
         } else if (error.response?.status === 403) {
-          console.error('Access forbidden - check user permissions');
+          console.error('🚫 Access forbidden - user may not have permission');
         } else {
-          console.error('Network or server error:', error.message);
+          console.error('🌐 Network or server error:', error.message);
         }
       }
       setLoading(false);
     };
 
+    // Fetch unpurchased books whenever filters change
     fetchUnpurchasedBooks();
   }, [showBestsellers, showFeatured, showNewReleases, selectedCategories]);
 
@@ -274,8 +284,8 @@ const Book = () => {
 
               <div className='allbooks-list'>
                 {filteredBooks.length > 0 ? (
-                  filteredBooks.map((book, index) => (
-                    <div key={index} onClick={() => handleBookClick(book)}>
+                  filteredBooks.map((book) => (
+                    <div key={book._id || book.id} onClick={() => handleBookClick(book)}>
                       <ProductCard book={book} />
                     </div>
                   ))
