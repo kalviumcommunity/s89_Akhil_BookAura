@@ -682,18 +682,47 @@ router.options('/not-purchased', (req, res) => {
 router.get('/not-purchased', verifyToken, async (req, res) => {
   try {
     console.log('📚 Fetching unpurchased books for user:', req.user.id);
+    console.log('📋 Query parameters:', req.query);
 
     const userId = req.user.id;
+
     // Get user's purchased book IDs
     const user = await User.findById(userId);
-    const purchasedBookIds = user.purchasedBooks?.map(b => b.bookId.toString()) || [];
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
 
+    const purchasedBookIds = user.purchasedBooks?.map(b => b.bookId.toString()) || [];
     console.log('🛒 User has purchased', purchasedBookIds.length, 'books');
 
-    // Find books not in purchasedBookIds
-    const books = await Book.find({ _id: { $nin: purchasedBookIds } });
+    // Build query for unpurchased books
+    let query = { _id: { $nin: purchasedBookIds } };
 
-    console.log('📖 Found', books.length, 'unpurchased books');
+    // Add filters based on query parameters
+    const { bestseller, featured, newrelease, category } = req.query;
+
+    if (bestseller === 'true') {
+      query.bestseller = true;
+    }
+
+    if (featured === 'true') {
+      query.featured = true;
+    }
+
+    if (newrelease === 'true') {
+      query.newrelease = true;
+    }
+
+    if (category) {
+      query.genre = new RegExp(category, 'i'); // Case-insensitive match
+    }
+
+    console.log('🔍 Query filter:', query);
+
+    // Find books not in purchasedBookIds with additional filters
+    const books = await Book.find(query);
+
+    console.log('📖 Found', books.length, 'unpurchased books matching filters');
 
     res.status(200).json({ success: true, data: books });
   } catch (error) {

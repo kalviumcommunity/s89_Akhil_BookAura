@@ -47,6 +47,16 @@ const Book = () => {
   useEffect(() => {
     const fetchUnpurchasedBooks = async () => {
       setLoading(true);
+
+      // Check if user is authenticated
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.log('❌ No auth token found - user not logged in');
+        setBooks([]);
+        setLoading(false);
+        return;
+      }
+
       try {
         console.log('📚 Fetching unpurchased books...');
 
@@ -69,23 +79,19 @@ const Book = () => {
       } catch (error) {
         console.error('❌ Failed to fetch unpurchased books:', error);
 
-        // Fallback: Try to fetch all books if unpurchased books fail
-        try {
-          console.log('🔄 Falling back to all books...');
-          const fallbackResponse = await api.get('/api/books');
-          console.log('✅ Fallback response received:', fallbackResponse.data);
-          setBooks(fallbackResponse.data || []);
-        } catch (fallbackError) {
-          console.error('❌ Fallback also failed:', fallbackError);
+        // Don't fallback to all books - only show unpurchased books
+        // Set empty array to show no books if the endpoint fails
+        setBooks([]);
 
-          // Provide user feedback
-          if (error.response?.status === 401) {
-            console.error('Authentication error - user may need to log in again');
-          } else if (error.response?.status === 403) {
-            console.error('Access forbidden - check user permissions');
-          } else {
-            console.error('Network or server error:', error.message);
-          }
+        // Provide user feedback
+        if (error.response?.status === 401) {
+          console.error('Authentication error - user may need to log in again');
+          // Clear invalid token
+          localStorage.removeItem('authToken');
+        } else if (error.response?.status === 403) {
+          console.error('Access forbidden - check user permissions');
+        } else {
+          console.error('Network or server error:', error.message);
         }
       }
       setLoading(false);
@@ -273,8 +279,27 @@ const Book = () => {
                       <ProductCard book={book} />
                     </div>
                   ))
+                ) : books.length === 0 ? (
+                  <div className="no-books-message">
+                    {!localStorage.getItem('authToken') ? (
+                      <>
+                        <h3>🔐 Please Log In</h3>
+                        <p>You need to be logged in to view available books for purchase.</p>
+                        <p>Please log in to your account to see books you haven't purchased yet.</p>
+                      </>
+                    ) : (
+                      <>
+                        <h3>🎉 Congratulations!</h3>
+                        <p>You have purchased all available books, or there are no books available for purchase at the moment.</p>
+                        <p>Check back later for new releases!</p>
+                      </>
+                    )}
+                  </div>
                 ) : (
-                  <p>No books found matching the filters.</p>
+                  <div className="no-books-message">
+                    <h3>📚 No books match your current filters</h3>
+                    <p>Try adjusting your search criteria or clearing the filters to see more books.</p>
+                  </div>
                 )}
               </div>
             </div>
