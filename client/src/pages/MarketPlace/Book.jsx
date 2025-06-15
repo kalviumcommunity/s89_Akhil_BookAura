@@ -4,9 +4,8 @@ import Navbar from '../../components/Navbar';
 import categories from './categories.json';
 import { Search, Filter, X } from 'lucide-react';
 import ProductCard from '../../components/ProductCard';
-import axios from 'axios';
+import api from '../../services/api';
 import BookDetailView from './BookDetailView';
-import {useCart} from './cart';
 import LoadingAnimation from '../../components/LoadingAnimation';
 
 
@@ -49,25 +48,35 @@ const Book = () => {
     const fetchUnpurchasedBooks = async () => {
       setLoading(true);
       try {
-        const token = localStorage.getItem('authToken');
-        const params = new URLSearchParams();
+        console.log('📚 Fetching unpurchased books...');
 
+        const params = new URLSearchParams();
         if (showBestsellers) params.append('bestseller', 'true');
         if (showFeatured) params.append('featured', 'true');
         if (showNewReleases) params.append('newrelease', 'true');
         if (selectedCategories.length > 0) params.append('category', selectedCategories[0]);
 
         const queryString = params.toString();
-        // Use the new endpoint for unpurchased books
-        const url = `https://s89-akhil-bookaura-3.onrender.com/router/not-purchased${queryString ? `?${queryString}` : ''}`;
+        const endpoint = `/router/not-purchased${queryString ? `?${queryString}` : ''}`;
 
-        const response = await axios.get(url, {
-          headers: { Authorization: `Bearer ${token}` },
-          withCredentials: true
-        });
-        setBooks(response.data.data); // .data.data for your API structure
+        console.log('📡 Making request to:', endpoint);
+
+        // Use the API service which handles auth tokens and CORS properly
+        const response = await api.get(endpoint);
+
+        console.log('✅ Response received:', response.data);
+        setBooks(response.data.data || response.data); // Handle both response formats
       } catch (error) {
-        console.error('Failed to fetch unpurchased books:', error);
+        console.error('❌ Failed to fetch unpurchased books:', error);
+
+        // Provide user feedback
+        if (error.response?.status === 401) {
+          console.error('Authentication error - user may need to log in again');
+        } else if (error.response?.status === 403) {
+          console.error('Access forbidden - check user permissions');
+        } else {
+          console.error('Network or server error:', error.message);
+        }
       }
       setLoading(false);
     };
