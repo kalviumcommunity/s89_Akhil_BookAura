@@ -61,7 +61,7 @@ const Book = () => {
 
       // ========================================
       // CRITICAL: This function ONLY fetches books that the user has NOT purchased
-      // The endpoint /api/unpurchased-books/unpurchased is specifically designed to:
+      // The endpoint /router/not-purchased is specifically designed to:
       // 1. Authenticate the user
       // 2. Get their purchased books list
       // 3. Return ONLY books NOT in that list
@@ -80,13 +80,13 @@ const Book = () => {
         if (selectedGenres.length > 0) params.append('genre', selectedGenres[0]);
 
         const queryString = params.toString();
-        // NEW DEDICATED ENDPOINT: /api/unpurchased-books/unpurchased
-        const endpoint = `/api/unpurchased-books/unpurchased${queryString ? `?${queryString}` : ''}`;
+        // USE WORKING ENDPOINT: /router/not-purchased
+        const endpoint = `/router/not-purchased${queryString ? `?${queryString}` : ''}`;
 
-        console.log('📡 Making request to DEDICATED unpurchased endpoint:', endpoint);
-        console.log('🔒 This endpoint is SPECIFICALLY designed to ONLY return unpurchased books');
+        console.log('📡 Making request to WORKING unpurchased endpoint:', endpoint);
+        console.log('🔒 This endpoint ONLY returns books the user has NOT purchased');
 
-        // CRITICAL: This dedicated endpoint filters out purchased books on the server side
+        // CRITICAL: This endpoint filters out purchased books on the server side
         const response = await api.get(endpoint);
 
         console.log('✅ Received response from dedicated unpurchased endpoint:', response.data);
@@ -102,36 +102,20 @@ const Book = () => {
         setBooks(unpurchasedBooks);
 
       } catch (error) {
-        console.error('❌ Failed to fetch unpurchased books from dedicated endpoint:', error);
+        console.error('❌ Failed to fetch unpurchased books:', error);
 
-        // Fallback to the working /router/not-purchased endpoint
-        try {
-          console.log('🔄 Trying fallback endpoint: /router/not-purchased');
-          const fallbackEndpoint = `/router/not-purchased${queryString ? `?${queryString}` : ''}`;
-          const fallbackResponse = await api.get(fallbackEndpoint);
+        // IMPORTANT: Never fallback to showing all books
+        // This ensures purchased books are never displayed
+        setBooks([]);
 
-          console.log('✅ Fallback endpoint worked:', fallbackResponse.data);
-          const unpurchasedBooks = fallbackResponse.data.data || fallbackResponse.data || [];
-          setBooks(unpurchasedBooks);
-
-          console.log(`📚 Displaying ${unpurchasedBooks.length} unpurchased books from fallback`);
-
-        } catch (fallbackError) {
-          console.error('❌ Fallback endpoint also failed:', fallbackError);
-
-          // IMPORTANT: Never fallback to showing all books
-          // This ensures purchased books are never displayed
-          setBooks([]);
-
-          // Handle different error types
-          if (error.response?.status === 401 || fallbackError.response?.status === 401) {
-            console.error('🔐 Authentication error - clearing token and showing login message');
-            localStorage.removeItem('authToken');
-          } else if (error.response?.status === 403 || fallbackError.response?.status === 403) {
-            console.error('🚫 Access forbidden - user may not have permission');
-          } else {
-            console.error('🌐 Network or server error:', error.message);
-          }
+        // Handle different error types
+        if (error.response?.status === 401) {
+          console.error('🔐 Authentication error - clearing token and showing login message');
+          localStorage.removeItem('authToken');
+        } else if (error.response?.status === 403) {
+          console.error('🚫 Access forbidden - user may not have permission');
+        } else {
+          console.error('🌐 Network or server error:', error.message);
         }
       }
       setLoading(false);

@@ -211,9 +211,29 @@ app.options('*', (req, res) => {
     res.status(200).end();
 });
 
+// Root endpoint
+app.get('/', (_, res) => {
+    res.status(200).json({
+        message: 'BookAura Server is running!',
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        endpoints: {
+            health: '/health',
+            test: '/test',
+            books: '/api/books',
+            auth: '/router'
+        }
+    });
+});
+
 // Health check endpoint
 app.get('/health', (_, res) => {
-    res.status(200).json({ status: 'ok', message: 'Server is running' });
+    res.status(200).json({
+        status: 'ok',
+        message: 'Server is running',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
 });
 
 // Simple test endpoint for CORS testing
