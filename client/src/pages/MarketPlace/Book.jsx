@@ -10,9 +10,9 @@ import LoadingAnimation from '../../components/LoadingAnimation';
 
 
 const Book = () => {
-  // IMPORTANT: This component ONLY shows books that the user has NOT purchased
-  // The books state will NEVER contain purchased books due to server-side filtering
-  const [books, setBooks] = useState([]); // Contains ONLY unpurchased books
+  // SIMPLE FRONTEND FILTERING: Fetch all books and user's purchased books, then filter on frontend
+  const [allBooks, setAllBooks] = useState([]); // All books from server
+  const [purchasedBookIds, setPurchasedBookIds] = useState([]); // User's purchased book IDs
   const [searchText, setSearchText] = useState('');
   const [priceRange, setPriceRange] = useState(1000); // adjust max if needed
   const [selectedGenres, setSelectedGenres] = useState([]);
@@ -46,84 +46,54 @@ const Book = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Fetch all books and user's purchased books, then filter on frontend
   useEffect(() => {
-    const fetchUnpurchasedBooks = async () => {
+    const fetchBooksAndUserData = async () => {
       setLoading(true);
 
-      // Check if user is authenticated
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        console.log('❌ No auth token found - user not logged in');
-        setBooks([]); // Show no books if not logged in
-        setLoading(false);
-        return;
-      }
-
-      // ========================================
-      // CRITICAL: This function ONLY fetches books that the user has NOT purchased
-      // The endpoint /router/not-purchased is specifically designed to:
-      // 1. Authenticate the user
-      // 2. Get their purchased books list
-      // 3. Return ONLY books NOT in that list
-      // 4. NEVER return purchased books under any circumstances
-      // ========================================
-
       try {
-        console.log('📚 Fetching ONLY unpurchased books using DEDICATED endpoint...');
+        // Check if user is authenticated
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          console.log('❌ No auth token found - user not logged in');
+          setAllBooks([]);
+          setPurchasedBookIds([]);
+          setLoading(false);
+          return;
+        }
 
-        // Build query parameters for filtering
-        const params = new URLSearchParams();
-        if (showBestsellers) params.append('bestseller', 'true');
-        if (showFeatured) params.append('featured', 'true');
-        if (showNewReleases) params.append('newrelease', 'true');
-        if (selectedCategories.length > 0) params.append('category', selectedCategories[0]);
-        if (selectedGenres.length > 0) params.append('genre', selectedGenres[0]);
+        console.log('📚 Fetching all books and user purchased books...');
 
-        const queryString = params.toString();
-        // USE WORKING ENDPOINT: /router/not-purchased
-        const endpoint = `/router/not-purchased${queryString ? `?${queryString}` : ''}`;
+        // Fetch all books from the server
+        const booksResponse = await api.get('/api/books');
+        const allBooksData = booksResponse.data || [];
+        setAllBooks(allBooksData);
+        console.log(`📖 Fetched ${allBooksData.length} total books`);
 
-        console.log('📡 Making request to WORKING unpurchased endpoint:', endpoint);
-        console.log('🔒 This endpoint ONLY returns books the user has NOT purchased');
-
-        // CRITICAL: This endpoint filters out purchased books on the server side
-        const response = await api.get(endpoint);
-
-        console.log('✅ Received response from dedicated unpurchased endpoint:', response.data);
-
-        // Extract unpurchased books from response
-        const unpurchasedBooks = response.data.data || response.data || [];
-
-        // Additional verification log
-        console.log(`🛡️ Server confirmed: User has purchased ${response.data.userPurchasedCount || 0} books`);
-        console.log(`📚 Displaying ${unpurchasedBooks.length} VERIFIED unpurchased books`);
-        console.log('📋 Unpurchased book titles:', unpurchasedBooks.map(book => book.title));
-
-        setBooks(unpurchasedBooks);
+        // Fetch user's purchased books
+        const userResponse = await api.get('/router/profile');
+        const userData = userResponse.data.user || userResponse.data || {};
+        const userPurchasedBooks = userData.purchasedBooks || [];
+        const purchasedIds = userPurchasedBooks.map(book => book.bookId || book._id).filter(Boolean);
+        setPurchasedBookIds(purchasedIds);
+        console.log(`🛒 User has purchased ${purchasedIds.length} books:`, purchasedIds);
 
       } catch (error) {
-        console.error('❌ Failed to fetch unpurchased books:', error);
+        console.error('❌ Failed to fetch books or user data:', error);
+        setAllBooks([]);
+        setPurchasedBookIds([]);
 
-        // IMPORTANT: Never fallback to showing all books
-        // This ensures purchased books are never displayed
-        setBooks([]);
-
-        // Handle different error types
+        // Handle authentication errors
         if (error.response?.status === 401) {
-          console.error('🔐 Authentication error - clearing token and showing login message');
+          console.error('🔐 Authentication error - clearing token');
           localStorage.removeItem('authToken');
-        } else if (error.response?.status === 403) {
-          console.error('🚫 Access forbidden - user may not have permission');
-        } else {
-          console.error('🌐 Network or server error:', error.message);
         }
       }
       setLoading(false);
     };
 
-    // Fetch unpurchased books whenever filters change
-    fetchUnpurchasedBooks();
-  }, [showBestsellers, showFeatured, showNewReleases, selectedCategories, selectedGenres]);
+    fetchBooksAndUserData();
+  }, []); // Only run once on component mount
 
   const handleGenreChange = (genre) => {
     setSelectedGenres((prev) =>
@@ -164,7 +134,14 @@ const Book = () => {
     setShowNewReleases(false);
   };
 
-  const filteredBooks = books.filter((book) => {
+  // Frontend filtering: Remove purchased books and apply filters
+  const filteredBooks = allBooks.filter((book) => {
+    // CRITICAL: Exclude purchased books
+    const isPurchased = purchasedBookIds.includes(book._id || book.id);
+    if (isPurchased) {
+      return false; // Don't show purchased books
+    }
+
     // Match search text in title or author
     const matchesSearch =
       book.title.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -185,7 +162,13 @@ const Book = () => {
         book.categories.includes(cat)
       ));
 
-    return matchesSearch && matchesGenre && matchesPrice && matchesCategories;
+    // Match special filters
+    const matchesBestseller = !showBestsellers || book.isBestSeller;
+    const matchesFeatured = !showFeatured || book.isFeatured;
+    const matchesNewRelease = !showNewReleases || book.isNewRelease;
+
+    return matchesSearch && matchesGenre && matchesPrice && matchesCategories &&
+           matchesBestseller && matchesFeatured && matchesNewRelease;
   });
 
   const handleBookClick = (book) => {
@@ -277,7 +260,42 @@ const Book = () => {
               </div>
 
               <div className="filter-section">
-                {/* Special categories can be added here if needed */}
+                <p>Special Categories</p>
+                <div className='checkbox-menu'>
+                  <div>
+                    <input
+                      type='checkbox'
+                      id='bestseller-filter'
+                      checked={showBestsellers}
+                      onChange={() => setShowBestsellers(!showBestsellers)}
+                    />
+                    <label htmlFor='bestseller-filter' className='checkbox-label'>
+                      Bestsellers
+                    </label>
+                  </div>
+                  <div>
+                    <input
+                      type='checkbox'
+                      id='featured-filter'
+                      checked={showFeatured}
+                      onChange={() => setShowFeatured(!showFeatured)}
+                    />
+                    <label htmlFor='featured-filter' className='checkbox-label'>
+                      Featured
+                    </label>
+                  </div>
+                  <div>
+                    <input
+                      type='checkbox'
+                      id='newrelease-filter'
+                      checked={showNewReleases}
+                      onChange={() => setShowNewReleases(!showNewReleases)}
+                    />
+                    <label htmlFor='newrelease-filter' className='checkbox-label'>
+                      New Releases
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -304,7 +322,7 @@ const Book = () => {
                       <ProductCard book={book} />
                     </div>
                   ))
-                ) : books.length === 0 ? (
+                ) : allBooks.length === 0 ? (
                   <div className="no-books-message">
                     {!localStorage.getItem('authToken') ? (
                       <>
