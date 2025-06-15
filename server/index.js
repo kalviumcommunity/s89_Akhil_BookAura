@@ -170,6 +170,7 @@ const eventRouter = require('./routes/EventRouter');
 const chatHistoryRouter = require('./routes/ChatHistoryRouter');
 const flashcardRouter = require('./routes/FlashcardRouter');
 const simpleBookRouter = require('./routes/SimpleBookRouter'); // Only Cloudinary-based book router
+const bookUploaderRouter = require('./routes/BookUploader'); // Dedicated unpurchased books router
 
 // Log loaded routers for debugging
 console.log('Loaded routers:');
@@ -181,6 +182,7 @@ console.log('- eventRouter:', typeof eventRouter);
 console.log('- chatHistoryRouter:', typeof chatHistoryRouter);
 console.log('- flashcardRouter:', typeof flashcardRouter);
 console.log('- simpleBookRouter:', typeof simpleBookRouter);
+console.log('- bookUploaderRouter:', typeof bookUploaderRouter);
 
 app.use("/api/payment", paymentRoutes);
 app.use("/api/pdf", pdfProxyRoutes);
@@ -192,6 +194,7 @@ app.use("/api/flashcards", flashcardRouter);
 app.use('/router', userRouter);
 app.use('/api/books', simpleBookRouter); // Main book API - now using Cloudinary
 app.use('/api/simple-books', simpleBookRouter); // Alias for compatibility
+app.use('/api/unpurchased-books', bookUploaderRouter); // DEDICATED unpurchased books endpoint
 
 // Global OPTIONS handler for any unhandled preflight requests
 app.options('*', (req, res) => {

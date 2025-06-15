@@ -59,8 +59,17 @@ const Book = () => {
         return;
       }
 
+      // ========================================
+      // CRITICAL: This function ONLY fetches books that the user has NOT purchased
+      // The endpoint /api/unpurchased-books/unpurchased is specifically designed to:
+      // 1. Authenticate the user
+      // 2. Get their purchased books list
+      // 3. Return ONLY books NOT in that list
+      // 4. NEVER return purchased books under any circumstances
+      // ========================================
+
       try {
-        console.log('📚 Fetching ONLY unpurchased books for authenticated user...');
+        console.log('📚 Fetching ONLY unpurchased books using DEDICATED endpoint...');
 
         // Build query parameters for filtering
         const params = new URLSearchParams();
@@ -68,23 +77,29 @@ const Book = () => {
         if (showFeatured) params.append('featured', 'true');
         if (showNewReleases) params.append('newrelease', 'true');
         if (selectedCategories.length > 0) params.append('category', selectedCategories[0]);
+        if (selectedGenres.length > 0) params.append('genre', selectedGenres[0]);
 
         const queryString = params.toString();
-        const endpoint = `/router/not-purchased${queryString ? `?${queryString}` : ''}`;
+        // NEW DEDICATED ENDPOINT: /api/unpurchased-books/unpurchased
+        const endpoint = `/api/unpurchased-books/unpurchased${queryString ? `?${queryString}` : ''}`;
 
-        console.log('📡 Making request to endpoint:', endpoint);
-        console.log('🔒 This endpoint ONLY returns books the user has NOT purchased');
+        console.log('📡 Making request to DEDICATED unpurchased endpoint:', endpoint);
+        console.log('🔒 This endpoint is SPECIFICALLY designed to ONLY return unpurchased books');
 
-        // CRITICAL: This endpoint filters out purchased books on the server side
+        // CRITICAL: This dedicated endpoint filters out purchased books on the server side
         const response = await api.get(endpoint);
 
-        console.log('✅ Received ONLY unpurchased books:', response.data);
+        console.log('✅ Received response from dedicated unpurchased endpoint:', response.data);
 
-        // Ensure we only set books that are confirmed to be unpurchased
+        // Extract unpurchased books from response
         const unpurchasedBooks = response.data.data || response.data || [];
-        setBooks(unpurchasedBooks);
 
-        console.log(`📊 Displaying ${unpurchasedBooks.length} unpurchased books only`);
+        // Additional verification log
+        console.log(`🛡️ Server confirmed: User has purchased ${response.data.userPurchasedCount || 0} books`);
+        console.log(`📚 Displaying ${unpurchasedBooks.length} VERIFIED unpurchased books`);
+        console.log('📋 Unpurchased book titles:', unpurchasedBooks.map(book => book.title));
+
+        setBooks(unpurchasedBooks);
 
       } catch (error) {
         console.error('❌ Failed to fetch unpurchased books:', error);
@@ -108,7 +123,7 @@ const Book = () => {
 
     // Fetch unpurchased books whenever filters change
     fetchUnpurchasedBooks();
-  }, [showBestsellers, showFeatured, showNewReleases, selectedCategories]);
+  }, [showBestsellers, showFeatured, showNewReleases, selectedCategories, selectedGenres]);
 
   const handleGenreChange = (genre) => {
     setSelectedGenres((prev) =>

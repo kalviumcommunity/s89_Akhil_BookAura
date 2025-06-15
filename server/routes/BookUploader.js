@@ -2,6 +2,8 @@ const express = require('express');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const Book = require('../models/Book');
+const User = require('../model/usermodel');
+const { verifyToken } = require('../middleware/auth');
 const fs = require('fs');
 const dotenv = require('dotenv');
 dotenv.config();
@@ -136,8 +138,99 @@ router.get('/', async (req, res) => {
   res.json(books);
 });
 
-// NOTE: The /not-purchased endpoint has been moved to userRouter.js
-// This router (BookUploader.js) is not currently mounted in the main server
+// DEDICATED ROUTE: Get ONLY unpurchased books for authenticated user
+router.get('/unpurchased', verifyToken, async (req, res) => {
+  try {
+    console.log('🔒 UNPURCHASED BOOKS ENDPOINT - User ID:', req.user.id);
 
+    const userId = req.user.id;
+
+    // Get user's purchased book IDs
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Extract purchased book IDs
+    const purchasedBookIds = user.purchasedBooks?.map(book => book.bookId.toString()) || [];
+    console.log('🛒 User purchased book IDs:', purchasedBookIds);
+
+    // Build query to exclude purchased books
+    let query = { _id: { $nin: purchasedBookIds } };
+
+    // Add optional filters from query parameters
+    const { bestseller, featured, newrelease, category, genre } = req.query;
+
+    if (bestseller === 'true') {
+      query.isBestSeller = true;
+    }
+
+    if (featured === 'true') {
+      query.isFeatured = true;
+    }
+
+    if (newrelease === 'true') {
+      query.isNewRelease = true;
+    }
+
+    if (category) {
+      query.genre = new RegExp(category, 'i'); // Case-insensitive match
+    }
+
+    if (genre) {
+      query.genre = new RegExp(genre, 'i'); // Case-insensitive match
+    }
+
+    console.log('🔍 Final query for unpurchased books:', JSON.stringify(query, null, 2));
+
+    // Find ONLY unpurchased books
+    const unpurchasedBooks = await Book.find(query).sort({ createdAt: -1 });
+
+    console.log(`✅ Found ${unpurchasedBooks.length} unpurchased books`);
+    console.log('📚 Unpurchased book titles:', unpurchasedBooks.map(book => book.title));
+
+    // Verify no purchased books are included (double-check)
+    const returnedBookIds = unpurchasedBooks.map(book => book._id.toString());
+    const hasPurchasedBooks = returnedBookIds.some(id => purchasedBookIds.includes(id));
+
+    if (hasPurchasedBooks) {
+      console.error('🚨 ERROR: Purchased books found in results! This should not happen.');
+      return res.status(500).json({
+        success: false,
+        message: 'Server error: Purchased books detected in results'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Found ${unpurchasedBooks.length} unpurchased books`,
+      data: unpurchasedBooks,
+      userPurchasedCount: purchasedBookIds.length
+    });
+
+  } catch (error) {
+    console.error('❌ Error in unpurchased books endpoint:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching unpurchased books',
+      error: error.message
+    });
+  }
+});
+
+// Handle OPTIONS requests for CORS
+router.options('/unpurchased', (req, res) => {
+  const origin = req.headers.origin;
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Cache-Control, Pragma, Expires, Cookie');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Type, Set-Cookie');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  res.status(200).end();
+});
 
 module.exports = router;
