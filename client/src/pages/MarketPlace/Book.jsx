@@ -69,13 +69,23 @@ const Book = () => {
       } catch (error) {
         console.error('❌ Failed to fetch unpurchased books:', error);
 
-        // Provide user feedback
-        if (error.response?.status === 401) {
-          console.error('Authentication error - user may need to log in again');
-        } else if (error.response?.status === 403) {
-          console.error('Access forbidden - check user permissions');
-        } else {
-          console.error('Network or server error:', error.message);
+        // Fallback: Try to fetch all books if unpurchased books fail
+        try {
+          console.log('🔄 Falling back to all books...');
+          const fallbackResponse = await api.get('/api/books');
+          console.log('✅ Fallback response received:', fallbackResponse.data);
+          setBooks(fallbackResponse.data || []);
+        } catch (fallbackError) {
+          console.error('❌ Fallback also failed:', fallbackError);
+
+          // Provide user feedback
+          if (error.response?.status === 401) {
+            console.error('Authentication error - user may need to log in again');
+          } else if (error.response?.status === 403) {
+            console.error('Access forbidden - check user permissions');
+          } else {
+            console.error('Network or server error:', error.message);
+          }
         }
       }
       setLoading(false);

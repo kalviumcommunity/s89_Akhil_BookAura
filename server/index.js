@@ -36,17 +36,17 @@ require('./passport.config');
 const app = express();
 const MONGODB_URI = process.env.MONGODB_URI;
 
-// Middleware
+// Enhanced CORS Middleware
 app.use(cors({
     origin: function(origin, callback) {
         // Define allowed origins
         const allowedOrigins = [
             'http://localhost:5173',  // Local development
             'http://localhost:5174',  // Alternative local port
+            'http://localhost:3000',  // Alternative local port
             'https://s89-akhil-book-aura.vercel.app',
             'https://s89-akhil-book-aura.netlify.app',
-            'https://bookauraba.netlify.app',
-            'https://bookauraba.netlify.app',
+            'https://bookauraba.netlify.app',  // Current production URL
             'https://bookaura.netlify.app',
             'https://bookaura.vercel.app',
             process.env.FRONTEND_URL // From environment variable if set
@@ -75,7 +75,7 @@ app.use(cors({
 
         // In production, we'll still allow all origins for now to prevent issues
         // but log it for monitoring
-        console.log('CORS - Origin not in allowed list:', origin);
+        console.log('CORS - Origin not in allowed list, but allowing anyway:', origin);
         return callback(null, true);
     },
     credentials: true,
@@ -95,8 +95,30 @@ app.use(cors({
     ],
     exposedHeaders: ['Content-Length', 'Content-Type', 'Set-Cookie'],
     maxAge: 86400, // 24 hours in seconds - how long the browser should cache CORS response
-    preflightContinue: true // Allow preflight requests to pass through to the next handler
+    preflightContinue: false, // Handle preflight requests immediately
+    optionsSuccessStatus: 200 // Some legacy browsers choke on 204
 }));
+
+// Additional CORS middleware for extra safety
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+
+    // Set CORS headers on every response
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Cache-Control, Pragma, Expires, Cookie');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Type, Set-Cookie');
+    res.setHeader('Access-Control-Max-Age', '86400');
+
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        console.log('🌐 Preflight request handled - Origin:', origin, 'Path:', req.path);
+        return res.status(200).end();
+    }
+
+    next();
+});
 app.use(express.json());
 app.use(cookieParser());
 
@@ -189,6 +211,15 @@ app.options('*', (req, res) => {
 // Health check endpoint
 app.get('/health', (_, res) => {
     res.status(200).json({ status: 'ok', message: 'Server is running' });
+});
+
+// Simple test endpoint for CORS testing
+app.get('/test', (req, res) => {
+    res.status(200).json({
+        message: 'CORS test successful',
+        origin: req.headers.origin,
+        timestamp: new Date().toISOString()
+    });
 });
 
 // Debug endpoint to check authentication status
