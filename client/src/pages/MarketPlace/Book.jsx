@@ -46,42 +46,33 @@ const Book = () => {
   }, []);
 
   useEffect(() => {
-    const fetchBooks = async () => {
+    const fetchUnpurchasedBooks = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        // Build query parameters based on filters
+        const token = localStorage.getItem('authToken');
         const params = new URLSearchParams();
 
-        if (showBestsellers) {
-          params.append('bestseller', 'true');
-        }
-
-        if (showFeatured) {
-          params.append('featured', 'true');
-        }
-
-        if (showNewReleases) {
-          params.append('newrelease', 'true');
-        }
-
-        // If any category is selected, use the first one as a filter
-        if (selectedCategories.length > 0) {
-          params.append('category', selectedCategories[0]);
-        }
+        if (showBestsellers) params.append('bestseller', 'true');
+        if (showFeatured) params.append('featured', 'true');
+        if (showNewReleases) params.append('newrelease', 'true');
+        if (selectedCategories.length > 0) params.append('category', selectedCategories[0]);
 
         const queryString = params.toString();
-        const url = `https://s89-akhil-bookaura-3.onrender.com/api/books${queryString ? `?${queryString}` : ''}`;
+        // Use the new endpoint for unpurchased books
+        const url = `https://s89-akhil-bookaura-3.onrender.com/router/not-purchased${queryString ? `?${queryString}` : ''}`;
 
-        const response = await axios.get(url);
-        setBooks(response.data); // Changed from response.data.data to response.data
-        setLoading(false);
+        const response = await axios.get(url, {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true
+        });
+        setBooks(response.data.data); // .data.data for your API structure
       } catch (error) {
-        console.error('Failed to fetch books:', error);
-        setLoading(false);
+        console.error('Failed to fetch unpurchased books:', error);
       }
+      setLoading(false);
     };
 
-    fetchBooks();
+    fetchUnpurchasedBooks();
   }, [showBestsellers, showFeatured, showNewReleases, selectedCategories]);
 
   const handleGenreChange = (genre) => {

@@ -135,4 +135,25 @@ router.get('/', async (req, res) => {
   const books = await Book.find().sort({ createdAt: -1 });
   res.json(books);
 });
+
+// ...existing code...
+const { verifyToken } = require('../middleware/auth');
+const User = require('../model/usermodel');
+
+// New endpoint: Get books NOT purchased by the user
+router.get('/not-purchased', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    // Get user's purchased book IDs
+    const user = await User.findById(userId);
+    const purchasedBookIds = user.purchasedBooks?.map(b => b.bookId.toString()) || [];
+    // Find books not in purchasedBookIds
+    const books = await Book.find({ _id: { $nin: purchasedBookIds } });
+    res.status(200).json({ success: true, data: books });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching books', error: error.message });
+  }
+});
+
+
 module.exports = router;
