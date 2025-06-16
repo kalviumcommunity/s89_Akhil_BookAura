@@ -1,24 +1,61 @@
-/* Sidebar container with theme background */
+/* Sidebar container */
 .main-div-study {
+  display: flex;
+  flex-direction: column;
   position: fixed;
   top: 0;
   left: 0;
   height: 100vh;
-  width: 200px;
-  background-color: #E6D9CC;
+  width: fit-content;
+  background-color: #e6d9cc;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
   z-index: 1000;
   transition: transform 0.3s ease-in-out;
+  box-sizing: border-box;
+}
+.main-div-study a {
+  text-decoration: none; /* Removes underline */
+}
+.profile-button-study-navbar{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  position: absolute;
+  bottom: 20px; 
+  padding: auto;
+}
+.profile-image-study-navbar{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-left: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  transition: all 0.3s ease;
+}
+.username-study-navbar{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-left: 10px;
+  font-size: 1.2rem;
+  color: #3b3b3b;
+  transition: all 0.3s ease;
 }
 
-/* Mobile menu button - hidden by default on desktop */
+
+/* Mobile menu button */
 .mobile-menu-button {
   display: none;
   position: fixed;
   top: 15px;
   left: 15px;
   z-index: 1001;
-  background-color: #E6D9CC;
+  background-color: #e6d9cc;
   border-radius: 50%;
   width: 40px;
   height: 40px;
@@ -26,51 +63,66 @@
   align-items: center;
   cursor: pointer;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-  color: #3B3B3B;
+  color: #3b3b3b;
   transition: background-color 0.2s;
 }
 
 .mobile-menu-button:hover {
-  background-color: #D7C6B9;
+  background-color: #d7c6b9;
 }
 
-/* Unordered list style reset */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 100vw;
+  background-color: rgba(0, 0, 0, 0.3);
+  z-index: 999;
+}
+
+/* Reset ul */
 .main-div-study ul {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-/* Nav item base style */
+/* Each li element */
 .main-div-study li {
   padding: 16px 20px;
   font-size: 16px;
-  color: #3B3B3B; /* dark gray for contrast */
+  color: #3b3b3b;
   cursor: pointer;
   transition: background-color 0.2s, color 0.2s;
   border-left: 4px solid transparent;
 }
 
-/* Hover effect with subtle shading */
+/* Hover effect */
 .main-div-study li:hover {
-  background-color: #D7C6B9; /* slightly darker beige */
+  background-color: #d7c6b9;
   color: #000000;
 }
 
-/* Active link style */
+/* Active and inactive states */
 .active-1 {
-  background-color: #CBBBAE;
-  color: #000000;
+  background-color: #cbbbae;
   font-weight: bold;
-  border-left: 4px solid #5A4B41; /* earthy brown highlight */
+  color: #050403;
 }
 
-/* Inactive link style */
 .notactive-1 {
-  color: #4F4F4F;
+  color: #4f4f4f;
 }
 
-/* Responsive styles for tablets and mobile */
+/* Flex layout for icons + text */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Responsive: Mobile View */
 @media (max-width: 768px) {
   .mobile-menu-button {
     display: flex;
@@ -86,7 +138,7 @@
   }
 }
 
-/* Additional adjustments for very small screens */
+/* Full width sidebar on very small screens */
 @media (max-width: 480px) {
   .main-div-study {
     width: 100%;

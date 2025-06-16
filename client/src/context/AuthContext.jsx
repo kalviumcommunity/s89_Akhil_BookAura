@@ -1,11 +1,8 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import api from '../services/api';
 import {
-  storeUserDataInCookies,
-  clearUserCookies,
-  getUserDataFromCookies,
-  hasCookie
-} from '../utils/cookieUtils';
+  clearAuthData
+} from '../utils/authUtils';
 
 // Create the context
 const AuthContext = createContext();
@@ -23,57 +20,152 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkLoginStatus = async () => {
       try {
-        // Get user data from cookies
-        const cookieData = getUserDataFromCookies();
+        console.log('Checking login status...');
 
-        // Also check if we have a token in localStorage (legacy support)
-        const localToken = localStorage.getItem('authToken');
+        // Check URL parameters for token from Google OAuth
+        const params = new URLSearchParams(window.location.search);
+        const urlToken = params.get('token');
+        const success = params.get('success');
 
-        // Check if we have a user ID in localStorage (legacy support)
-        const localUserId = localStorage.getItem('userId');
+        // If we have a token from Google OAuth callback, store it
+        if (urlToken && success === 'true') {
+          console.log('Google authentication successful, storing token');
+          localStorage.setItem('authToken', urlToken);
 
-        // Log detailed authentication state for debugging
-        console.log('Auth check details:', {
-          cookieData,
-          tokenInLocalStorage: !!localToken,
-          userIdInLocalStorage: !!localUserId,
-          cookieContent: document.cookie
-        });
+          // Also set a non-httpOnly cookie for client-side detection
+          document.cookie = `isLoggedIn=true; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=None; ${window.location.protocol === 'https:' ? 'Secure' : ''}`;
 
-        // Determine if user is authenticated
-        const isAuthenticated = cookieData.isLoggedIn || !!localToken;
-
-        // If we have user ID in localStorage but not in cookies, store it in cookies
-        if (!cookieData.userId && localUserId) {
-          console.log('Migrating user ID from localStorage to cookies');
-          storeUserDataInCookies({ _id: localUserId }, localToken);
+          // Clean up URL parameters
+          const cleanUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
         }
 
+        // Check for the non-httpOnly isLoggedIn cookie
+        const isLoggedInCookie = document.cookie.split(';').some(cookie =>
+          cookie.trim().startsWith('isLoggedIn=true')
+        );
+        console.log('isLoggedIn cookie present:', isLoggedInCookie);
+
+        // Check if we have a token in localStorage
+        const localToken = localStorage.getItem('authToken');
+        console.log('Token in localStorage:', localToken ? 'Present' : 'Not present');
+
+        // If either is true, consider the user logged in
+        const isAuthenticated = isLoggedInCookie || !!localToken;
+        console.log('Authentication status:', isAuthenticated ? 'Logged in' : 'Not logged in');
+
+        // IMMEDIATELY set login status to avoid delays
         setIsLoggedIn(isAuthenticated);
 
-        // If authenticated, try to fetch user data
+        // IMMEDIATELY check for cached user data
         if (isAuthenticated) {
-          try {
-            const response = await api.get('/router/profile');
-            if (response.data.success) {
-              setUser(response.data.user);
+          const cachedUserData = localStorage.getItem('userData');
+          if (cachedUserData) {
+            try {
+              const parsedData = JSON.parse(cachedUserData);
+              console.log('IMMEDIATELY using cached user data');
 
-              // Store userId in localStorage for payment processing
-              if (response.data.user && response.data.user._id) {
-                localStorage.setItem('userId', response.data.user._id);
-                console.log("Stored user ID from profile:", response.data.user._id);
-              }
+              // Ensure we have all required fields with defaults if missing
+              const userData = {
+                username: parsedData.username || 'User',
+                email: parsedData.email || '',
+                profileImage: parsedData.profileImage || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'
+              };
+
+              console.log('Processed user data in AuthContext:', userData);
+              setUser(userData);
+
+              // Set loading to false right away
+              setLoading(false);
+            } catch (e) {
+              console.error('Error parsing cached user data:', e);
             }
-          } catch (profileError) {
-            console.error('Error fetching user profile:', profileError);
-            // If we can't get the profile, we'll just continue without user data
           }
         }
 
-        console.log('User login status:', isAuthenticated ? 'Logged in' : 'Not logged in');
+        // Set a very short timeout to ensure loading state is cleared
+        setTimeout(() => {
+          setLoading(false);
+        }, 500);
+
+        // If authenticated, try to fetch fresh user data in the background
+        if (isAuthenticated) {
+          // Use a separate async function to fetch in background
+          const fetchUserDataInBackground = async () => {
+            try {
+              console.log('Fetching fresh user profile data in background...');
+
+              if (!localToken) {
+                console.log('No token available for background fetch');
+                return;
+              }
+
+              // Set the token in the Authorization header explicitly
+              const headers = {
+                Authorization: `Bearer ${localToken}`
+              };
+
+              // Add a timestamp parameter to prevent caching
+              const timestamp = new Date().getTime();
+
+              // Set a timeout for the API request
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => {
+                console.log('Background API request timeout reached, aborting');
+                controller.abort();
+              }, 5000); // 5 second timeout
+
+              const response = await api.get(`/router/profile?_t=${timestamp}`, {
+                headers,
+                signal: controller.signal
+              });
+
+              clearTimeout(timeoutId); // Clear the timeout if request completes
+
+              if (response.data.success) {
+                console.log('Fresh user profile data retrieved successfully in background');
+                const userData = response.data.user;
+
+                // Ensure we have all required fields with defaults if missing
+                const processedUserData = {
+                  username: userData.username || 'User',
+                  email: userData.email || '',
+                  profileImage: userData.profileImage || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'
+                };
+
+                console.log('Fresh user data processed in AuthContext:', processedUserData);
+
+                // Cache the user data in localStorage
+                localStorage.setItem('userData', JSON.stringify(processedUserData));
+
+                // Update the user data
+                setUser(processedUserData);
+              }
+            } catch (profileError) {
+              console.error('Error in background fetch of user profile:', profileError);
+
+              // If we get a 401 error, the token might be invalid or expired
+              if (profileError.response && profileError.response.status === 401) {
+                console.log('Authentication token invalid or expired');
+
+                // Only clear auth state if we're not on the login page
+                if (!window.location.pathname.includes('/login')) {
+                  setIsLoggedIn(false);
+                  setUser(null);
+                }
+              }
+              // For other errors, we already have cached data, so just log
+            }
+          };
+
+          // Start the background fetch
+          fetchUserDataInBackground();
+        } else {
+          // Not authenticated, ensure loading is false
+          setLoading(false);
+        }
       } catch (error) {
-        console.error('Error checking login status:', error);
-      } finally {
+        console.error('Error in authentication check:', error);
         setLoading(false);
       }
     };
@@ -83,14 +175,14 @@ export const AuthProvider = ({ children }) => {
 
   // Function to handle login
   const login = (userData, token) => {
-    // Store user data in state
     setUser(userData);
     setIsLoggedIn(true);
 
-    // Store user data in cookies
-    storeUserDataInCookies(userData, token || localStorage.getItem('authToken'));
-
-    console.log('User logged in and data stored in cookies:', userData?._id);
+    // If token is provided, store it in localStorage
+    if (token) {
+      localStorage.setItem('authToken', token);
+      console.log('Token stored in localStorage during login');
+    }
   };
 
   // Function to handle logout
@@ -99,10 +191,8 @@ export const AuthProvider = ({ children }) => {
       // Call server logout endpoint
       await api.get('/router/logout');
 
-      // Clear all authentication-related data
-      clearAllUserData();
-
-      // Update state
+      // Clear all auth data using utility
+      clearAuthData();
       setUser(null);
       setIsLoggedIn(false);
 
@@ -112,58 +202,10 @@ export const AuthProvider = ({ children }) => {
       console.error('Error logging out:', error);
 
       // Even if the server request fails, clear local auth state
-      clearAllUserData();
+      clearAuthData();
       setUser(null);
       setIsLoggedIn(false);
     }
-  };
-
-  // Helper function to clear all user data from browser
-  const clearAllUserData = () => {
-    console.log('Clearing all user data...');
-
-    // 1. Clear all authentication tokens
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userId');
-
-    // 2. Clear chat-related data
-    localStorage.removeItem('chatUserId');
-
-    // 3. Clear cart data
-    localStorage.removeItem('bookCart');
-    localStorage.removeItem('syncCartAfterLogin');
-
-    // 4. Clear Cronofy calendar data
-    localStorage.removeItem('cronofyAccessToken');
-    localStorage.removeItem('cronofyRefreshToken');
-
-    // 5. Clear Google login related data
-    localStorage.removeItem('googleLoginPending');
-
-    // 6. Clear any session storage items
-    sessionStorage.clear();
-
-    // 7. Call the Cronofy service logout method to ensure it clears its internal state
-    try {
-      const CronofyService = require('../services/CronofyService').default;
-      if (CronofyService && typeof CronofyService.logout === 'function') {
-        CronofyService.logout();
-      }
-    } catch (error) {
-      console.error('Error calling CronofyService.logout:', error);
-    }
-
-    // Note: We're NOT clearing server-side data
-    // The user's cart items, purchased books, and other data will remain on the server
-    // Only clearing client-side storage
-
-    // 9. Clear cookies using our cookie utility
-    clearUserCookies();
-
-    // For secure cookies that can't be directly accessed by JavaScript,
-    // the server-side logout endpoint should handle clearing them
-
-    console.log('All user data cleared');
   };
 
   // Function to force refresh the auth state
@@ -171,31 +213,16 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      // Get user data from cookies
-      const cookieData = getUserDataFromCookies();
+      // Check for the non-httpOnly isLoggedIn cookie
+      const isLoggedInCookie = document.cookie.split(';').some(cookie =>
+        cookie.trim().startsWith('isLoggedIn=true')
+      );
 
-      // Also check if we have a token in localStorage (legacy support)
+      // Check if we have a token in localStorage
       const localToken = localStorage.getItem('authToken');
 
-      // Check if we have a user ID in localStorage (legacy support)
-      const localUserId = localStorage.getItem('userId');
-
-      // Log detailed authentication state for debugging
-      console.log('Auth refresh details:', {
-        cookieData,
-        tokenInLocalStorage: !!localToken,
-        userIdInLocalStorage: !!localUserId,
-        cookieContent: document.cookie
-      });
-
-      // Determine if user is authenticated
-      const isAuthenticated = cookieData.isLoggedIn || !!localToken;
-
-      // If we have user ID in localStorage but not in cookies, store it in cookies
-      if (!cookieData.userId && localUserId) {
-        console.log('Migrating user ID from localStorage to cookies during refresh');
-        storeUserDataInCookies({ _id: localUserId }, localToken);
-      }
+      // If either is true, consider the user logged in
+      const isAuthenticated = isLoggedInCookie || !!localToken;
 
       setIsLoggedIn(isAuthenticated);
       console.log('Refreshed login status:', isAuthenticated ? 'Logged in' : 'Not logged in');

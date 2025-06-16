@@ -9,15 +9,21 @@ const GoogleLogin = () => {
     useEffect(() => {
         const handleGoogleCallback = async () => {
             try {
-                const response = await fetch('https://s89-akhil-bookaura-2.onrender.com/router/auth/google/callback', {
+                const response = await fetch('https://s89-akhil-bookaura-3.onrender.com/router/auth/google/callback', {
                     method: 'GET',
                     credentials: 'include'
                 });
 
                 if (response.ok) {
                     const data = await response.json();
-                    login(data.user);
-                    navigate('/home');
+                    // Pass both user data and token to login function
+                    login(data.user, data.token);
+                    // Store token in localStorage for API interceptor
+                    if (data.token) {
+                        localStorage.setItem('authToken', data.token);
+                        console.log('Google auth token stored in localStorage');
+                    }
+                    navigate('/');
                 } else {
                     throw new Error('Google authentication failed');
                 }

@@ -63,6 +63,10 @@ const purchasedBookSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    epubUrl: {
+        type: String
+        // Not required for backward compatibility
+    },
     purchaseDate: {
         type: Date,
         default: Date.now
@@ -108,6 +112,28 @@ const userSchema = new mongoose.Schema({
     purchasedBooks: [purchasedBookSchema],
     lastPurchaseDate: {
         type: Date
+    },
+    // Add pending purchase data for payment recovery
+    pendingPurchase: {
+        purchaseId: {
+            type: String
+        },
+        books: [{
+            _id: mongoose.Schema.Types.ObjectId,
+            title: String,
+            author: String,
+            coverimage: String,
+            price: Number,
+            url: String,
+            epubUrl: String
+        }],
+        totalAmount: {
+            type: Number
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
+        }
     },
     code: {
         type: String

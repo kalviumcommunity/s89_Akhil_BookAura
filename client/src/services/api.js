@@ -2,31 +2,17 @@ import axios from 'axios';
 
 // Determine the API base URL based on environment
 const getBaseUrl = () => {
-  // Check if we have an environment variable (Vite uses import.meta.env)
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+  // Check if we're in development mode
+  const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+  if (isDevelopment) {
+    // Use localhost for development
+    return import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  } else {
+    // Use production URL for production
+    return import.meta.env.VITE_API_URL || 'https://s89-akhil-bookaura-3.onrender.com';
   }
 
-  // Check if we're in development or production
-  if (import.meta.env.DEV) {
-    // Local development - use localhost
-    return 'http://localhost:5000';
-  }
-
-  // Check if we're running on a specific domain
-  const hostname = window.location.hostname;
-
-  // Map hostnames to API URLs
-  if (hostname === 'bookauraba.netlify.app') {
-    return 'https://s89-akhil-bookaura-3.onrender.com';
-  } else if (hostname === 'bookaura.netlify.app') {
-    return 'https://s89-akhil-bookaura-2.onrender.com';
-  } else if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
-    return 'http://localhost:5000';
-  }
-
-  // Production default
-  return 'https://s89-akhil-bookaura-3.onrender.com';
 };
 
 // Create a base axios instance with common configuration
@@ -45,16 +31,78 @@ const api = axios.create({
   }
 });
 
-// Request interceptor to add auth token from localStorage if available
+// Request interceptor to add auth token from localStorage or cookies if available
 api.interceptors.request.use(
   (config) => {
-    // Get token from localStorage
-    const token = localStorage.getItem('authToken');
+    // First try to get token from localStorage
+    let token = localStorage.getItem('authToken');
+
+    // Log authentication status for debugging
+    console.log('Auth status check for request to:', config.url);
+    console.log('- Token in localStorage:', token ? 'Present' : 'Missing');
+    console.log('- Cookies present:', document.cookie ? 'Yes' : 'No');
+
+    // If no token in localStorage, check for cookies
+    if (!token) {
+      // Parse cookies to find auth token
+      const cookies = document.cookie.split(';');
+      console.log('- All cookies:', cookies.map(c => c.trim()).join(', '));
+
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        // Check for both possible cookie names
+        if (cookie.startsWith('authToken=')) {
+          token = cookie.substring('authToken='.length);
+          console.log('- Found token in authToken cookie');
+          break;
+        } else if (cookie.startsWith('token=')) {
+          token = cookie.substring('token='.length);
+          console.log('- Found token in token cookie');
+          break;
+        }
+      }
+    }
 
     // If token exists, add it to the Authorization header
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('- Adding auth token to request:', config.url);
+    } else {
+      console.log('- No auth token found for request:', config.url);
+
+      // Check if user is logged in via cookie
+      const isLoggedInCookie = document.cookie.split(';').some(cookie =>
+        cookie.trim().startsWith('isLoggedIn=true')
+      );
+
+      if (isLoggedInCookie) {
+        console.log('- User appears to be logged in via cookie, but no token found');
+
+        // For payment-related requests, try to recover the token from URL if available
+        if (config.url.includes('/payment') && window.location.search.includes('session_id')) {
+          const urlParams = new URLSearchParams(window.location.search);
+          const urlToken = urlParams.get('token');
+          if (urlToken) {
+            console.log('- Found token in URL parameters, using it for payment request');
+            config.headers.Authorization = `Bearer ${urlToken}`;
+            // Save it to localStorage for future requests
+            localStorage.setItem('authToken', urlToken);
+          }
+        }
+        // For profile requests, we need to handle this specially
+        else if (config.url.includes('/profile')) {
+          console.log('- Profile request detected without token, this may fail');
+        } else {
+          console.log('- Continuing request without token');
+        }
+      }
     }
+
+    // Always include credentials to send cookies
+    config.withCredentials = true;
+
+    // We're removing the cache control headers completely to avoid CORS issues
+    // If caching becomes a problem, we'll need to update the server's CORS configuration
 
     return config;
   },
@@ -103,13 +151,36 @@ api.interceptors.response.use(
       console.log('Authentication error:', error.response.data);
 
       // Check if we're already on the login page to avoid redirect loops
-      if (!window.location.pathname.includes('/login')) {
-        // Clear any stored auth data
-        localStorage.removeItem('authToken');
+      // Also check if we're on the profile page, which is a protected route
+      const isProfilePage = window.location.pathname.includes('/profile');
+      const isLoginPage = window.location.pathname.includes('/login');
 
-        // Redirect to login page
-        // Using window.location instead of navigate because this is outside of React components
-        window.location.href = '/login';
+      if (!isLoginPage) {
+        console.log('Unauthorized access detected');
+
+        // Only clear auth data and redirect if this is a protected route like profile
+        // For other routes, we'll just let the error propagate
+        if (isProfilePage) {
+          console.log('Protected route detected, redirecting to login page');
+
+          // Clear any stored auth data
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('userData');
+
+          // Clear cookies
+          document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+          document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+          document.cookie = 'isLoggedIn=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+          // Show error message
+          alert('Your session has expired. Please log in again.');
+
+          // Redirect to login page
+          // Using window.location instead of navigate because this is outside of React components
+          window.location.href = '/login';
+        } else {
+          console.log('Non-protected route, continuing with error');
+        }
       }
     }
 

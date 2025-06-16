@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import LeftNavbar from '../../components/StudyHubNavbar';
 import './Flashcards.css';
 import { Upload, Plus, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import api from '../../services/api';
 
 const Flashcards = () => {
   const [decks, setDecks] = useState([]);
@@ -21,16 +21,49 @@ const Flashcards = () => {
 
   // Fetch flashcard decks on component mount
   useEffect(() => {
-    fetchDecks();
+    // Check if user is logged in before fetching decks
+    const checkAuthAndFetchDecks = async () => {
+      // Check for auth token in localStorage or cookies
+      const token = localStorage.getItem('authToken') ||
+                    document.cookie.split(';').find(c => c.trim().startsWith('authToken=') || c.trim().startsWith('token='));
+
+      if (token) {
+        console.log('Auth token found, fetching flashcard decks');
+        fetchDecks();
+      } else {
+        console.log('No auth token found, user needs to log in');
+        setLoading(false);
+        setError('Please log in to view your flashcards');
+      }
+    };
+
+    checkAuthAndFetchDecks();
   }, []);
 
   const fetchDecks = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/flashcards/decks', {
-        withCredentials: true
-      });
-      setDecks(response.data.data);
+      const response = await api.get('/api/flashcards/decks');
+      console.log('Raw response from server:', response);
+
+      // Check if the response has the expected structure
+      if (response.data && response.data.success) {
+        // Get the data array from the nested structure
+        const decksData = response.data.data || [];
+        console.log('Fetched decks:', decksData);
+
+        // Ensure we're working with an array
+        if (Array.isArray(decksData)) {
+          setDecks(decksData);
+        } else {
+          console.error('Decks data is not an array:', decksData);
+          setDecks([]);
+        }
+      } else {
+        console.error('Unexpected response format:', response.data);
+        setDecks([]);
+      }
+
       setLoading(false);
     } catch (err) {
       console.error('Error fetching flashcard decks:', err);
@@ -42,12 +75,34 @@ const Flashcards = () => {
   const fetchDeckDetails = async (deckId) => {
     try {
       setLoading(true);
-      const response = await axios.get(`https://s89-akhil-bookaura-3.onrender.com/api/flashcards/decks/${deckId}`, {
-        withCredentials: true
-      });
-      setSelectedDeck(response.data.data);
-      setCurrentCardIndex(0);
-      setIsFlipped(false);
+      const response = await api.get(`/api/flashcards/decks/${deckId}`);
+      console.log('Raw deck details response:', response);
+
+      // Check if the response has the expected structure
+      if (response.data && response.data.success) {
+        // Get the deck data from the nested structure
+        const deckData = response.data.data;
+        console.log('Fetched deck details:', deckData);
+
+        if (deckData) {
+          // Ensure flashcards array exists
+          if (!deckData.flashcards) {
+            console.warn('Flashcards array is missing, initializing as empty array');
+            deckData.flashcards = [];
+          }
+
+          setSelectedDeck(deckData);
+          setCurrentCardIndex(0);
+          setIsFlipped(false);
+        } else {
+          console.error('Deck data is missing in the response');
+          setError('Failed to load flashcard deck. Data is missing.');
+        }
+      } else {
+        console.error('Unexpected response format:', response.data);
+        setError('Failed to load flashcard deck. Unexpected response format.');
+      }
+
       setLoading(false);
     } catch (err) {
       console.error('Error fetching deck details:', err);
@@ -109,7 +164,7 @@ const Flashcards = () => {
 
       // Create form data
       const formData = new FormData();
-      formData.append('pdfFile', uploadFile);
+      formData.append('pdf', uploadFile); // Changed from 'pdfFile' to 'pdf' to match server expectation
       formData.append('title', deckTitle);
       formData.append('description', deckDescription);
 
@@ -117,8 +172,7 @@ const Flashcards = () => {
       setUploadProgress(10);
 
       // First phase: Upload the file
-      const response = await axios.post('https://s89-akhil-bookaura-3.onrender.com/api/flashcards/generate', formData, {
-        withCredentials: true,
+      const response = await api.post('/api/flashcards/generate', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         },
@@ -159,22 +213,78 @@ const Flashcards = () => {
       await fetchDecks();
 
       // Show success message with the number of flashcards generated
-      const flashcardCount = response.data.data.flashcardCount;
-      alert(`Success! Generated ${flashcardCount} flashcards from your PDF.`);
+      console.log('Response from server:', response.data);
+
+      const responseData = response.data;
+      let flashcardCount = 'multiple';
+      let responseDeckTitle = ''; // Renamed from deckTitle to avoid conflict with state variable
+
+      if (responseData && responseData.data) {
+        if (responseData.data.flashcardCount) {
+          flashcardCount = responseData.data.flashcardCount;
+        }
+        if (responseData.data.title) {
+          responseDeckTitle = responseData.data.title;
+        }
+      }
+
+      const successMessage = responseDeckTitle
+        ? `Success! Generated ${flashcardCount} flashcards in deck "${responseDeckTitle}".`
+        : `Success! Generated ${flashcardCount} flashcards from your PDF.`;
+
+      alert(successMessage);
 
     } catch (err) {
+      // Log the full error object for debugging
       console.error('Error uploading PDF:', err);
-      setIsUploading(false);
+      console.error('Error name:', err.name);
+      console.error('Error message:', err.message);
+      console.error('Error stack:', err.stack);
 
-      // Extract error message from response if available
-      const errorMessage = err.response && err.response.data && err.response.data.message
-        ? err.response.data.message
-        : 'Failed to generate flashcards. Please try again.';
+      // Try to extract detailed error information
+      let errorDetails = '';
+
+      try {
+        if (err.response) {
+          console.error('Error response:', err.response);
+          errorDetails = `Status: ${err.response.status}`;
+
+          if (err.response.data) {
+            console.error('Error data:', err.response.data);
+            if (err.response.data.message) {
+              errorDetails += ` - ${err.response.data.message}`;
+            }
+            if (err.response.data.error) {
+              errorDetails += ` (${err.response.data.error})`;
+            }
+          }
+        } else if (err.request) {
+          // Request was made but no response received
+          errorDetails = 'No response received from server. Please check your connection.';
+        } else {
+          // Error in setting up the request
+          errorDetails = err.message || 'Unknown error occurred';
+        }
+      } catch (parseError) {
+        console.error('Error while parsing error details:', parseError);
+        errorDetails = 'Error information could not be processed';
+      }
+
+      console.error('Error details:', errorDetails);
+
+      // Create a user-friendly error message
+      const errorMessage = 'Failed to generate flashcards. ' +
+        (errorDetails ? `Error: ${errorDetails}` : 'Please try again later.');
 
       alert(errorMessage);
+
+      // Reset UI state
+      setIsUploading(false);
+      setUploadProgress(0);
     } finally {
-      // Ensure progress is reset if there was an error
+      // Ensure modal stays open if there was an error so user can try again
       if (isUploading) {
+        setIsUploading(false);
         setUploadProgress(0);
       }
     }
@@ -201,6 +311,7 @@ const Flashcards = () => {
   const handleBackToDeckList = () => {
     setSelectedDeck(null);
   };
+
 
   // Render the upload modal
   const renderUploadModal = () => {
@@ -357,10 +468,19 @@ const Flashcards = () => {
     }
 
     if (error) {
+      // Special handling for authentication errors
+      if (error.includes('Please log in')) {
+        return (
+          <div className="auth-error">
+            <p>{error}</p>
+            <a href="/login" className="login-button">Log In</a>
+          </div>
+        );
+      }
       return <div className="error">{error}</div>;
     }
 
-    if (decks.length === 0) {
+    if (!decks || decks.length === 0) {
       return (
         <div className="no-decks">
           <p>You don't have any flashcard decks yet.</p>
@@ -387,7 +507,7 @@ const Flashcards = () => {
         </div>
 
         <div className="deck-grid">
-          {decks.map(deck => (
+          {Array.isArray(decks) && decks.map(deck => (
             <div key={deck._id} className="deck-card">
               <div className="deck-card-content">
                 <h3>{deck.title}</h3>

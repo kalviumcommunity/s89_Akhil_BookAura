@@ -12,6 +12,8 @@ const cors = require('cors');
 const session = require('express-session');
 const passport = require('passport');
 const cookieParser = require('cookie-parser');
+//using cronjob to keep the site active because i have deployed in render free version 
+require('./CronJob');
 
 // Set global module paths for easier imports
 global.__basedir = __dirname;
@@ -43,42 +45,20 @@ require('./passport.config');
 const app = express();
 const MONGODB_URI = process.env.MONGODB_URI;
 
-// Middleware
-// First, handle preflight requests with a simple CORS handler
-app.use((req, res, next) => {
-    // Only handle preflight OPTIONS requests
-    if (req.method === 'OPTIONS') {
-        console.log('Handling preflight request from:', req.headers.origin);
-
-        // Set CORS headers for preflight requests
-        res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Cache-Control, Pragma, X-Auth-Token, X-User-ID, X-HTTP-Method-Override');
-        res.header('Access-Control-Allow-Credentials', 'true');
-        res.header('Access-Control-Max-Age', '86400'); // 24 hours
-
-        // Respond with 204 No Content for preflight requests
-        return res.status(204).end();
-    }
-
-    // Continue to the next middleware for non-preflight requests
-    next();
-});
-
-// Then use the regular CORS middleware for actual requests
+// Enhanced CORS Middleware
 app.use(cors({
     origin: function(origin, callback) {
         // Define allowed origins
         const allowedOrigins = [
             'http://localhost:5173',  // Local development
             'http://localhost:5174',  // Alternative local port
-            'http://localhost:3000',  // Another common local port
+            'http://localhost:3000',  // Alternative local port
             'http://127.0.0.1:5173',  // Local IP address
             'http://127.0.0.1:5174',  // Local IP address alternative port
             'http://127.0.0.1:3000',  // Local IP address common port
             'https://s89-akhil-book-aura.vercel.app',
             'https://s89-akhil-book-aura.netlify.app',
-            'https://bookauraba.netlify.app',
+            'https://bookauraba.netlify.app',  // Current production URL
             'https://bookaura.netlify.app',
             'https://bookaura.vercel.app',
             process.env.FRONTEND_URL // From environment variable if set
@@ -107,7 +87,7 @@ app.use(cors({
 
         // In production, we'll still allow all origins for now to prevent issues
         // but log it for monitoring
-        console.log('CORS - Origin not in allowed list:', origin);
+        console.log('CORS - Origin not in allowed list, but allowing anyway:', origin);
         return callback(null, true);
     },
     credentials: true,
@@ -124,15 +104,47 @@ app.use(cors({
         'Pragma',
         'X-Auth-Token',
         'X-User-ID',
-        'X-HTTP-Method-Override'
+        'X-HTTP-Method-Override',
+        'Expires',
+        'Cookie'
     ],
     exposedHeaders: ['Content-Length', 'Content-Type', 'Set-Cookie'],
-    maxAge: 86400 // 24 hours in seconds - how long the browser should cache CORS response
+    maxAge: 86400, // 24 hours in seconds - how long the browser should cache CORS response
+    preflightContinue: false, // Handle preflight requests immediately
+    optionsSuccessStatus: 200 // Some legacy browsers choke on 204
 }));
+
+// Additional CORS middleware for extra safety
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+
+    // Set CORS headers on every response
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Cache-Control, Pragma, Expires, Cookie');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Type, Set-Cookie');
+    res.setHeader('Access-Control-Max-Age', '86400');
+
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        console.log('🌐 Preflight request handled - Origin:', origin, 'Path:', req.path);
+        return res.status(200).end();
+    }
+
+    next();
+});
 app.use(express.json());
 app.use(cookieParser());
 
+
 // Session middleware
+// Log session configuration for debugging
+console.log('Configuring session middleware:');
+console.log('- NODE_ENV:', process.env.NODE_ENV);
+console.log('- JWT_SECRET:', process.env.JWT_SECRET ? 'Set' : 'Not set');
+
+// Configure session with improved settings
 app.use(session({
     secret: process.env.JWT_SECRET || 'fallback-secret-key-for-development',
     resave: false,
@@ -142,19 +154,23 @@ app.use(session({
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Required for cross-site cookies in modern browsers
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         httpOnly: true,
+        path: '/', // Ensure cookie is available on all paths
+    },
+    proxy: true, // Always trust the reverse proxy (needed for Render)
+    // Even with MemoryStore, we need to ensure it's properly configured
+    store: undefined, // Using default MemoryStore for simplicity
+    name: 'bookaura.sid' // Custom name to avoid conflicts
+}));
 
-    proxy: process.env.NODE_ENV === 'production', // Trust the reverse proxy in production
-
-    store: process.env.NODE_ENV === 'production'
-        ? undefined
-        : undefined
-}}));
-
-
-if (process.env.NODE_ENV === 'production' && !app.get('trust proxy')) {
-    console.warn('Warning: You should set "trust proxy" when behind a reverse proxy like Nginx or when deployed to cloud platforms');
-    app.set('trust proxy', 1); // Trust first proxy
+// Add warning about MemoryStore in production
+if (process.env.NODE_ENV === 'production') {
+    console.warn('WARNING: Using MemoryStore in production is not recommended.');
+    console.warn('Consider implementing a persistent session store like MongoDB or Redis.');
 }
+
+// Set trust proxy for all environments when deployed
+console.log('Setting trust proxy for proper handling of secure cookies behind a proxy');
+app.set('trust proxy', 1); // Trust first proxy
 
 // Initialize Passport
 app.use(passport.initialize());
@@ -162,39 +178,83 @@ app.use(passport.session());
 
 // Routers
 const userRouter = require('./routes/userRouter');
-const bookRouter = require('./routes/BookRouter');
 const paymentRoutes = require("./routes/Payment");
 const pdfProxyRoutes = require("./routes/PdfProxy");
 const cartRouter = require('./routes/CartRouter');
 const eventRouter = require('./routes/EventRouter');
-const registerFlashcardRoutes = require('./routes/FlashcardRouter');
 const chatHistoryRouter = require('./routes/ChatHistoryRouter');
+const flashcardRouter = require('./routes/FlashcardRouter');
+const simpleBookRouter = require('./routes/SimpleBookRouter'); // Only Cloudinary-based book router
 
 // Log loaded routers for debugging
 console.log('Loaded routers:');
 console.log('- userRouter:', typeof userRouter);
-console.log('- bookRouter:', typeof bookRouter);
 console.log('- paymentRoutes:', typeof paymentRoutes);
 console.log('- pdfProxyRoutes:', typeof pdfProxyRoutes);
 console.log('- cartRouter:', typeof cartRouter);
 console.log('- eventRouter:', typeof eventRouter);
-console.log('- registerFlashcardRoutes:', typeof registerFlashcardRoutes);
 console.log('- chatHistoryRouter:', typeof chatHistoryRouter);
+console.log('- flashcardRouter:', typeof flashcardRouter);
+console.log('- simpleBookRouter:', typeof simpleBookRouter);
 
 app.use("/api/payment", paymentRoutes);
 app.use("/api/pdf", pdfProxyRoutes);
 app.use("/api/cart", cartRouter);
 app.use("/api/events", eventRouter);
-// Register flashcard routes directly on the app
-registerFlashcardRoutes(app);
 app.use("/api/chat-history", chatHistoryRouter);
+app.use("/api/flashcards", flashcardRouter);
 
 app.use('/router', userRouter);
-app.use('/router', bookRouter);
+app.use('/api/books', simpleBookRouter); // Main book API - now using Cloudinary
+app.use('/api/simple-books', simpleBookRouter); // Alias for compatibility
+
+// Global OPTIONS handler for any unhandled preflight requests
+app.options('*', (req, res) => {
+    const origin = req.headers.origin;
+
+    // Match the main CORS configuration
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Cache-Control, Pragma, Expires, Cookie');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Type, Set-Cookie');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+    console.log('🌐 Global OPTIONS handler - Origin:', origin, 'Path:', req.path);
+    res.status(200).end();
+});
+
+// Root endpoint
+app.get('/', (_, res) => {
+    res.status(200).json({
+        message: 'BookAura Server is running!',
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        endpoints: {
+            health: '/health',
+            test: '/test',
+            books: '/api/books',
+            auth: '/router'
+        }
+    });
+});
 
 // Health check endpoint
 app.get('/health', (_, res) => {
-    res.status(200).json({ status: 'ok', message: 'Server is running' });
+    res.status(200).json({
+        status: 'ok',
+        message: 'Server is running',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
+});
+
+// Simple test endpoint for CORS testing
+app.get('/test', (req, res) => {
+    res.status(200).json({
+        message: 'CORS test successful',
+        origin: req.headers.origin,
+        timestamp: new Date().toISOString()
+    });
 });
 
 // Debug endpoint to check authentication status

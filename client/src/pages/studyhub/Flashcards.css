@@ -6,10 +6,9 @@
 }
 
 .flashcards-content {
-  margin-left: 200px; /* Match the width of StudyHubNavbar */
+  margin-left: 150px; /* Match the width of StudyHubNavbar */
   width: calc(100% - 200px);
   padding: 30px;
-  transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
 }
 
 .flashcards-header {
@@ -161,7 +160,7 @@
   margin-bottom: 20px;
 }
 
-.loading, .error {
+.loading, .error, .auth-error {
   text-align: center;
   padding: 40px;
   color: #666;
@@ -176,33 +175,38 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px;
-  background-color: #fdf7f7;
+  justify-content: center;
+  background-color: white;
   border-radius: 10px;
+  padding: 40px 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  text-align: center;
   margin: 40px auto;
   max-width: 600px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .auth-error p {
+  color: #666;
+  font-size: 1.1rem;
   margin-bottom: 20px;
-  font-size: 16px;
-  color: #e74c3c;
 }
 
-.auth-error .login-button {
+.login-button {
   display: inline-block;
   background-color: #A67C52;
   color: white;
+  border: none;
+  border-radius: 6px;
   padding: 10px 20px;
-  border-radius: 5px;
-  text-decoration: none;
+  font-size: 1rem;
   font-weight: 500;
-  transition: background-color 0.3s ease;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.2s;
 }
 
-.auth-error .login-button:hover {
-  background-color: #8a6642;
+.login-button:hover {
+  background-color: #8A6642;
 }
 
 /* Flashcard Study Interface */
@@ -608,36 +612,7 @@
     margin-left: 0;
     width: 100%;
     padding: 20px;
-    padding-top: 60px; /* Add space for mobile navbar button */
-  }
-
-  .deck-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  }
-
-  .flashcard-study {
-    padding: 10px;
-  }
-
-  .study-header {
-    margin-bottom: 20px;
-  }
-
-  .flashcard {
-    height: 250px;
-  }
-
-  .back-button {
-    position: relative;
-    margin-bottom: 15px;
-  }
-}
-
-/* Additional adjustments for very small screens */
-@media (max-width: 480px) {
-  .flashcards-content {
-    padding: 15px;
-    padding-top: 60px;
+    margin-top: 60px; /* Add space for mobile navbar */
   }
 
   .deck-grid {
@@ -645,11 +620,15 @@
   }
 
   .flashcard {
-    height: 200px;
+    height: 250px;
   }
 
-  .upload-modal {
-    padding: 20px;
+  .study-header {
+    margin-bottom: 20px;
+  }
+
+  .back-button {
+    position: relative;
+    margin-bottom: 15px;
   }
 }
-

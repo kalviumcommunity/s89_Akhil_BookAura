@@ -4,7 +4,7 @@ import { CheckCircle, ArrowLeft, ShoppingBag } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useCart } from './cart';
-import axios from 'axios';
+import api from '../../services/api';
 import './SuccessPage.css';
 import LoadingAnimation from '../../components/LoadingAnimation';
 
@@ -32,44 +32,72 @@ const SuccessPage = () => {
     setSaveStatus('saving');
     setErrorDetails(null);
 
-    // Get userId from localStorage if available
-    const userId = localStorage.getItem('userId');
-    console.log('User login status for recovery:', localStorage.getItem('authToken') ? 'Logged in' : 'Not logged in');
-
     try {
-      // First check if the purchase already exists
-      const verifyResponse = await axios.get(
-        `https://s89-akhil-bookaura-3.onrender.com/api/payment/verify-purchase?purchaseId=${purchaseId}${userId ? `&userId=${userId}` : ''}`,
-        {
-          withCredentials: true,
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-          }
-        }
+      // First check if the purchase already exists or get pending data
+      const pendingResponse = await api.get(
+        `/api/payment/get-pending-purchase?purchaseId=${purchaseId}`
       );
 
-      if (verifyResponse.data.success) {
-        console.log('Purchase found during recovery:', verifyResponse.data.purchase);
+      if (pendingResponse.data.success) {
+        if (pendingResponse.data.alreadyExists) {
+          // Purchase already exists
+          setOrderDetails(pendingResponse.data.purchase);
+          setSaveStatus('success');
+          clearCart();
+          setIsLoading(false);
+          return;
+        } else if (pendingResponse.data.pendingPurchase) {
+          // Found pending purchase data, use it for recovery
+          console.log('📦 Using pending purchase data for manual recovery');
+          const pendingBooks = pendingResponse.data.pendingPurchase.books;
 
-        // If the purchase has a userId and we don't have it in localStorage, save it
-        if (verifyResponse.data.purchase.userId && !userId) {
-          localStorage.setItem('userId', verifyResponse.data.purchase.userId);
+          const processedCartItems = pendingBooks.map(book => {
+            const requiredFields = ['_id', 'title', 'author', 'coverimage', 'price'];
+            const missing = requiredFields.filter(field => {
+              if (field === 'price') {
+                return book[field] === undefined || book[field] === null;
+              }
+              return !book[field];
+            });
+            if (missing.length > 0) {
+              console.error('Missing book fields:', missing, 'Book:', book);
+              throw new Error(`Missing book fields: ${missing.join(', ')}`);
+            }
+
+            return {
+              ...book,
+              url: book.url || 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1746792433/bookstore/bookFiles/zspcnbobqoimglk83yz6'
+            };
+          });
+
+          // Save purchase with pending data
+          const response = await api.post(
+            '/api/payment/save-purchase',
+            {
+              sessionId: sessionId || 'manual-recovery',
+              purchaseId,
+              books: processedCartItems
+            }
+          );
+
+          if (response.data.success) {
+            setSaveStatus('success');
+            clearCart();
+            setIsLoading(false);
+            return;
+          } else {
+            throw new Error('Server returned error during recovery');
+          }
         }
-
-        setOrderDetails(verifyResponse.data.purchase);
-        setSaveStatus('success');
-        clearCart();
-        setIsLoading(false);
-        return;
       }
     } catch (error) {
-      console.log('Purchase not found, will attempt to create it:', error.message);
+      console.log('No pending purchase data found, trying with cart items');
     }
 
-    // If we get here, the purchase doesn't exist and needs to be created
+    // Fallback to cart items if no pending data found
     if (!cartItems || cartItems.length === 0) {
       setErrorDetails({
-        message: 'Cart is empty. Cannot recover purchase without cart data.',
+        message: 'Cart is empty and no pending purchase data found. Cannot recover purchase.',
         timestamp: new Date().toISOString()
       });
       setSaveStatus('error');
@@ -80,8 +108,17 @@ const SuccessPage = () => {
     try {
       const processedCartItems = cartItems.map(book => {
         const requiredFields = ['_id', 'title', 'author', 'coverimage', 'price'];
-        const missing = requiredFields.filter(field => !book[field]);
-        if (missing.length > 0) throw new Error('Missing book fields');
+        const missing = requiredFields.filter(field => {
+          // Special handling for price field - 0 is a valid price
+          if (field === 'price') {
+            return book[field] === undefined || book[field] === null;
+          }
+          return !book[field];
+        });
+        if (missing.length > 0) {
+          console.error('Missing book fields:', missing, 'Book:', book);
+          throw new Error(`Missing book fields: ${missing.join(', ')}`);
+        }
 
         return {
           ...book,
@@ -89,32 +126,12 @@ const SuccessPage = () => {
         };
       });
 
-      // Get userId from localStorage or other sources
-      let recoveryUserId = localStorage.getItem('userId');
-
-      // If we don't have a userId, try to get it from the purchase
-      if (!recoveryUserId && verifyResponse?.data?.purchase?.userId) {
-        recoveryUserId = verifyResponse.data.purchase.userId;
-        localStorage.setItem('userId', recoveryUserId);
-        console.log('Using userId from purchase:', recoveryUserId);
-      }
-
-      console.log('Saving purchase during recovery for user:', recoveryUserId);
-
-      const response = await axios.post(
-        'https://s89-akhil-bookaura-3.onrender.com/api/payment/save-purchase',
+      const response = await api.post(
+        '/api/payment/save-purchase',
         {
           sessionId: sessionId || 'manual-recovery',
           purchaseId,
-          books: processedCartItems,
-          userId: recoveryUserId // Include userId in the request
-        },
-        {
-          withCredentials: true,
-          timeout: 30000,
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-          }
+          books: processedCartItems
         }
       );
 
@@ -151,97 +168,117 @@ const SuccessPage = () => {
       setHasProcessed(true); // ✅ Prevent re-processing
       setSaveStatus('saving');
 
-      // Get userId from localStorage if available
-      const userId = localStorage.getItem('userId');
-      console.log('User login status:', localStorage.getItem('authToken') ? 'Logged in' : 'Not logged in');
-
       try {
-        // Verify Stripe session
-        // Ensure userId is defined before adding it to the URL
-        const userIdParam = userId ? `&userId=${userId}` : '';
+        // Check for token in URL (might be present from Google OAuth redirect)
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlToken = urlParams.get('token');
 
-        const sessionResponse = await axios.get(
-          `https://s89-akhil-bookaura-3.onrender.com/api/payment/verify-session?sessionId=${sessionId}${userIdParam}`,
-          {
-            withCredentials: true,
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-            }
-          }
+        // If token is in URL, store it for future requests
+        if (urlToken) {
+          console.log('Found token in URL, storing for authentication');
+          localStorage.setItem('authToken', urlToken);
+
+          // Also set a client-side cookie for isLoggedIn status
+          document.cookie = `isLoggedIn=true; path=/; max-age=${7 * 24 * 60 * 60}`;
+        }
+
+        // Verify Stripe session
+        const sessionResponse = await api.get(
+          `/api/payment/verify-session?sessionId=${sessionId}`
         );
 
         if (!sessionResponse.data.success) {
-          console.log('Session verification failed:', sessionResponse.data);
           setSaveStatus('error');
           setIsLoading(false);
           return;
         }
 
-        // Get userId from session if not available in localStorage
-        const sessionUserId = sessionResponse.data.session.userId;
-        if (sessionUserId && !userId) {
-          console.log('Using userId from session:', sessionUserId);
-          localStorage.setItem('userId', sessionUserId);
-        }
-
-        // Check if purchase already exists
+        // Check if purchase already exists or get pending purchase data
         try {
-          // Safely construct the userId parameter
-          let verifyUserIdParam = '';
-          try {
-            const verifyUserId = userId || sessionResponse?.data?.session?.userId;
-            if (verifyUserId) {
-              verifyUserIdParam = `&userId=${verifyUserId}`;
-            }
-          } catch (err) {
-            console.log('Error constructing userId param:', err.message);
-          }
+          const pendingResponse = await api.get(
+            `/api/payment/get-pending-purchase?purchaseId=${purchaseId}`
+          );
 
-          try {
-            const verifyResponse = await axios.get(
-              `https://s89-akhil-bookaura-3.onrender.com/api/payment/verify-purchase?purchaseId=${purchaseId}${verifyUserIdParam}`,
-              {
-                withCredentials: true,
-                headers: {
-                  'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-                }
-              }
-            );
-
-            if (verifyResponse.data.success) {
-              console.log('Purchase already exists:', verifyResponse.data.purchase);
-              setOrderDetails(verifyResponse.data.purchase);
+          if (pendingResponse.data.success) {
+            if (pendingResponse.data.alreadyExists) {
+              // Purchase already exists
+              setOrderDetails(pendingResponse.data.purchase);
               setSaveStatus('success');
               clearCart(); // ✅ Clear cart only after handling
               setIsLoading(false);
               return;
-            }
-          } catch (verifyError) {
-            // If we get a 404, it means the purchase doesn't exist yet, which is expected
-            // We'll continue with creating it
-            if (verifyError.response?.status === 404) {
-              console.log('Purchase not found (404), will create a new one');
-            } else {
-              // For other errors, log but continue
-              console.error('Purchase verification error:', verifyError.message, verifyError.response?.status);
+            } else if (pendingResponse.data.pendingPurchase) {
+              // Found pending purchase data, use it instead of cart
+              console.log('📦 Using pending purchase data for recovery');
+              const pendingBooks = pendingResponse.data.pendingPurchase.books;
+
+              const processedCartItems = pendingBooks.map(book => {
+                const requiredFields = ['_id', 'title', 'author', 'coverimage', 'price'];
+                const missing = requiredFields.filter(field => {
+                  if (field === 'price') {
+                    return book[field] === undefined || book[field] === null;
+                  }
+                  return !book[field];
+                });
+                if (missing.length > 0) {
+                  console.error('Missing book fields:', missing, 'Book:', book);
+                  throw new Error(`Missing book fields: ${missing.join(', ')}`);
+                }
+
+                return {
+                  ...book,
+                  url: book.url || 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1746792433/bookstore/bookFiles/zspcnbobqoimglk83yz6'
+                };
+              });
+
+              // Save purchase with pending data
+              const response = await api.post(
+                '/api/payment/save-purchase',
+                {
+                  sessionId,
+                  purchaseId,
+                  books: processedCartItems
+                }
+              );
+
+              if (response.data.success) {
+                setSaveStatus('success');
+                clearCart();
+                setIsLoading(false);
+                return;
+              } else {
+                throw new Error('Server returned error during save');
+              }
             }
           }
-        } catch (error) {
-          console.log('Purchase verification outer error:', error.message);
-          // Continue if purchase not found
+        } catch (pendingError) {
+          console.log('No pending purchase data found, trying with cart items');
         }
 
+        // Fallback to cart items if no pending data found
         if (cartItems.length === 0) {
-          console.log('Cart is empty, cannot save purchase');
           setSaveStatus('error');
+          setErrorDetails({
+            message: 'Cart is empty. Cannot save purchase without cart data.',
+            timestamp: new Date().toISOString()
+          });
           setIsLoading(false);
           return;
         }
 
         const processedCartItems = cartItems.map(book => {
           const requiredFields = ['_id', 'title', 'author', 'coverimage', 'price'];
-          const missing = requiredFields.filter(field => !book[field]);
-          if (missing.length > 0) throw new Error('Missing book fields');
+          const missing = requiredFields.filter(field => {
+            // Special handling for price field - 0 is a valid price
+            if (field === 'price') {
+              return book[field] === undefined || book[field] === null;
+            }
+            return !book[field];
+          });
+          if (missing.length > 0) {
+            console.error('Missing book fields:', missing, 'Book:', book);
+            throw new Error(`Missing book fields: ${missing.join(', ')}`);
+          }
 
           return {
             ...book,
@@ -249,53 +286,13 @@ const SuccessPage = () => {
           };
         });
 
-        // Update userId with session data if available
-        let updatedUserId = userId;
-
-        try {
-          // Safely access session userId
-          if (sessionResponse?.data?.session?.userId) {
-            updatedUserId = updatedUserId || sessionResponse.data.session.userId;
-
-            // Store userId in localStorage if we got it from the session
-            if (!userId && updatedUserId) {
-              localStorage.setItem('userId', updatedUserId);
-              console.log('Stored userId from session:', updatedUserId);
-            }
-          }
-        } catch (err) {
-          console.log('Error accessing session userId:', err.message);
-        }
-
-        // Fallback if we still don't have a userId
-        if (!updatedUserId) {
-          console.log('No userId available, using fallback');
-          // Try to extract from URL if present in query params
-          const urlParams = new URLSearchParams(window.location.search);
-          const urlUserId = urlParams.get('user_id');
-          if (urlUserId) {
-            updatedUserId = urlUserId;
-            localStorage.setItem('userId', urlUserId);
-            console.log('Using userId from URL:', urlUserId);
-          }
-        }
-
-        console.log('Saving purchase for user:', updatedUserId);
-
-        const response = await axios.post(
-          'https://s89-akhil-bookaura-3.onrender.com/api/payment/save-purchase',
+        // Single attempt to save purchase - no retries
+        const response = await api.post(
+          '/api/payment/save-purchase',
           {
             sessionId,
             purchaseId,
-            books: processedCartItems,
-            userId: updatedUserId // Include userId in the request
-          },
-          {
-            withCredentials: true,
-            timeout: 15000,
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-            }
+            books: processedCartItems
           }
         );
 
@@ -303,6 +300,11 @@ const SuccessPage = () => {
           setSaveStatus('success');
           clearCart();
         } else {
+          setErrorDetails({
+            message: 'Server returned error',
+            responseData: response.data,
+            timestamp: new Date().toISOString()
+          });
           setSaveStatus('error');
         }
       } catch (error) {
@@ -322,66 +324,7 @@ const SuccessPage = () => {
 
         // Update state with error details
         setErrorDetails(details);
-
-        // Retry once if timeout or server error
-        if (error.code === 'ECONNABORTED' || (error.response && error.response.status >= 500)) {
-          console.log('Attempting retry for save-purchase...');
-          try {
-            // Use the same userId or get it again if needed
-            let retryUserId = userId;
-
-            try {
-              // Safely access session userId
-              if (sessionResponse?.data?.session?.userId) {
-                retryUserId = retryUserId || sessionResponse.data.session.userId;
-              }
-            } catch (err) {
-              console.log('Error accessing session userId during retry:', err.message);
-            }
-
-            // If we still don't have a userId, try to get it from localStorage again
-            if (!retryUserId) {
-              retryUserId = localStorage.getItem('userId');
-              console.log('Retry using userId from localStorage:', retryUserId);
-            }
-
-            console.log('Retrying save purchase for user:', retryUserId);
-
-            const retryResponse = await axios.post(
-              'https://s89-akhil-bookaura-3.onrender.com/api/payment/save-purchase',
-              {
-                sessionId,
-                purchaseId,
-                books: cartItems.map(book => ({
-                  ...book,
-                  url: book.url || 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1746792433/bookstore/bookFiles/zspcnbobqoimglk83yz6'
-                })),
-                userId: retryUserId // Include userId in the request
-              },
-              {
-                withCredentials: true,
-                timeout: 20000,
-                headers: {
-                  'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-                }
-              }
-            );
-
-            if (retryResponse.data.success) {
-              console.log('Retry successful');
-              setSaveStatus('success');
-              clearCart();
-            } else {
-              console.error('Retry failed with response:', retryResponse.data);
-              setSaveStatus('error');
-            }
-          } catch (retryError) {
-            console.error('Retry error:', retryError);
-            setSaveStatus('error');
-          }
-        } else {
-          setSaveStatus('error');
-        }
+        setSaveStatus('error');
       } finally {
         setIsLoading(false);
       }
@@ -431,22 +374,10 @@ const SuccessPage = () => {
 
                   <div className="recovery-actions">
                     <button
-                      className="retry-button"
-                      onClick={() => {
-                        setIsLoading(true);
-                        setSaveStatus('pending');
-                        setHasProcessed(false);
-                        setErrorDetails(null);
-                      }}
-                    >
-                      Retry Normal Process
-                    </button>
-
-                    <button
                       className="recovery-button"
                       onClick={recoverPurchase}
                     >
-                      Advanced Recovery
+                      Try Again
                     </button>
                   </div>
                 </>

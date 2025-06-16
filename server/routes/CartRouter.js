@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { loadModel } = require('../utils/modelLoader');
 const User = loadModel('userModel');
-const Book = loadModel('BookModel');
+const Book = require('../models/Book'); // Use direct import for Book model
 const { verifyToken } = require('../middleware/auth');
 
 // Load environment variables using our centralized utility

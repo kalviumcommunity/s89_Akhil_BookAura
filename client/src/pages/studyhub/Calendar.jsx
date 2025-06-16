@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
 import moment from 'moment';
 import StudyHubNavbar from '../../components/StudyHubNavbar';
 import { Plus, X, Trash2 } from 'lucide-react';
+import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 // FullCalendar imports
 import FullCalendar from '@fullcalendar/react';
@@ -17,6 +18,7 @@ const Calendar = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { isLoggedIn, user } = useAuth();
 
   // State for modal
   const [showModal, setShowModal] = useState(false);
@@ -36,21 +38,24 @@ const Calendar = () => {
 
   // Fetch events from the server
   const fetchEvents = useCallback(async (start, end) => {
+    if (!isLoggedIn) {
+      console.log('User not logged in, skipping event fetch');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
+      console.log('Fetching events for date range:', start, 'to', end);
+      console.log('User authentication status:', isLoggedIn ? 'Logged in' : 'Not logged in');
 
-      // Get auth token from localStorage
-      const authToken = localStorage.getItem('authToken');
-
-      const response = await axios.get('https://s89-akhil-bookaura-3.onrender.com/api/events', {
-        params: { start, end },
-        withCredentials: true,
-        headers: {
-          'Authorization': `Bearer ${authToken || ''}`
-        }
+      const response = await api.get('/api/events', {
+        params: { start, end }
       });
 
       if (response.data.success) {
+        console.log('Events fetched successfully:', response.data.data.length, 'events');
+
         // Transform events to the format expected by FullCalendar
         const formattedEvents = response.data.data.map(event => ({
           id: event._id,
@@ -65,21 +70,22 @@ const Calendar = () => {
 
         setEvents(formattedEvents);
       } else {
+        console.error('Failed to fetch events:', response.data);
         setError('Failed to fetch events');
       }
     } catch (err) {
       console.error('Error fetching events:', err);
 
-      // Check if this is an authentication error
-      if (err.response && err.response.status === 401) {
-        setError('You need to be logged in to view your calendar. Please log in and try again.');
-      } else {
-        setError('Failed to fetch events. Please try again later.');
+      if (err.response) {
+        console.error('Response status:', err.response.status);
+        console.error('Response data:', err.response.data);
       }
+
+      setError('Failed to fetch events. Please try again later.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isLoggedIn]);
 
   // Initial fetch
   useEffect(() => {
@@ -152,7 +158,29 @@ const Calendar = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!isLoggedIn) {
+      setError('You must be logged in to create or edit events');
+      return;
+    }
+
+    // Validate form
+    if (!formData.title || !formData.start || !formData.end) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    // Validate dates
+    const startDate = new Date(formData.start);
+    const endDate = new Date(formData.end);
+
+    if (endDate < startDate) {
+      setError('End date cannot be before start date');
+      return;
+    }
+
     try {
+      console.log('Submitting event form, user is logged in:', isLoggedIn);
+
       const eventData = {
         title: formData.title,
         description: formData.description,
@@ -167,18 +195,13 @@ const Calendar = () => {
       let response;
 
       if (modalMode === 'add') {
-        // Get auth token from localStorage
-        const authToken = localStorage.getItem('authToken');
-
         // Create new event
-        response = await axios.post('https://s89-akhil-bookaura-3.onrender.com/api/events', eventData, {
-          withCredentials: true,
-          headers: {
-            'Authorization': `Bearer ${authToken || ''}`
-          }
-        });
+        console.log('Creating new event:', eventData);
+        response = await api.post('/api/events', eventData);
 
         if (response.data.success) {
+          console.log('Event created successfully:', response.data.data);
+
           // Add the new event to the state
           const newEvent = {
             id: response.data.data._id,
@@ -194,18 +217,13 @@ const Calendar = () => {
           setEvents([...events, newEvent]);
         }
       } else {
-        // Get auth token from localStorage
-        const authToken = localStorage.getItem('authToken');
-
         // Update existing event
-        response = await axios.put(`https://s89-akhil-bookaura-3.onrender.com/api/events/${selectedEvent.id}`, eventData, {
-          withCredentials: true,
-          headers: {
-            'Authorization': `Bearer ${authToken || ''}`
-          }
-        });
+        console.log('Updating event:', selectedEvent.id, eventData);
+        response = await api.put(`/api/events/${selectedEvent.id}`, eventData);
 
         if (response.data.success) {
+          console.log('Event updated successfully:', response.data.data);
+
           // Update the event in the state
           setEvents(events.map(event =>
             event.id === selectedEvent.id
@@ -243,18 +261,20 @@ const Calendar = () => {
   const handleDeleteEvent = async () => {
     if (!selectedEvent) return;
 
-    try {
-      // Get auth token from localStorage
-      const authToken = localStorage.getItem('authToken');
+    if (!isLoggedIn) {
+      setError('You must be logged in to delete events');
+      return;
+    }
 
-      const response = await axios.delete(`https://s89-akhil-bookaura-3.onrender.com/api/events/${selectedEvent.id}`, {
-        withCredentials: true,
-        headers: {
-          'Authorization': `Bearer ${authToken || ''}`
-        }
-      });
+    try {
+      console.log('Deleting event:', selectedEvent.id);
+      console.log('User authentication status:', isLoggedIn ? 'Logged in' : 'Not logged in');
+
+      const response = await api.delete(`/api/events/${selectedEvent.id}`);
 
       if (response.data.success) {
+        console.log('Event deleted successfully');
+
         // Remove the event from the state
         setEvents(events.filter(event => event.id !== selectedEvent.id));
 
@@ -264,6 +284,12 @@ const Calendar = () => {
       }
     } catch (err) {
       console.error('Error deleting event:', err);
+
+      if (err.response) {
+        console.error('Response status:', err.response.status);
+        console.error('Response data:', err.response.data);
+      }
+
       setError('Failed to delete event. Please try again later.');
     }
   };
@@ -296,11 +322,6 @@ const Calendar = () => {
         {error && (
           <div className="error-message">
             {error}
-            {error.includes('logged in') && (
-              <a href="/login?redirect=/studyhub/calendar" className="login-button">
-                Log In
-              </a>
-            )}
           </div>
         )}
 

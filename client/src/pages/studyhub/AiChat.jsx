@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import './AiChat.css';
 import Navbar from '../../components/StudyHubNavbar';
 import { Send, Loader2, Image, Trash2 } from 'lucide-react';
-import axios from 'axios';
+import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 const AiChat = () => {
@@ -10,11 +10,7 @@ const AiChat = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isChatHistoryLoading, setIsChatHistoryLoading] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
   const chatContainerRef = useRef(null);
-  const textareaRef = useRef(null);
-  const mobileTextareaRef = useRef(null);
   const { isLoggedIn } = useAuth();
 
   // Function to format AI responses with better styling
@@ -57,55 +53,130 @@ const AiChat = () => {
       const file = e.target.files[0];
       if (file) {
         console.log("Selected file:", file.name, file.type, file.size);
-
-        // Check file size
-        if (file.size > 5 * 1024 * 1024) {
-          const errorMessage = {
-            text: 'The image is too large. Please use an image smaller than 5MB.',
-            sender: 'ai'
-          };
-          setMessages(prev => [...prev, errorMessage]);
-          return;
-        }
-
-        // Check file type
-        if (!file.type.startsWith('image/')) {
-          const errorMessage = {
-            text: 'Please upload an image file (JPG, PNG, GIF, etc).',
-            sender: 'ai'
-          };
-          setMessages(prev => [...prev, errorMessage]);
-          return;
-        }
-
-        // Set the selected image and create a preview URL
-        setSelectedImage(file);
-        const previewUrl = URL.createObjectURL(file);
-        setImagePreview(previewUrl);
-
-        // Focus the textarea for the user to add a message
-        if (window.innerWidth > 768) {
-          textareaRef.current?.focus();
-        } else {
-          mobileTextareaRef.current?.focus();
-        }
+        handleSendMessageWithImage(file);
       }
     };
     fileInput.click();
   };
 
-  // Function to remove the selected image
-  const removeSelectedImage = () => {
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview); // Clean up the URL object
+  const handleSendMessageWithImage = async (file) => {
+    // Check file size
+    if (file.size > 5 * 1024 * 1024) {
+      const errorMessage = {
+        text: 'The image is too large. Please use an image smaller than 5MB.',
+        sender: 'ai'
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      return;
     }
-    setSelectedImage(null);
-    setImagePreview('');
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      const errorMessage = {
+        text: 'Please upload an image file (JPG, PNG, GIF, etc).',
+        sender: 'ai'
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      return;
+    }
+
+    const imageMessage = "Analyze this image and provide information about it.";
+    const userMessage = {
+      text: `[Image uploaded: ${file.name}] ${imageMessage}`,
+      sender: 'user'
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
+
+    if (isLoggedIn) {
+      saveToChatHistory(userMessage.text, 'user');
+    }
+
+    // Generate a random userId if not available
+    const userId = localStorage.getItem('chatUserId') ||
+                  (() => {
+                    const id = Math.random().toString(36).substring(2, 15);
+                    localStorage.setItem('chatUserId', id);
+                    return id;
+                  })();
+
+    // Create FormData object for file upload
+    const formData = new FormData();
+    formData.append('image', file); // 'image' must match the field name expected by multer
+    formData.append('message', imageMessage);
+    formData.append('userId', userId);
+
+    console.log("Sending image:", file.name, file.type, `${(file.size/1024).toFixed(2)}KB`, "with userId:", userId);
+
+    try {
+      // Use the base URL from our API service but make a direct fetch call
+      // This is because the chat API is a separate service
+      
+      const chatUrl = 'https://s89-akhil-bookaura.onrender.com/api/chat';
+
+      console.log('Sending image to:', chatUrl);
+
+      // Use fetch instead of axios for better compatibility with FormData
+      const response = await fetch('https://s89-akhil-bookaura.onrender.com/api/chat', {
+        method: 'POST',
+        headers: {
+          // Include auth token if available
+          ...(localStorage.getItem('authToken') ? {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          } : {})
+          // Don't set Content-Type header, browser will set it with boundary for FormData
+        },
+        credentials: 'include', // Include cookies
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('AI response received for image:', data);
+
+      const aiMessage = { text: data.response, sender: 'ai' };
+      setMessages(prev => [...prev, aiMessage]);
+
+      if (isLoggedIn) {
+        await saveToChatHistory(aiMessage.text, 'ai');
+      }
+    } catch (error) {
+      console.error('Error sending message with image:', error);
+
+      // Log more detailed error information
+      if (error.response) {
+        console.error('Server response:', error.response.status, error.response.data);
+      }
+
+      let errorMessage;
+      if (error.message.includes('413')) {
+        errorMessage = { text: 'The image is too large. Please try with a smaller image (under 5MB).', sender: 'ai' };
+      } else if (error.message.includes('415')) {
+        errorMessage = { text: 'This file type is not supported. Please upload a JPG, PNG, or GIF image.', sender: 'ai' };
+      } else {
+        errorMessage = { text: 'Sorry, I encountered an error processing your image. Please try again.', sender: 'ai' };
+      }
+
+      setMessages(prev => [...prev, errorMessage]);
+
+      if (isLoggedIn) {
+        saveToChatHistory(errorMessage.text, 'ai');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
     if (isLoggedIn) {
+      console.log('User is logged in, loading chat history...');
       loadChatHistory();
+    } else {
+      console.log('User is not logged in, skipping chat history load');
     }
   }, [isLoggedIn]);
 
@@ -115,209 +186,81 @@ const AiChat = () => {
     }
   }, [messages]);
 
-  // Auto-resize textarea based on content
-  const autoResizeTextarea = (textarea) => {
-    if (textarea) {
-      // Reset height to auto to get the correct scrollHeight
-      textarea.style.height = 'auto';
-      // Set the height to scrollHeight to fit the content
-      textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
-    }
-  };
-
-  // Handle input change with auto-resize
-  const handleInputChange = (e) => {
-    setInputMessage(e.target.value);
-    autoResizeTextarea(e.target);
-  };
-
   const loadChatHistory = async () => {
     try {
       setIsChatHistoryLoading(true);
-
-      // Get auth token from localStorage
-      const authToken = localStorage.getItem('authToken');
-
-      const response = await axios.get('https://s89-akhil-3.onrender.com/api/chat-history', {
-        withCredentials: true,
-        headers: {
-          'Authorization': `Bearer ${authToken || ''}`
-        }
-      });
+      console.log('Loading chat history...');
+      const response = await api.get('/api/chat-history');
 
       if (response.data.success) {
+        console.log('Chat history loaded successfully:', response.data.data.length, 'messages');
         setMessages(response.data.data);
       }
     } catch (error) {
       console.error('Error loading chat history:', error);
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      }
     } finally {
       setIsChatHistoryLoading(false);
     }
   };
 
   const saveToChatHistory = async (text, sender) => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn) {
+      console.log('Not saving message to history - user not logged in');
+      return;
+    }
 
     try {
-      // Get auth token from localStorage
-      const authToken = localStorage.getItem('authToken');
-
-      await axios.post('https://s89-akhil-bookaura-3.onrender.com/api/chat-history',
-        { text, sender },
-        {
-          withCredentials: true,
-          headers: {
-            'Authorization': `Bearer ${authToken || ''}`
-          }
-        }
-      );
+      console.log('Saving message to chat history:', { text, sender });
+      const response = await api.post('/api/chat-history', { text, sender });
+      console.log('Message saved successfully:', response.data);
     } catch (error) {
       console.error('Error saving message to chat history:', error);
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      }
     }
   };
 
   const clearChatHistory = async () => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn) {
+      console.log('Not clearing history - user not logged in');
+      return;
+    }
 
     try {
-      // Get auth token from localStorage
-      const authToken = localStorage.getItem('authToken');
-
-      const response = await axios.delete('https://s89-akhil-bookaura-3.onrender.com/api/chat-history', {
-        withCredentials: true,
-        headers: {
-          'Authorization': `Bearer ${authToken || ''}`
-        }
-      });
-
-      if (response.data.success) setMessages([]);
+      console.log('Clearing chat history...');
+      const response = await api.delete('/api/chat-history');
+      if (response.data.success) {
+        console.log('Chat history cleared successfully');
+        setMessages([]);
+      }
     } catch (error) {
       console.error('Error clearing chat history:', error);
-    }
-  };
-
-  const handleKeyDown = (e) => {
-    // If Shift+Enter is pressed, add a new line
-    if (e.key === 'Enter' && e.shiftKey) {
-      e.preventDefault(); // Prevent form submission
-      setInputMessage(prev => prev + '\n');
-    }
-    // If only Enter is pressed (without Shift), submit the form
-    else if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault(); // Prevent default textarea behavior
-      handleSendMessage(e);
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      }
     }
   };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
 
-    // If there's no message and no image, don't do anything
-    if (!inputMessage.trim() && !selectedImage) return;
+    if (!inputMessage.trim()) return;
 
-    // Reset textarea height after sending message
-    if (textareaRef.current) textareaRef.current.style.height = 'auto';
-    if (mobileTextareaRef.current) mobileTextareaRef.current.style.height = 'auto';
-
-    // If there's an image, send the message with the image
-    if (selectedImage) {
-      // Create message text - use input message if provided, otherwise use a default
-      const messageText = inputMessage.trim()
-        ? inputMessage
-        : "Please analyze this image.";
-
-      // Create a message object with image preview for display
-      const userMessage = {
-        text: messageText,
-        sender: 'user',
-        image: imagePreview,
-        imageName: selectedImage.name
-      };
-
-      setMessages(prev => [...prev, userMessage]);
-      setInputMessage('');
-      setIsLoading(true);
-
-      if (isLoggedIn) {
-        saveToChatHistory(`[Image: ${selectedImage.name}] ${messageText}`, 'user');
-      }
-
-      // Generate a random userId if not available
-      const userId = localStorage.getItem('chatUserId') ||
-                    (() => {
-                      const id = Math.random().toString(36).substring(2, 15);
-                      localStorage.setItem('chatUserId', id);
-                      return id;
-                    })();
-
-      // Create FormData object for file upload
-      const formData = new FormData();
-      formData.append('image', selectedImage);
-      formData.append('message', messageText);
-      formData.append('userId', userId);
-
-      try {
-        // Get auth token from localStorage
-        const authToken = localStorage.getItem('authToken');
-
-        // Use fetch instead of axios for better compatibility with FormData
-        const response = await fetch('https://s89-akhil-bookaura-1.onrender.com/api/chat', {
-          method: 'POST',
-          body: formData, // Don't set Content-Type header, browser will set it with boundary
-          headers: {
-            'Authorization': `Bearer ${authToken || ''}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`Server responded with status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const aiMessage = { text: data.response, sender: 'ai' };
-
-        setMessages(prev => [...prev, aiMessage]);
-
-        if (isLoggedIn) {
-          saveToChatHistory(aiMessage.text, 'ai');
-        }
-      } catch (error) {
-        console.error('Error sending message with image:', error);
-
-        let errorMessage;
-        if (error.message.includes('413')) {
-          errorMessage = { text: 'The image is too large. Please try with a smaller image (under 5MB).', sender: 'ai' };
-        } else if (error.message.includes('415')) {
-          errorMessage = { text: 'This file type is not supported. Please upload a JPG, PNG, or GIF image.', sender: 'ai' };
-        } else {
-          errorMessage = { text: 'Sorry, I encountered an error processing your image. Please try again.', sender: 'ai' };
-        }
-
-        setMessages(prev => [...prev, errorMessage]);
-
-        if (isLoggedIn) {
-          saveToChatHistory(errorMessage.text, 'ai');
-        }
-      } finally {
-        setIsLoading(false);
-        // Clean up the image preview URL and reset states
-        if (imagePreview) {
-          URL.revokeObjectURL(imagePreview);
-        }
-        setSelectedImage(null);
-        setImagePreview('');
-      }
-      return;
-    }
-
-    // If there's no image, just send the text message
     const userMessage = { text: inputMessage, sender: 'user' };
     setMessages(prev => [...prev, userMessage]);
     setInputMessage('');
     setIsLoading(true);
 
+    // Save user message to chat history
     if (isLoggedIn) {
-      saveToChatHistory(userMessage.text, 'user');
+      await saveToChatHistory(userMessage.text, 'user');
     }
 
     try {
@@ -329,15 +272,25 @@ const AiChat = () => {
                       return id;
                     })();
 
-      // Get auth token from localStorage
-      const authToken = localStorage.getItem('authToken');
+      console.log('Sending message to AI chat service with userId:', userId);
 
-      const response = await fetch('https://s89-akhil-bookaura-1.onrender.com/api/chat', {
+      // Use the base URL from our API service but make a direct fetch call
+      // This is because the chat API is a separate service
+      const baseUrl = api.defaults.baseURL;
+      const chatUrl = `https://s89-akhil-bookaura.onrender.com/api/chat`;
+
+      console.log('Sending request to:', chatUrl);
+
+      const response = await fetch(chatUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken || ''}`
+          // Include auth token if available
+          ...(localStorage.getItem('authToken') ? {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          } : {})
         },
+        credentials: 'include', // Include cookies
         body: JSON.stringify({
           userId: userId,
           message: inputMessage,
@@ -345,21 +298,38 @@ const AiChat = () => {
         }),
       });
 
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('AI response received:', data);
+
       const aiMessage = { text: data.response, sender: 'ai' };
       setMessages(prev => [...prev, aiMessage]);
 
+      // Save AI response to chat history
       if (isLoggedIn) {
-        saveToChatHistory(aiMessage.text, 'ai');
+        await saveToChatHistory(aiMessage.text, 'ai');
       }
     } catch (error) {
       console.error('Error sending message:', error);
 
-      const errorMessage = { text: 'Sorry, I encountered an error. Please try again.', sender: 'ai' };
+      // Log detailed error information
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      }
+
+      const errorMessage = {
+        text: 'Sorry, I encountered an error. Please try again. ' +
+              (error.message ? `(${error.message})` : ''),
+        sender: 'ai'
+      };
       setMessages(prev => [...prev, errorMessage]);
 
       if (isLoggedIn) {
-        saveToChatHistory(errorMessage.text, 'ai');
+        await saveToChatHistory(errorMessage.text, 'ai');
       }
     } finally {
       setIsLoading(false);
@@ -400,18 +370,7 @@ const AiChat = () => {
                   <div className="message-content">
                     <span className="message-sender">{message.sender === 'user' ? 'You' : 'AI Assistant'}</span>
                     {message.sender === 'user' ? (
-                      <div className="user-message-content">
-                        {message.image && (
-                          <div className="message-image-container">
-                            <img
-                              src={message.image}
-                              alt={message.imageName || "Uploaded image"}
-                              className="message-image"
-                            />
-                          </div>
-                        )}
-                        <p style={{ whiteSpace: 'pre-wrap' }}>{message.text}</p>
-                      </div>
+                      <p>{message.text}</p>
                     ) : (
                       <div className="ai-formatted-response" dangerouslySetInnerHTML={{ __html: formatAIResponse(message.text) }} />
                     )}
@@ -434,21 +393,6 @@ const AiChat = () => {
 
           {/* Desktop input (part of chat container) */}
           <div className="desktop-input">
-            {imagePreview && (
-              <div className="image-preview-container">
-                <div className="image-preview">
-                  <img src={imagePreview} alt="Preview" />
-                  <button
-                    className="remove-image-btn"
-                    onClick={removeSelectedImage}
-                    title="Remove image"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-                <p className="image-preview-hint">Add a message to send with this image (optional)</p>
-              </div>
-            )}
             <form className="chat-input" onSubmit={handleSendMessage}>
               <button
                 onClick={handleImageUpload}
@@ -463,19 +407,16 @@ const AiChat = () => {
                   <Image size={26} />
                 )}
               </button>
-              <textarea
-                ref={textareaRef}
+              <input
+                type="text"
                 value={inputMessage}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                placeholder={selectedImage ? "Add a message to send with your image (optional)" : "Type your question here... (Shift+Enter for new line)"}
+                onChange={(e) => setInputMessage(e.target.value)}
+                placeholder="Type your question here..."
                 disabled={isLoading}
-                rows={1}
-                className="chat-textarea"
               />
               <button
                 type="submit"
-                disabled={isLoading || (!selectedImage && !inputMessage.trim())}
+                disabled={isLoading || !inputMessage.trim()}
                 className="send-button"
                 title="Send message"
               >
@@ -491,21 +432,6 @@ const AiChat = () => {
 
         {/* Mobile input (fixed at bottom) */}
         <div className="mobile-input-container">
-          {imagePreview && (
-            <div className="image-preview-container mobile">
-              <div className="image-preview">
-                <img src={imagePreview} alt="Preview" />
-                <button
-                  className="remove-image-btn"
-                  onClick={removeSelectedImage}
-                  title="Remove image"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-              <p className="image-preview-hint">Add a message to send with this image (optional)</p>
-            </div>
-          )}
           <form className="chat-input" onSubmit={handleSendMessage}>
             <button
               onClick={handleImageUpload}
@@ -520,19 +446,16 @@ const AiChat = () => {
                 <Image size={26} />
               )}
             </button>
-            <textarea
-              ref={mobileTextareaRef}
+            <input
+              type="text"
               value={inputMessage}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              placeholder={selectedImage ? "Add a message to send with your image (optional)" : "Type your question here... (Shift+Enter for new line)"}
+              onChange={(e) => setInputMessage(e.target.value)}
+              placeholder="Type your question here..."
               disabled={isLoading}
-              rows={1}
-              className="chat-textarea"
             />
             <button
               type="submit"
-              disabled={isLoading || (!selectedImage && !inputMessage.trim())}
+              disabled={isLoading || !inputMessage.trim()}
               className="send-button"
               title="Send message"
             >

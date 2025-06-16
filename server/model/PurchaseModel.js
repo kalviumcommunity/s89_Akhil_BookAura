@@ -32,6 +32,10 @@ const purchaseSchema = new mongoose.Schema({
       type: String,
       required: true
     },
+    epubUrl: {
+      type: String
+      // Not required for backward compatibility
+    },
     purchaseDate: {
       type: Date,
       default: Date.now

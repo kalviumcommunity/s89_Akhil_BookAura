@@ -1,19 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StudyHubNavbar from '../../components/StudyHubNavbar';
 import './StudyHome.css';
 import {
   ChevronRight,
   Calendar,
-  BookOpen,
   MessageSquare,
   Clock,
-  TrendingUp,
   Award,
-  BookMarked
+  BookMarked,
+  WalletCards,
+  Clipboard
 } from 'lucide-react';
 import logo from '../../images/logo.png';
-import moment from 'moment';
 import { useSchedule } from '../../context/ScheduleContext';
 
 const StudyHome = () => {
@@ -24,12 +23,6 @@ const StudyHome = () => {
   useEffect(() => {
     fetchSchedules();
   }, [fetchSchedules]);
-
-  // Function to navigate to calendar page
-  const goToCalendar = () => {
-    navigate('/calendar');
-  };
-
 
 
   // Show loading state
@@ -135,17 +128,7 @@ const StudyHome = () => {
               </button>
             </div>
 
-            <div className="feature-card" onClick={() => navigate('/flashcards')}>
-              <div className="feature-icon">
-                <BookOpen size={24} />
-              </div>
-              <h3>Flashcards</h3>
-              <p>Create and review flashcards to reinforce your learning</p>
-              <button className="feature-btn">
-                <ChevronRight size={16} />
-                Study Now
-              </button>
-            </div>
+
 
             <div className="feature-card" onClick={() => navigate('/aichat')}>
               <div className="feature-icon">
@@ -159,12 +142,23 @@ const StudyHome = () => {
               </button>
             </div>
 
-            <div className="feature-card" onClick={() => navigate('/my-books')}>
+            <div className="feature-card" onClick={() => navigate('/flashcards')}>
               <div className="feature-icon">
-                <BookMarked size={24} />
+                <WalletCards size={24} />
               </div>
-              <h3>My Books</h3>
-              <p>Access your purchased books and study materials</p>
+              <h3>Flash cards</h3>
+              <p>Revise your study materials with flashcards</p>
+              <button className="feature-btn">
+                <ChevronRight size={16} />
+                Start Studying
+              </button>
+            </div>
+            <div className="feature-card" onClick={() => navigate('/studytechniques')}>
+              <div className="feature-icon">
+                <Clipboard size={24} />
+              </div>
+              <h3>Study Techniques</h3>
+              <p>Learn effective study techniques and strategies</p>
               <button className="feature-btn">
                 <ChevronRight size={16} />
                 View Library
@@ -173,7 +167,7 @@ const StudyHome = () => {
           </div>
         </div>
 
-        
+
 
         {/* Quick Tips Section */}
         <div className="tips-section">
@@ -193,6 +187,11 @@ const StudyHome = () => {
               <div className="tip-number">03</div>
               <h3>Take Regular Breaks</h3>
               <p>Follow the Pomodoro Technique: 25 minutes of focused study followed by a 5-minute break.</p>
+            </div>
+            <div className="tip-card">
+              <div className="tip-number">04</div>
+              <h3>Stay Hydrated</h3>
+              <p>Drink plenty of water to keep your brain functioning at its best.</p>
             </div>
           </div>
         </div>

@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Cronofy API endpoints
 const CRONOFY_BASE_URL = 'https://api.cronofy.com';
-const REDIRECT_URI = 'http://localhost:5173/calendar/callback';
+const REDIRECT_URI = import.meta.env.VITE_FRONTEND_URL || 'https://bookauraba.netlify.app/calendar/callback';
 
 class CronofyService {
   constructor() {

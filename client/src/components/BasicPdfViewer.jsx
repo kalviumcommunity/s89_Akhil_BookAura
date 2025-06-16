@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Download, Maximize, Minimize, Moon, Sun, ExternalLink, FileText, Volume2 } from 'lucide-react';
 import './PdfViewer.css';
-import { getPdfSignedUrl, getPdfFetchUrl, getPlaceholderPdfUrl } from '../utils/apiConfig';
+import { getPlaceholderPdfUrl } from '../utils/apiConfig';
 
 const BasicPdfViewer = ({ fileUrl }) => {
   const [loading, setLoading] = useState(true);
@@ -47,7 +47,7 @@ const BasicPdfViewer = ({ fileUrl }) => {
             const authToken = localStorage.getItem('authToken');
 
             // Try to get a signed URL from the server
-            const response = await axios.get(getPdfSignedUrl(), {
+            const response = await axios.get(`https://s89-akhil-bookaura-3.onrender.com/api/pdf/signed-url`, {
               params: { url: finalUrl },
               withCredentials: true,
               headers: {
@@ -149,7 +149,7 @@ const BasicPdfViewer = ({ fileUrl }) => {
 
       // Use the proxy endpoint to get the PDF data
       console.log('Downloading PDF via proxy for:', fileUrl);
-      const response = await axios.get(getPdfFetchUrl(), {
+      const response = await axios.get(`https://s89-akhil-bookaura-3.onrender.com/api/pdf/fetch-pdf`, {
         params: { url: fileUrl },
         responseType: 'blob',
         withCredentials: true,

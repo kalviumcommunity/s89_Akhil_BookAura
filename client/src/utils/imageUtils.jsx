@@ -1,3 +1,5 @@
+import React, { useState, useEffect } from 'react';
+
 /**
  * Utility function to proxy image URLs through our server to avoid CORS issues
  * @param {string} url - The original image URL
@@ -11,7 +13,7 @@ export const getProxiedImageUrl = (url) => {
     url.includes('ssl-images-amazon.com')
   )) {
     // Return the proxied URL
-    return `https://s89-akhil-bookaura-2.onrender.com/api/pdf/image-proxy?url=${encodeURIComponent(url)}`;
+    return `https://s89-akhil-bookaura-3.onrender.com/api/pdf/image-proxy?url=${encodeURIComponent(url)}`;
   }
 
   // Return the original URL for other sources
@@ -19,20 +21,53 @@ export const getProxiedImageUrl = (url) => {
 };
 
 /**
- * Utility function to handle image loading errors
+ * Utility function to handle image loading errors with multiple fallbacks
  * @param {Event} event - The error event
  */
 export const handleImageError = (event) => {
-  // Set a default image when the original fails to load
-  event.target.src = '/default-book-cover.jpg';
+  const img = event.target;
 
-  // Remove onerror to prevent infinite loop if default image also fails
-  event.target.onerror = null;
+  // Check if we've already tried fallbacks to prevent infinite loops
+  if (img.dataset.fallbackAttempted) {
+    return;
+  }
+
+  // Mark that we've attempted fallback
+  img.dataset.fallbackAttempted = 'true';
+
+  // Try multiple fallback strategies with working URLs
+  const fallbackImages = [
+    // Use a working placeholder service
+    'https://picsum.photos/300/400?random=1',
+    // Backup placeholder
+    'https://dummyimage.com/300x400/f0f0f0/666666&text=Book+Cover',
+    // SVG fallback that always works
+    'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDMwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjBGMEYwIi8+Cjx0ZXh0IHg9IjE1MCIgeT0iMjAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2NjY2IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiPkJvb2sgQ292ZXI8L3RleHQ+Cjwvc3ZnPgo='
+  ];
+
+  // Try the first fallback
+  if (fallbackImages.length > 0) {
+    img.src = fallbackImages[0];
+
+    // Set up error handler for fallback
+    img.onerror = () => {
+      if (fallbackImages.length > 1) {
+        img.src = fallbackImages[1];
+        img.onerror = () => {
+          if (fallbackImages.length > 2) {
+            img.src = fallbackImages[2];
+            img.onerror = null; // Final fallback, no more retries
+          }
+        };
+      }
+    };
+  }
 
   // Ensure the image maintains proper dimensions
-  event.target.style.objectFit = 'cover';
-  event.target.style.width = '100%';
-  event.target.style.height = '100%';
+  img.style.objectFit = 'cover';
+  img.style.width = '100%';
+  img.style.height = '100%';
+  img.style.backgroundColor = '#f0f0f0';
 };
 
 /**
@@ -44,11 +79,41 @@ export const handleImageError = (event) => {
  * @param {string} props.className - Optional CSS class name
  * @returns {JSX.Element} - The image element
  */
-import React, { useState } from 'react';
 
 export const SafeImage = ({ src, alt, style, className, ...rest }) => {
   const [isLoading, setIsLoading] = useState(true);
-  const proxiedSrc = getProxiedImageUrl(src);
+  const [error, setError] = useState(false);
+  const [currentSrc, setCurrentSrc] = useState('');
+
+  // Initialize source with proxy if needed
+  useEffect(() => {
+    if (src) {
+      // Check if this is a problematic local file reference
+      if (src.includes('/api/books/file/')) {
+        console.warn('Detected local file reference, using fallback:', src);
+        setCurrentSrc('https://dummyimage.com/300x400/f0f0f0/666666&text=Book+Cover');
+        setError(true);
+        setIsLoading(false);
+        return;
+      }
+
+      const proxiedSrc = getProxiedImageUrl(src);
+      setCurrentSrc(proxiedSrc);
+      setIsLoading(true);
+      setError(false);
+    }
+  }, [src]);
+
+  const handleLoad = () => {
+    setIsLoading(false);
+    setError(false);
+  };
+
+  const handleError = (event) => {
+    setError(true);
+    setIsLoading(false);
+    handleImageError(event);
+  };
 
   // Default styles to ensure consistent image display
   const defaultStyle = {
@@ -56,19 +121,41 @@ export const SafeImage = ({ src, alt, style, className, ...rest }) => {
     width: '100%',
     height: '100%',
     transition: 'opacity 0.3s ease',
-    opacity: isLoading ? 0.5 : 1,
+    opacity: isLoading ? 0.7 : 1,
+    backgroundColor: isLoading || error ? '#f0f0f0' : 'transparent',
     ...style
   };
 
+  // Show loading placeholder if no src provided
+  if (!src) {
+    return (
+      <div
+        style={{
+          ...defaultStyle,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#f0f0f0',
+          color: '#666',
+          fontSize: '12px'
+        }}
+        className={className}
+      >
+        No Image
+      </div>
+    );
+  }
+
   return (
     <img
-      src={proxiedSrc}
-      alt={alt || 'Image'}
-      onError={handleImageError}
-      onLoad={() => setIsLoading(false)}
+      src={currentSrc}
+      alt={alt || 'Book Cover'}
+      onError={handleError}
+      onLoad={handleLoad}
       style={defaultStyle}
       className={className}
-      loading="lazy" // Add lazy loading for better performance
+      loading="lazy"
+      crossOrigin="anonymous" // Help with CORS issues
       {...rest}
     />
   );

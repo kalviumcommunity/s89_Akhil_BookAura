@@ -13,9 +13,11 @@ import CartPage from './pages/MarketPlace/CartPage';
 import SuccessPage from './pages/MarketPlace/SuccessPage';
 import CancelPage from './pages/MarketPlace/CancelPage';
 import MyBooksPage from './pages/MarketPlace/MyBooksPage';
+import EpubViewerPage from './pages/EpubViewerPage';
+import Reader from './epub/Reader';
+import BookReader from './pages/Reader/Reader';
 import CalendarPage from './pages/studyhub/Calendar';
 import StudyHome from './pages/studyhub/StudyHome';
-import Flashcards from './pages/studyhub/FlashcardsFixed';
 import AiChat from './pages/studyhub/AiChat';
 import Profile from './pages/Profile';
 import TestPdfViewer from './pages/TestPdfViewer';
@@ -24,6 +26,15 @@ import TestPdfJsViewer from './pages/TestPdfJsViewer';
 import TestSimplePdfViewer from './pages/TestSimplePdfViewer';
 import TestBasicPdfViewer from './pages/TestBasicPdfViewer';
 import TestPdfUpload from './pages/TestPdfUpload';
+import TestEpubViewer from './pages/TestEpubViewer';
+import GoogleAuthTest from './pages/GoogleAuthTest';
+import Flashcards from './pages/studyhub/Flashcards';
+import WorkingEpubTest from './pages/WorkingEpubTest';
+import AllBooksPage from './pages/AllBooksPage';
+import TestFixes from './components/TestFixes';
+import SimpleTestPage from './components/SimpleTestPage';
+import StudyTechniques from './pages/studyhub/StudyTechniques';
+import Pomodoro from './pages/studyhub/Pomodoro';
 
 const pageTransition = {
   initial: { opacity: 0, x: -100 },
@@ -36,6 +47,7 @@ const AllRouting = () => {
  return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
+        
         <Route
           path="/"
           element={
@@ -127,10 +139,6 @@ const AllRouting = () => {
         />
 
         <Route
-          path="/flashcards"
-          element={<Flashcards />}
-        />
-        <Route
           path="/aichat"
           element={<AiChat />}
         />
@@ -161,6 +169,58 @@ const AllRouting = () => {
         <Route
           path="/test-pdf-upload"
           element={<TestPdfUpload />}
+        />
+        <Route
+          path="/google-auth-test"
+          element={<GoogleAuthTest />}
+        />
+        <Route
+          path="/flashcards"
+          element={<Flashcards />}
+        />
+        <Route
+          path="/test-epub"
+          element={<TestEpubViewer />}
+        />
+        <Route
+          path="/working-epub"
+          element={<WorkingEpubTest />}
+        />
+        <Route
+          path="/all-books"
+          element={<AllBooksPage />}
+        />
+        <Route
+          path="/read-epub/:encodedUrl"
+          element={<EpubViewerPage />}
+        />
+        <Route
+          path="/epub-reader/:encodedUrl"
+          element={<EpubViewerPage />}
+        />
+        <Route
+          path="/reader/:id"
+          element={<Reader />}
+        />
+        <Route
+          path="/reader/:bookId"
+          element={<BookReader />}
+        />
+        <Route
+          path="/test-fixes"
+          element={<TestFixes />}
+        />
+        <Route
+          path="/simple-test"
+          element={<SimpleTestPage />}
+        />
+        <Route 
+        path='/studytechniques'
+        element={<StudyTechniques />}
+        />
+        <Route 
+        path='/pomodoro'
+        element={<Pomodoro />}
         />
       </Routes>
     </AnimatePresence>

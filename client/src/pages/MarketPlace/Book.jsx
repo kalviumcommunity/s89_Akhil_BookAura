@@ -4,14 +4,15 @@ import Navbar from '../../components/Navbar';
 import categories from './categories.json';
 import { Search, Filter, X } from 'lucide-react';
 import ProductCard from '../../components/ProductCard';
-import axios from 'axios';
+import api from '../../services/api';
 import BookDetailView from './BookDetailView';
-import {useCart} from './cart';
 import LoadingAnimation from '../../components/LoadingAnimation';
 
 
 const Book = () => {
-  const [books, setBooks] = useState([]);
+  // SIMPLE FRONTEND FILTERING: Fetch all books and user's purchased books, then filter on frontend
+  const [allBooks, setAllBooks] = useState([]); // All books from server
+  const [purchasedBookIds, setPurchasedBookIds] = useState([]); // User's purchased book IDs
   const [searchText, setSearchText] = useState('');
   const [priceRange, setPriceRange] = useState(1000); // adjust max if needed
   const [selectedGenres, setSelectedGenres] = useState([]);
@@ -45,44 +46,54 @@ const Book = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Fetch all books and user's purchased books, then filter on frontend
   useEffect(() => {
-    const fetchBooks = async () => {
+    const fetchBooksAndUserData = async () => {
+      setLoading(true);
+
       try {
-        setLoading(true);
-        // Build query parameters based on filters
-        const params = new URLSearchParams();
-
-        if (showBestsellers) {
-          params.append('bestseller', 'true');
+        // Check if user is authenticated
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          console.log('❌ No auth token found - user not logged in');
+          setAllBooks([]);
+          setPurchasedBookIds([]);
+          setLoading(false);
+          return;
         }
 
-        if (showFeatured) {
-          params.append('featured', 'true');
-        }
+        console.log('📚 Fetching all books and user purchased books...');
 
-        if (showNewReleases) {
-          params.append('newrelease', 'true');
-        }
+        // Fetch all books from the server
+        const booksResponse = await api.get('/api/books');
+        const allBooksData = booksResponse.data || [];
+        setAllBooks(allBooksData);
+        console.log(`📖 Fetched ${allBooksData.length} total books`);
 
-        // If any category is selected, use the first one as a filter
-        if (selectedCategories.length > 0) {
-          params.append('category', selectedCategories[0]);
-        }
+        // Fetch user's purchased books
+        const userResponse = await api.get('/router/profile');
+        const userData = userResponse.data.user || userResponse.data || {};
+        const userPurchasedBooks = userData.purchasedBooks || [];
+        const purchasedIds = userPurchasedBooks.map(book => book.bookId || book._id).filter(Boolean);
+        setPurchasedBookIds(purchasedIds);
+        console.log(`🛒 User has purchased ${purchasedIds.length} books:`, purchasedIds);
 
-        const queryString = params.toString();
-        const url = `https://s89-akhil-bookaura-3.onrender.com/router/getBooks${queryString ? `?${queryString}` : ''}`;
-
-        const response = await axios.get(url);
-        setBooks(response.data.data);
-        setLoading(false);
       } catch (error) {
-        console.error('Failed to fetch books:', error);
-        setLoading(false);
+        console.error('❌ Failed to fetch books or user data:', error);
+        setAllBooks([]);
+        setPurchasedBookIds([]);
+
+        // Handle authentication errors
+        if (error.response?.status === 401) {
+          console.error('🔐 Authentication error - clearing token');
+          localStorage.removeItem('authToken');
+        }
       }
+      setLoading(false);
     };
 
-    fetchBooks();
-  }, [showBestsellers, showFeatured, showNewReleases, selectedCategories]);
+    fetchBooksAndUserData();
+  }, []); // Only run once on component mount
 
   const handleGenreChange = (genre) => {
     setSelectedGenres((prev) =>
@@ -123,7 +134,14 @@ const Book = () => {
     setShowNewReleases(false);
   };
 
-  const filteredBooks = books.filter((book) => {
+  // Frontend filtering: Remove purchased books and apply filters
+  const filteredBooks = allBooks.filter((book) => {
+    // CRITICAL: Exclude purchased books
+    const isPurchased = purchasedBookIds.includes(book._id || book.id);
+    if (isPurchased) {
+      return false; // Don't show purchased books
+    }
+
     // Match search text in title or author
     const matchesSearch =
       book.title.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -144,7 +162,13 @@ const Book = () => {
         book.categories.includes(cat)
       ));
 
-    return matchesSearch && matchesGenre && matchesPrice && matchesCategories;
+    // Match special filters
+    const matchesBestseller = !showBestsellers || book.isBestSeller;
+    const matchesFeatured = !showFeatured || book.isFeatured;
+    const matchesNewRelease = !showNewReleases || book.isNewRelease;
+
+    return matchesSearch && matchesGenre && matchesPrice && matchesCategories &&
+           matchesBestseller && matchesFeatured && matchesNewRelease;
   });
 
   const handleBookClick = (book) => {
@@ -203,8 +227,10 @@ const Book = () => {
 
               <div className='range-box'>
                 <p>Price Range</p>
-                <label>0</label>
+                <label htmlFor="price-range">0</label>
                 <input
+                  id="price-range"
+                  name="price-range"
                   className='range-input-bar'
                   type='range'
                   min={0}
@@ -234,7 +260,42 @@ const Book = () => {
               </div>
 
               <div className="filter-section">
-                {/* Special categories can be added here if needed */}
+                <p>Special Categories</p>
+                <div className='checkbox-menu'>
+                  <div>
+                    <input
+                      type='checkbox'
+                      id='bestseller-filter'
+                      checked={showBestsellers}
+                      onChange={() => setShowBestsellers(!showBestsellers)}
+                    />
+                    <label htmlFor='bestseller-filter' className='checkbox-label'>
+                      Bestsellers
+                    </label>
+                  </div>
+                  <div>
+                    <input
+                      type='checkbox'
+                      id='featured-filter'
+                      checked={showFeatured}
+                      onChange={() => setShowFeatured(!showFeatured)}
+                    />
+                    <label htmlFor='featured-filter' className='checkbox-label'>
+                      Featured
+                    </label>
+                  </div>
+                  <div>
+                    <input
+                      type='checkbox'
+                      id='newrelease-filter'
+                      checked={showNewReleases}
+                      onChange={() => setShowNewReleases(!showNewReleases)}
+                    />
+                    <label htmlFor='newrelease-filter' className='checkbox-label'>
+                      New Releases
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -244,6 +305,8 @@ const Book = () => {
                 <div className='search1'>
                   <Search size={20} />
                   <input
+                    id="book-search"
+                    name="book-search"
                     type='text'
                     placeholder='Search for books, authors, or genres...'
                     value={searchText}
@@ -254,13 +317,32 @@ const Book = () => {
 
               <div className='allbooks-list'>
                 {filteredBooks.length > 0 ? (
-                  filteredBooks.map((book, index) => (
-                    <div key={index} onClick={() => handleBookClick(book)}>
+                  filteredBooks.map((book) => (
+                    <div key={book._id || book.id} onClick={() => handleBookClick(book)}>
                       <ProductCard book={book} />
                     </div>
                   ))
+                ) : allBooks.length === 0 ? (
+                  <div className="no-books-message">
+                    {!localStorage.getItem('authToken') ? (
+                      <>
+                        <h3>🔐 Please Log In</h3>
+                        <p>You need to be logged in to view available books for purchase.</p>
+                        <p>Please log in to your account to see books you haven't purchased yet.</p>
+                      </>
+                    ) : (
+                      <>
+                        <h3>🎉 Congratulations!</h3>
+                        <p>You have purchased all available books, or there are no books available for purchase at the moment.</p>
+                        <p>Check back later for new releases!</p>
+                      </>
+                    )}
+                  </div>
                 ) : (
-                  <p>No books found matching the filters.</p>
+                  <div className="no-books-message">
+                    <h3>📚 No books match your current filters</h3>
+                    <p>Try adjusting your search criteria or clearing the filters to see more books.</p>
+                  </div>
                 )}
               </div>
             </div>

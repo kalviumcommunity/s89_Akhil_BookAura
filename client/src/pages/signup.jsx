@@ -38,18 +38,8 @@ const Signup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
     try {
-      // Store a flag to sync cart after signup
-      localStorage.setItem('syncCartAfterLogin', 'true');
-
-      // Use the API config utility for the URL
-      const response = await axios.post(`${getApiBaseUrl()}/router/signup`, form, {
-        withCredentials: true
-      });
-
+      const response = await axios.post("https://s89-akhil-bookaura-2.onrender.com/router/signup", form, { withCredentials: true });
       console.log("Signup successful:", response.data);
 
       // Store the token in localStorage (legacy support)
@@ -85,43 +75,20 @@ const Signup = () => {
 
   const handleGoogleSignIn = () => {
     setError('');
-    setIsLoading(true);
-
-    try {
-      // Store a flag to sync cart after Google login
-      localStorage.setItem('syncCartAfterLogin', 'true');
-
-      // Get the Google auth URL
-      const googleAuthUrl = getGoogleAuthUrl();
-      console.log('Redirecting to Google auth URL:', googleAuthUrl);
-
-      // Add error handling with a timeout
-      const redirectTimeout = setTimeout(() => {
-        setError('Google authentication request timed out. Please try again later.');
-        setIsLoading(false);
-      }, 10000); // 10 second timeout
-
-      // Store the timeout ID so we can clear it if navigation happens
-      localStorage.setItem('googleAuthTimeout', redirectTimeout);
-
-      // Redirect to Google auth
-      window.location.href = googleAuthUrl;
-    } catch (error) {
-      console.error('Error initiating Google sign-up:', error);
-      setError('Failed to connect to Google authentication. Please try again later.');
-      setIsLoading(false);
-    }
+    window.location.href = "https://s89-akhil-bookaura-2.onrender.com/router/auth/google";
+    // Let backend handle redirect after Google login
   };
 
   return (
     <div className="boxes">
       <div className="colourbox">
-        <img className='logoimage' onClick={()=>navigate('/')} src={logo} alt="logo" />
+        
         <img className='authimage' src={AuthImage} alt="Signup" />
         <br />
       </div>
       <div className="loginbox">
         <div className="login-form">
+          <img className='logoimage' onClick={()=>navigate('/')} src={logo} alt="logo" />
           <h1>Sign Up</h1>
           {error && <div className="error-message">{error}</div>}
           <form onSubmit={handleSubmit}>

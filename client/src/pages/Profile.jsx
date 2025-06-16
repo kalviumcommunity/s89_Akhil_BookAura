@@ -42,35 +42,148 @@ const Profile = () => {
   const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
-    // Redirect if not logged in
-    if (!isLoggedIn) {
+    console.log('Profile component mounted, auth status:', isLoggedIn ? 'Logged in' : 'Not logged in');
+
+    // Check authentication status
+    if (!isLoggedIn && !loading) {
+      console.log('User not logged in, redirecting to login page');
       navigate('/login');
       return;
     }
 
-    // Fetch user data
+    // Don't fetch if we're still loading auth state or not logged in
+    if (!isLoggedIn) {
+      console.log('Not logged in, waiting for auth state to resolve...');
+      return;
+    }
+
+    // IMMEDIATELY check for cached data and show it
+    const cachedUserData = localStorage.getItem('userData');
+    if (cachedUserData) {
+      try {
+        console.log('Using cached user data immediately');
+        const parsedData = JSON.parse(cachedUserData);
+
+        // Ensure we have all required fields with defaults if missing
+        const userData = {
+          username: parsedData.username || 'User',
+          email: parsedData.email || '',
+          profileImage: parsedData.profileImage || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'
+        };
+
+        console.log('Parsed user data:', userData);
+
+        setUserData(userData);
+        setEditData({
+          username: userData.username,
+          email: userData.email,
+          profileImage: userData.profileImage
+        });
+
+        // Set loading to false immediately to show the UI
+        setLoading(false);
+      } catch (e) {
+        console.error('Error parsing cached user data:', e);
+      }
+    }
+
+    // Set a very short timeout to prevent any loading state
+    const loadingTimeout = setTimeout(() => {
+      if (loading) {
+        console.log('Loading timeout reached after 1 second, forcing display');
+        setLoading(false);
+      }
+    }, 1000); // Just 1 second timeout as a fallback
+
+    // Fetch user data in the background
     const fetchUserData = async () => {
       try {
-        const response = await api.get('/router/profile');
+        console.log('Fetching fresh user profile data in background...');
+
+        // Get token from localStorage
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          console.log('No auth token found, skipping profile fetch');
+          setLoading(false);
+          return;
+        }
+
+        // Set up headers with token
+        const headers = {
+          Authorization: `Bearer ${token}`
+        };
+
+        // Add a timestamp parameter to prevent caching
+        const timestamp = new Date().getTime();
+
+        // Set a timeout for the API request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          console.log('API request timeout reached, aborting');
+          controller.abort();
+        }, 5000); // Reduced to 5 second timeout
+
+        const response = await api.get(`/router/profile?_t=${timestamp}`, {
+          headers,
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId); // Clear the timeout if request completes
 
         if (response.data.success) {
-          setUserData(response.data.user);
-          // Initialize edit data with current user data
+          console.log('Fresh user profile data retrieved successfully');
+          const userData = response.data.user;
+
+          // Cache the user data in localStorage
+          localStorage.setItem('userData', JSON.stringify(userData));
+
+          // Ensure we have all required fields with defaults if missing
+          const processedUserData = {
+            username: userData.username || 'User',
+            email: userData.email || '',
+            profileImage: userData.profileImage || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'
+          };
+
+          console.log('Fresh user data processed:', processedUserData);
+
+          // Update the UI with fresh data
+          setUserData(processedUserData);
           setEditData({
-            username: response.data.user.username,
-            email: response.data.user.email,
-            profileImage: response.data.user.profileImage
+            username: processedUserData.username,
+            email: processedUserData.email,
+            profileImage: processedUserData.profileImage
           });
         }
-        setLoading(false);
       } catch (error) {
-        console.error('Error fetching user data:', error);
-        setLoading(false);
+        console.error('Error fetching fresh user data:', error);
+
+        // If we get a 401 error, the token might be invalid or expired
+        if (error.response && error.response.status === 401) {
+          console.log('Authentication failed, redirecting to login');
+
+          // Clear any stored auth data
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('userData');
+
+          // Clear cookies
+          document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+          document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+          document.cookie = 'isLoggedIn=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+          navigate('/login');
+        }
+        // For other errors, we already have cached data displayed, so just log the error
       }
     };
 
+    // Start fetching in the background
     fetchUserData();
-  }, [isLoggedIn, navigate]);
+
+    // Clean up the timeout when the component unmounts
+    return () => {
+      clearTimeout(loadingTimeout);
+    };
+  }, [isLoggedIn, loading, navigate]);
 
   const handleLogout = async () => {
     await logout();
@@ -223,12 +336,18 @@ const Profile = () => {
     }
   };
 
+  // We'll show a simplified loading state that will appear very briefly
   if (loading) {
     return (
       <div>
         <Navbar />
         <div className="profile-container">
-          <div className="loading">Loading...</div>
+          <div className="profile-card loading-card">
+            <div className="loading-spinner-small"></div>
+            <div className="loading-text-small">
+              <p>Loading profile...</p>
+            </div>
+          </div>
         </div>
         <Footer />
       </div>

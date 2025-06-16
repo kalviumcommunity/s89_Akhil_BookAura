@@ -2,10 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import './Navbar.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Logo from '../images/logo.png';
-import { ShoppingCart, Home, BookOpen, GraduationCap, Menu, X } from 'lucide-react';
+import { ShoppingCart, Home, BookOpen, GraduationCap, Menu, X ,Languages} from 'lucide-react';
 import { useCart } from '../pages/MarketPlace/cart';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import SimpleGoogleTranslate from './SimpleGoogleTranslate';
+import ErrorBoundary from './ErrorBoundary';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -27,6 +29,7 @@ const Navbar = () => {
       document.body.style.overflow = 'auto';
     }
   };
+
 
   // Close mobile menu when navigating
   const handleNavigation = (path) => {
@@ -79,11 +82,26 @@ const Navbar = () => {
     const fetchProfileImage = async () => {
       if (isLoggedIn) {
         try {
-          const response = await api.get('/router/profile-image');
+          // Get token from localStorage
+          const token = localStorage.getItem('authToken');
+
+          // Set up headers with token if available
+          const headers = {};
+          if (token) {
+            headers.Authorization = `Bearer ${token}`;
+          }
+
+          // Add a timestamp parameter to prevent caching
+          const timestamp = new Date().getTime();
+          const response = await api.get(`/router/profile-image?_t=${timestamp}`, { headers });
+
           if (response.data.success) {
             setProfileImage(response.data.profileImage);
             setUserName(response.data.username);
           }
+          console.log('Profile image fetched successfully:', response.data.profileImage);
+          console.log('Username fetched successfully:', response.data.username);
+          console.log('Raw response data:', response.data);
         } catch (error) {
           // Only log the error if it's not a 401 Unauthorized (expected when not logged in)
           if (error.response && error.response.status !== 401) {
@@ -138,6 +156,13 @@ const Navbar = () => {
 
       {/* Always visible elements on the right */}
       <div className="always-visible-items">
+        {/* Google Translate Widget */}
+        <div className="translate-widget-container">
+          <ErrorBoundary>
+            <SimpleGoogleTranslate />
+          </ErrorBoundary>
+        </div>
+
         {!isLoggedIn && (
           <div
             className='login'

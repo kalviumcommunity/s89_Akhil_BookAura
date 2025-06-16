@@ -232,40 +232,24 @@ const loadModel = (modelName) => {
     return mongoose.model('User', userSchema);
   }
 
-  // For Book model, create a placeholder
+  // For Book model, use the correct models/Book.js
   if (modelName.toLowerCase() === 'bookmodel') {
-    console.log('Creating placeholder Book model');
+    console.log('Loading Book model from models/Book.js');
 
     if (mongoose.models.Book) {
       return mongoose.models.Book;
     }
 
-    // Try to require the model directly using require
+    // Try to require the model from the correct location
     try {
-      console.log('Trying to require BookModel.js directly');
-      const BookModel = require('../model/BookModel');
-      console.log('Successfully required BookModel.js directly');
+      console.log('Trying to require Book.js from models directory');
+      const BookModel = require('../models/Book');
+      console.log('Successfully required Book.js from models directory');
       return BookModel;
     } catch (err) {
-      console.error('Failed to require BookModel.js directly:', err.message);
+      console.error('Failed to require Book.js from models directory:', err.message);
+      throw new Error(`Could not load Book model: ${err.message}`);
     }
-
-    const bookSchema = new mongoose.Schema({
-      title: { type: String, required: true },
-      author: { type: String, required: true },
-      description: String,
-      genre: String,
-      price: { type: Number, required: true },
-      coverimage: { type: String, required: true },
-      url: String,
-      categories: [String],
-      isBestSeller: { type: Boolean, default: false },
-      isFeatured: { type: Boolean, default: false },
-      isNewRelease: { type: Boolean, default: false },
-      createdAt: { type: Date, default: Date.now }
-    });
-
-    return mongoose.model('Book', bookSchema);
   }
 
   // For Purchase model, create a placeholder

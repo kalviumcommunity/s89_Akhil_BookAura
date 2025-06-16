@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@google/generative-ai": "^0.2.1",
+    "@google/generative-ai": "^0.24.1",
     "axios": "^1.9.0",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
@@ -8,14 +8,14 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
-    "express": "^5.1.0",
+    "express": "^4.18.2",
     "express-session": "^1.18.1",
     "form-data": "^4.0.2",
     "jsonwebtoken": "^9.0.2",
-    "mime-types": "^2.1.35",
     "mongoose": "^8.13.2",
     "multer": "^1.4.5-lts.2",
     "multer-storage-cloudinary": "^4.0.0",
+    "node-cron": "^4.1.0",
     "nodemailer": "^6.10.1",
     "nodemon": "^3.1.9",
     "passport": "^0.7.0",
@@ -23,14 +23,6 @@
     "streamifier": "^0.1.1",
     "stripe": "^18.1.0",
     "uuid": "^11.1.0"
-  },
-  "overrides": {
-    "express": {
-      "router": false
-    }
-  },
-  "resolutions": {
-    "router": "npm:@empty-npm-package/empty"
   },
   "scripts": {
     "start": "node index.js",

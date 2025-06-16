@@ -4,6 +4,35 @@
   --secondary-color: white;
   --accent-color: brown;
   --background-color: #DBD7D1;
+
+  /* Consistent spacing system for all elements except main-books */
+  --container-padding: clamp(1.25rem, 3vw, 2.5rem);
+  --section-spacing: clamp(2rem, 5vw, 4rem);
+  --element-spacing: clamp(1rem, 2vw, 1.5rem);
+  --container-max-width: 1400px;
+  --quote-container-padding: clamp(1rem, 2.5vw, 2rem);
+
+  /* Zoom-responsive variables for main-books (will be set by JavaScript) */
+  --zoom-factor: 1;
+  --book-width: 220px; /* Increased from 180px */
+  --book-spacing-x: 280px; /* Increased from 250px */
+  --book-spacing-y: 190px; /* Increased from 170px */
+  --book-margin-top: 120px;
+
+  /* Container zoom adjustments (will be set by JavaScript) */
+  --container-padding-zoom: 20px;
+  --container-max-width-zoom: 1400px;
+  --quote-scale: 1;
+  --quote-max-width: 500px; /* Increased from 350px */
+  --main-books-left: 50%;
+  --main-books-transform: translateX(-1%);
+  --main-books-scale: 1;
+  --main-books-width: 600px;
+  --individual-book-scale: 1;
+  --book-spacing-reduction: 1;
+
+  /* Navbar height compensation for different screen sizes */
+  --navbar-height-compensation: clamp(5rem, 10vh, 7rem);
 }
 
 /* Login success notification */
@@ -34,33 +63,121 @@
   display: flex;
   position: relative;
   width: 100%;
-  max-width: 1400px;
+  max-width: var(--container-max-width-zoom);
   margin: 0 auto;
-  padding: 70px 20px 0; /* Added top padding to account for fixed navbar */
+  top: 7vh;
+
   box-sizing: border-box;
   min-height: 70vh;
+  overflow: visible; /* Allow content to be visible */
 }
 
-/* Quote container */
+/* Ensure page doesn't get cut off during zoom */
+html, body {
+  overflow-x: auto; /* Allow horizontal scrolling when zoomed */
+  min-width: 320px; /* Minimum width to prevent extreme cutting */
+}
+
+/* Prevent main-box from being cut off */
+.main-box {
+  
+  min-width: fit-content;
+}
+
+/* Quote container - unified styling for all screen sizes */
 .quote-container {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding-right: 20px;
-  max-width: 30%;
+  justify-content: center;
+  align-items: flex-start;
+  padding-right: var(--quote-container-padding);
+  max-width: min(40%, var(--quote-max-width));
+  transform: scale(var(--quote-scale));
+  transform-origin: left center;
+  transition: transform 0.3s ease, max-width 0.3s ease;
+  margin: 0;
+  overflow: visible;
+  flex-grow: 1;
+  flex-basis: 0;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+/* ULTIMATE CENTERING FIX - Force perfect centering for all mobile/tablet layouts */
+@media screen and (max-width: 991px) {
+  .main-box {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    text-align: center !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    padding: var(--navbar-height-compensation) 0 0 !important;
+  }
+
+  .quote-container {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    margin: 0 auto var(--element-spacing) !important;
+    padding: 0 var(--container-padding) !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    transform: none !important;
+    position: relative !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+  }
+
+  .quote-line {
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    width: 100% !important;
+  }
+
+  .line {
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    width: 100% !important;
+  }
+
+  .explore {
+    margin: var(--element-spacing) auto !important;
+    display: block !important;
+    text-align: center !important;
+  }
+}
+
+.fade {
+  opacity: 0;
+  animation: fadeIn 1s ease forwards;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
 }
 
 .quote-line {
-  margin-top: 60px;
+  margin-top: clamp(2rem, 8vh, 4rem);
   font-weight: bolder;
-  font-size: clamp(3rem, 6vw, 6rem);
+  font-size: clamp(3.5rem, 7vw, 7rem); /* Increased font size */
   font-family: MightySouly;
   line-height: 1.1;
 }
 
 .line {
-  margin-top: 20px;
-  font-size: clamp(0.9rem, 1.5vw, 1.2rem);
+  margin-top: var(--element-spacing);
+  font-size: clamp(1.1rem, 1.8vw, 1.5rem); /* Increased font size */
   line-height: 1.5;
 }
 
@@ -68,13 +185,13 @@
   border: 3px solid var(--primary-color);
   background-color: var(--primary-color);
   color: var(--secondary-color);
-  padding: 15px;
-  margin-top: 20px;
-  font-size: clamp(0.7rem, 1vw, 1rem);
+  padding: clamp(1rem, 2vw, 1.3rem) clamp(1.5rem, 2.5vw, 2rem); /* Increased padding */
+  margin-top: var(--element-spacing);
+  font-size: clamp(0.9rem, 1.3vw, 1.2rem); /* Increased font size */
   cursor: pointer;
   transition: all 0.3s ease;
   display: inline-block;
-  max-width: 250px;
+  max-width: clamp(250px, 35vw, 350px); /* Increased max-width */
 }
 
 
@@ -87,26 +204,63 @@
 
 /* Books container */
 .main-books {
-  position: absolute;
   display: flex;
   flex-direction: column;
-  margin-top: -40px;
-  left: 50%;
-  transform: translateX(-1%);
+  left: var(--main-books-left);
+  margin-top: -7px;
+  position: absolute;
+  transform: var(--main-books-transform);
+  width: fit-content; /* Let content determine width */
+  transform-origin: top left; /* Scale from top-left like the example */
+  transition: transform 0.2s ease-out; /* Smooth scaling like the example */
+  overflow: visible; /* Ensure all books are visible */
 }
 
 .photo {
-  width: 180px;
+  width: var(--book-width); /* Dynamic width that changes with zoom */
   height: auto;
-  margin-top: 120px;
+  margin-top: var(--book-margin-top);
   margin-bottom: 20px;
-  transition: transform 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Smooth popup animation */
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  object-fit: cover;
+  position: relative;
 }
 
+/* Popup animation on hover */
 .photo:hover {
-  transform: translateY(-10px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  transform: scale(1.005) !important;/* Simple scaling without variables */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+/* Add a subtle glow effect */
+.photo::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+
+}
+
+.photo:hover::before {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+/* Add click animation */
+.photo:active {
+  transform: scale(1.05) translateY(-5px); /* Simple scaling without variables */
+  transition: all 0.1s ease;
 }
 
 .book1 {
@@ -114,42 +268,54 @@
 }
 
 .book2 {
-  margin-top: -170px;
-  margin-left: 250px;
+  margin-top: calc(-1 * var(--book-spacing-y));
+  margin-left: calc(var(--book-spacing-x) * var(--book-spacing-reduction));
 }
 
 .book3 {
-  margin-top: -170px;
-  margin-left: 500px;
+  margin-top: calc(-1 * var(--book-spacing-y));
+  margin-left: calc(2 * var(--book-spacing-x) * var(--book-spacing-reduction));
+}
+
+/* Ensure books don't overflow when scaled */
+@media screen and (min-width: 992px) {
+  .main-books {
+    
+    max-width: none;
+    overflow: visible;
+  }
+
+  .photo {
+    flex-shrink: 0; /* Prevent books from shrinking too much */
+  }
 }
 
 .middle-box {
-  margin-top: 150px;
-  border-top: 1px solid black;
+  margin-top: clamp(6rem, 12vh, 10rem);
   min-height: 100vh;
   width: 100%;
   position: relative;
-  padding: 40px 20px;
+  padding: var(--section-spacing) var(--container-padding);
   box-sizing: border-box;
 }
 
 /* Bestseller Showcase */
 .bestseller-showcase {
-  max-width: 1200px;
-  margin: 0 auto 60px;
+  max-width: var(--container-max-width);
+  margin: 0 auto var(--section-spacing);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 40px;
-  padding: 30px;
+  gap: var(--section-spacing);
+  padding: var(--section-spacing);
   background-color: #f9f7f4;
-  border-radius: 12px;
+  border-radius: clamp(8px, 1vw, 12px);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
 .bestseller-book {
   flex: 1;
-  min-width: 300px;
+  min-width: clamp(250px, 40vw, 350px);
   position: relative;
   display: flex;
   justify-content: center;
@@ -157,13 +323,13 @@
 
 .bestseller-badge-container {
   position: absolute;
-  top: -20px;
-  left: -20px;
+  top: clamp(-15px, -2vw, -20px);
+  left: clamp(-15px, -2vw, -20px);
   z-index: 2;
 }
 
 .bestseller-badge {
-  width: 100px;
+  width: clamp(80px, 8vw, 120px);
   height: auto;
   transform: rotate(-25deg);
   filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.2));
@@ -171,11 +337,11 @@
 
 .bestseller-cover {
   width: 80%;
-  max-width: 300px;
+  max-width: clamp(250px, 35vw, 350px);
   height: auto;
   box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
   transition: transform 0.4s ease;
-  border-radius: 5px;
+  border-radius: clamp(4px, 0.5vw, 8px);
 }
 
 .bestseller-cover:hover {
@@ -184,78 +350,78 @@
 
 .bestseller-details {
   flex: 2;
-  min-width: 300px;
-  padding: 20px;
+  min-width: clamp(250px, 40vw, 350px);
+  padding: var(--element-spacing);
 }
 
 .bestseller-title {
   font-size: clamp(2rem, 4vw, 3rem);
   font-weight: bold;
-  margin: 0 0 10px 0;
+  margin: 0 0 clamp(0.5rem, 1vw, 1rem) 0;
   font-family: MightySouly;
 }
 
 .bestseller-author {
-  font-size: 1.2rem;
+  font-size: clamp(1rem, 1.5vw, 1.3rem);
   color: #555;
-  margin: 0 0 15px 0;
+  margin: 0 0 var(--element-spacing) 0;
 }
 
 .bestseller-rating {
   display: flex;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: var(--element-spacing);
 }
 
 .bestseller-rating .stars {
   color: #f8d448;
-  font-size: 1.3rem;
-  margin-right: 10px;
+  font-size: clamp(1.1rem, 1.5vw, 1.4rem);
+  margin-right: clamp(0.5rem, 1vw, 1rem);
 }
 
 .bestseller-rating .count {
   color: #777;
-  font-size: 0.9rem;
+  font-size: clamp(0.8rem, 1vw, 1rem);
 }
 
 .bestseller-description {
-  font-size: 1rem;
+  font-size: clamp(0.9rem, 1.2vw, 1.1rem);
   line-height: 1.6;
   color: #333;
-  margin-bottom: 25px;
+  margin-bottom: var(--element-spacing);
 }
 
 .bestseller-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
-  margin-bottom: 25px;
+  gap: var(--element-spacing);
+  margin-bottom: var(--element-spacing);
 }
 
 .meta-item {
   display: flex;
   flex-direction: column;
-  min-width: 80px;
+  min-width: clamp(70px, 10vw, 100px);
 }
 
 .meta-label {
-  font-size: 0.8rem;
+  font-size: clamp(0.7rem, 0.9vw, 0.9rem);
   color: #777;
-  margin-bottom: 5px;
+  margin-bottom: clamp(0.25rem, 0.5vw, 0.5rem);
 }
 
 .meta-value {
-  font-size: 1rem;
+  font-size: clamp(0.9rem, 1.1vw, 1.1rem);
   font-weight: 600;
 }
 
 .bestseller-button {
-  padding: 12px 30px;
+  padding: clamp(0.75rem, 1.5vw, 1rem) clamp(1.5rem, 3vw, 2rem);
   background-color: var(--primary-color);
   color: var(--secondary-color);
   border: none;
-  border-radius: 4px;
-  font-size: 1rem;
+  border-radius: clamp(3px, 0.5vw, 6px);
+  font-size: clamp(0.9rem, 1.1vw, 1.1rem);
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 600;
@@ -269,9 +435,9 @@
 
 /* Featured Books Section */
 .featured-section {
-  margin-top: 80px;
-  padding: 20px;
-  max-width: 1400px;
+  margin-top: var(--section-spacing);
+  padding: var(--container-padding);
+  max-width: var(--container-max-width);
   margin-left: auto;
   margin-right: auto;
 }
@@ -279,7 +445,7 @@
 .section-title {
   font-size: clamp(2rem, 4vw, 3rem);
   font-weight: bold;
-  margin-bottom: 10px;
+  margin-bottom: clamp(0.5rem, 1vw, 1rem);
   text-align: center;
   font-family: MightySouly;
 }
@@ -288,20 +454,20 @@
   font-size: clamp(1rem, 1.5vw, 1.2rem);
   color: #555;
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: var(--section-spacing);
 }
 
 .featured-books-container {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 30px;
-  margin-bottom: 40px;
+  gap: var(--element-spacing);
+  margin-bottom: var(--section-spacing);
 }
 
 .featured-book {
   background-color: var(--secondary-color);
-  border-radius: 8px;
+  border-radius: clamp(6px, 1vw, 10px);
   overflow: hidden;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -363,12 +529,12 @@
 .view-all-btn {
   display: block;
   margin: 0 auto;
-  padding: 12px 25px;
+  padding: clamp(0.75rem, 1.5vw, 1rem) clamp(1.5rem, 3vw, 2rem);
   background-color: var(--primary-color);
   color: var(--secondary-color);
   border: none;
-  border-radius: 4px;
-  font-size: 1rem;
+  border-radius: clamp(3px, 0.5vw, 6px);
+  font-size: clamp(0.9rem, 1.1vw, 1.1rem);
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -379,11 +545,21 @@
 
 /* Large screens (1200px and above) */
 @media screen and (min-width: 1200px) {
+  :root {
+    --book-width: 240px; /* Even larger on big screens */
+    --book-spacing-x: 300px;
+    --book-spacing-y: 200px;
+    --book-margin-top: 120px;
+  }
+  .quote-container {
+    margin-left: 0;
+    padding-left: clamp(2rem, 4vw, 4rem);
+    justify-content: center;
+    align-items: flex-start;
+  }
+
   .quote-line {
     font-size: 5rem;
-  }
-  .photo {
-    width: 180px;
   }
   .explore {
     font-size: 0.9rem;
@@ -392,23 +568,18 @@
 
 /* Medium screens (992px to 1199px) */
 @media screen and (max-width: 1199px) and (min-width: 992px) {
+  :root {
+    --book-width: 180px; /* Increased from 150px */
+    --book-spacing-x: 220px; /* Increased from 180px */
+    --book-spacing-y: 170px; /* Increased from 150px */
+    --book-margin-top: 120px;
+  }
+
   .quote-line {
     font-size: 4rem;
   }
-  .photo {
-    width: 150px;
-  }
   .book1 {
-    margin-top: 120px;
     margin-left: -50px;
-  }
-  .book2 {
-    margin-top: -150px;
-    margin-left: 180px;
-  }
-  .book3 {
-    margin-top: -150px;
-    margin-left: 400px;
   }
   .explore {
     font-size: 0.8rem;
@@ -442,20 +613,45 @@
 /* Bestseller styles now defined in the bestseller-badge class */
 /* Medium screens (768px to 991px) */
 @media screen and (max-width: 991px) and (min-width: 768px) {
+  :root {
+    --container-padding: clamp(1rem, 2.5vw, 2rem);
+    --section-spacing: clamp(1.5rem, 4vw, 3rem);
+    --element-spacing: clamp(0.8rem, 1.5vw, 1.2rem);
+    --quote-container-padding: clamp(0.8rem, 2vw, 1.5rem);
+    --book-width: 140px; /* Increased from 120px */
+    --book-spacing-x: 25px; /* Increased from 20px */
+    --book-spacing-y: 0px;
+    --book-margin-top: 0px;
+    --navbar-height-compensation: clamp(4.5rem, 9vh, 6rem);
+    --quote-scale: 1; /* Reset quote scaling on tablets */
+    --quote-max-width: 100%; /* Full width on tablets */
+    --main-books-width: 100%; /* Full width on tablets */
+    --main-books-scale: 1; /* Reset books scaling on tablets */
+  }
+
   .main-box {
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    padding: var(--navbar-height-compensation) var(--container-padding) 0;
+    width: 100%;
   }
 
   .quote-container {
+    transform: none;
     max-width: 100%;
+    width: 100%;
+    margin: 0 auto var(--element-spacing);
+    padding: 0;
     text-align: center;
-    padding-right: 0;
-    margin-bottom: 20px;
+    justify-content: center;
+    align-items: center;
+    display: flex;
+    flex-direction: column;
   }
 
   .explore {
-    margin: 20px auto;
+    margin: var(--element-spacing) auto;
   }
 
   .main-books {
@@ -463,19 +659,14 @@
     display: flex;
     flex-direction: row;
     justify-content: center;
-    gap: 20px;
+    gap: var(--book-spacing-x);
     margin-top: 40px;
     left: auto;
     transform: none;
   }
 
-  .photo {
-    width: 120px;
-    margin-top: 0;
-  }
-
   .book1, .book2, .book3 {
-    margin-top: 0;
+    margin-top: var(--book-margin-top);
     margin-left: 0;
   }
 
@@ -496,75 +687,181 @@
   }
 
   .bestseller-showcase {
-    padding: 20px;
-    gap: 25px;
-    margin-bottom: 40px;
+    padding: var(--element-spacing);
+    gap: var(--element-spacing);
+    margin-bottom: var(--section-spacing);
   }
 
   .bestseller-book {
-    min-width: 250px;
+    min-width: clamp(220px, 35vw, 280px);
   }
 
   .bestseller-badge {
-    width: 80px;
+    width: clamp(70px, 7vw, 90px);
   }
 
   .bestseller-details {
-    min-width: 250px;
-    padding: 15px;
+    min-width: clamp(220px, 35vw, 280px);
+    padding: var(--element-spacing);
   }
 
   .bestseller-title {
-    font-size: 2.2rem;
+    font-size: clamp(1.8rem, 3.5vw, 2.5rem);
   }
 
   .bestseller-author {
-    font-size: 1.1rem;
+    font-size: clamp(1rem, 1.3vw, 1.2rem);
   }
 
   .bestseller-description {
-    font-size: 0.9rem;
-    margin-bottom: 20px;
+    font-size: clamp(0.85rem, 1.1vw, 1rem);
+    margin-bottom: var(--element-spacing);
   }
 
   .bestseller-meta {
-    gap: 15px;
-    margin-bottom: 20px;
+    gap: var(--element-spacing);
+    margin-bottom: var(--element-spacing);
   }
 
   .bestseller-button {
-    padding: 10px 25px;
+    padding: clamp(0.6rem, 1.2vw, 0.8rem) clamp(1.2rem, 2.5vw, 1.8rem);
+  }
+}
+
+/* CRITICAL FIX: Perfect centering for the exact problematic range */
+@media screen and (max-width: 1000px) and (min-width: 700px) {
+  .main-box {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    width: 100vw !important;
+    margin: 0 !important;
+    padding: var(--navbar-height-compensation) 0 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .quote-container {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    margin: 0 auto var(--element-spacing) !important;
+    padding: 0 2rem !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    transform: none !important;
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  .quote-line {
+    text-align: center !important;
+    margin: clamp(2rem, 8vh, 4rem) auto 0 !important;
+    width: 100% !important;
+    display: block !important;
+  }
+
+  .line {
+    text-align: center !important;
+    margin: var(--element-spacing) auto !important;
+    width: 100% !important;
+    display: block !important;
+  }
+
+  .explore {
+    margin: var(--element-spacing) auto !important;
+    display: block !important;
+    text-align: center !important;
+    position: relative !important;
+    left: 0 !important;
+    right: 0 !important;
+  }
+}
+
+/* Enhanced fix for problematic screen range */
+@media screen and (max-width: 991px) and (min-width: 768px) {
+  .quote-container {
+    transform: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 auto var(--element-spacing) !important;
+    padding: 0 var(--container-padding) !important;
+    text-align: center !important;
+    justify-content: center !important;
+    align-items: center !important;
+    display: flex !important;
+    flex-direction: column !important;
+    position: relative !important;
+    left: 0 !important;
+    right: 0 !important;
+  }
+
+  .main-box {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    text-align: center !important;
+  }
+
+  .quote-line, .line, .explore {
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
   }
 }
 
 /* Small screens (480px to 767px) */
 @media screen and (max-width: 767px) and (min-width: 480px) {
+  :root {
+    --container-padding: clamp(0.8rem, 2vw, 1.5rem);
+    --section-spacing: clamp(1.2rem, 3vw, 2.5rem);
+    --element-spacing: clamp(0.6rem, 1.2vw, 1rem);
+    --quote-container-padding: clamp(0.6rem, 1.5vw, 1rem);
+    --book-width: 120px; /* Increased from 100px */
+    --book-spacing-x: 25px; /* Increased from 20px */
+    --book-spacing-y: 0px;
+    --book-margin-top: 0px;
+    --navbar-height-compensation: clamp(5rem, 10vh, 6.5rem);
+    --quote-scale: 1; /* Reset quote scaling on small screens */
+    --quote-max-width: 100%; /* Full width on small screens */
+    --main-books-width: 100%; /* Full width on small screens */
+    --main-books-scale: 1; /* Reset books scaling on small screens */
+  }
+
   .main-box {
     flex-direction: column;
     align-items: center;
-    padding: 60px 15px 0;
+    padding: var(--navbar-height-compensation) var(--container-padding) 0;
   }
 
   .quote-container {
+    transform: none;
     max-width: 100%;
+    margin: 0 auto var(--element-spacing);
+    padding: 0 var(--container-padding);
     text-align: center;
-    padding-right: 0;
-    margin-bottom: 20px;
+    justify-content: center;
+    align-items: center;
   }
 
   .quote-line {
-    font-size: 3rem;
-    margin-top: 10px;
+    font-size: clamp(2.5rem, 5vw, 3.5rem);
+    margin-top: clamp(0.5rem, 2vh, 1rem);
   }
 
   .line {
-    font-size: 0.9rem;
+    font-size: clamp(0.8rem, 1.3vw, 1rem);
   }
 
   .explore {
-    margin: 20px auto;
-    font-size: 0.8rem;
-    padding: 10px;
+    margin: var(--element-spacing) auto;
+    font-size: clamp(0.7rem, 1vw, 0.9rem);
+    padding: clamp(0.6rem, 1.2vw, 0.8rem) clamp(0.8rem, 1.5vw, 1rem);
   }
 
   .main-books {
@@ -573,154 +870,168 @@
     flex-direction: row;
     justify-content: center;
     flex-wrap: wrap;
-    gap: 20px;
+    gap: var(--book-spacing-x);
     margin-top: 40px;
     left: auto;
     transform: none;
   }
 
-  .photo {
-    width: 100px;
-    margin-top: 0;
-  }
-
   .book1, .book2, .book3 {
-    margin-top: 0;
+    margin-top: var(--book-margin-top);
     margin-left: 0;
   }
 
   .bestseller-showcase {
-    padding: 20px 15px;
-    gap: 20px;
-    margin-bottom: 30px;
+    padding: var(--element-spacing) var(--container-padding);
+    gap: var(--element-spacing);
+    margin-bottom: var(--section-spacing);
     flex-direction: column;
   }
 
   .bestseller-book {
-    min-width: 200px;
+    min-width: clamp(180px, 30vw, 250px);
     margin: 0 auto;
-    max-width: 280px;
+    max-width: clamp(250px, 40vw, 320px);
   }
 
   .bestseller-badge-container {
-    top: -15px;
-    left: -15px;
+    top: clamp(-12px, -1.5vw, -18px);
+    left: clamp(-12px, -1.5vw, -18px);
   }
 
   .bestseller-badge {
-    width: 70px;
+    width: clamp(60px, 6vw, 80px);
   }
 
   .bestseller-details {
     min-width: auto;
-    padding: 10px 5px;
+    padding: var(--element-spacing) clamp(0.3rem, 1vw, 0.8rem);
     text-align: center;
   }
 
   .bestseller-title {
-    font-size: 2rem;
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
   }
 
   .bestseller-author {
-    font-size: 1rem;
-    margin-bottom: 10px;
+    font-size: clamp(0.9rem, 1.2vw, 1.1rem);
+    margin-bottom: var(--element-spacing);
   }
 
   .bestseller-rating {
     justify-content: center;
-    margin-bottom: 15px;
+    margin-bottom: var(--element-spacing);
   }
 
   .bestseller-description {
-    font-size: 0.9rem;
-    margin-bottom: 15px;
+    font-size: clamp(0.8rem, 1.1vw, 1rem);
+    margin-bottom: var(--element-spacing);
     text-align: left;
   }
 
   .bestseller-meta {
     justify-content: center;
-    gap: 15px;
-    margin-bottom: 20px;
+    gap: var(--element-spacing);
+    margin-bottom: var(--element-spacing);
   }
 
   .bestseller-button {
-    padding: 10px 20px;
-    font-size: 0.9rem;
+    padding: clamp(0.6rem, 1.2vw, 0.8rem) clamp(1rem, 2vw, 1.5rem);
+    font-size: clamp(0.8rem, 1.1vw, 1rem);
   }
 
   .featured-section {
-    margin-top: 40px;
-    padding: 10px;
+    margin-top: var(--section-spacing);
+    padding: var(--container-padding);
   }
 
   .section-title {
-    font-size: 2rem;
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
   }
 
   .section-subtitle {
-    font-size: 0.9rem;
-    margin-bottom: 30px;
+    font-size: clamp(0.8rem, 1.2vw, 1rem);
+    margin-bottom: var(--section-spacing);
   }
 
   .featured-books-container {
-    gap: 15px;
+    gap: var(--element-spacing);
   }
 
   .featured-book {
-    width: 160px;
+    width: clamp(140px, 25vw, 180px);
   }
 
   .book-cover {
-    height: 220px;
+    height: clamp(200px, 30vw, 240px);
   }
 
   .book-info h3 {
-    font-size: 1rem;
+    font-size: clamp(0.9rem, 1.2vw, 1.1rem);
   }
 
   .author {
-    font-size: 0.8rem;
+    font-size: clamp(0.7rem, 1vw, 0.9rem);
   }
 
   .view-all-btn {
-    padding: 10px 20px;
-    font-size: 0.9rem;
+    padding: clamp(0.6rem, 1.2vw, 0.8rem) clamp(1rem, 2vw, 1.5rem);
+    font-size: clamp(0.8rem, 1.1vw, 1rem);
   }
 }
 
 /* Very small screens (below 480px) */
 @media screen and (max-width: 479px) {
+  :root {
+    --container-padding: clamp(0.5rem, 1.5vw, 1rem);
+    --section-spacing: clamp(1rem, 2.5vw, 2rem);
+    --element-spacing: clamp(0.5rem, 1vw, 0.8rem);
+    --quote-container-padding: clamp(0.3rem, 1vw, 0.8rem);
+    --book-width: 110px; /* Increased from 90px */
+    --book-spacing-x: 15px; /* Increased from 10px */
+    --book-spacing-y: 0px;
+    --book-margin-top: 0px;
+    --navbar-height-compensation: clamp(5.5rem, 11vh, 7rem);
+    --quote-scale: 1; /* Reset quote scaling on very small screens */
+    --quote-max-width: 100%; /* Full width on very small screens */
+    --main-books-width: 100%; /* Full width on very small screens */
+    --main-books-scale: 1; /* Reset books scaling on very small screens */
+  }
+
   .main-box {
     flex-direction: column;
     align-items: center;
-    padding: 50px 5px 0;
+    padding: var(--navbar-height-compensation) var(--container-padding) 0;
     min-height: auto;
     overflow-x: hidden;
   }
 
   .quote-container {
+    transform: none;
     max-width: 100%;
+    margin: 0 auto var(--element-spacing);
+    padding: 0 var(--container-padding);
     text-align: center;
-    padding-right: 0;
-    margin-bottom: 20px;
+    justify-content: center;
+    align-items: center;
   }
 
   .quote-line {
-    font-size: 2.5rem;
-    margin-top: 10px;
+    font-size: clamp(2rem, 4.5vw, 3rem);
+    margin-top: clamp(0.5rem, 1.5vh, 1rem);
     line-height: 1;
   }
 
   .line {
-    font-size: 0.8rem;
+    font-size: clamp(0.7rem, 1.2vw, 0.9rem);
     line-height: 1.4;
-    margin-top: 15px;
+    margin-top: var(--element-spacing);
   }
 
   .explore {
-    margin: 15px auto;
-    font-size: 0.7rem;
-    padding: 8px;
+    margin: var(--element-spacing) auto;
+    font-size: clamp(0.6rem, 0.9vw, 0.8rem);
+    padding: clamp(0.5rem, 1vw, 0.7rem) clamp(0.6rem, 1.2vw, 0.8rem);
     width: auto;
   }
 
@@ -730,7 +1041,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: var(--book-spacing-x);
     margin-top: 20px;
     left: auto;
     transform: none;
@@ -738,240 +1049,395 @@
   }
 
   .photo {
-    width: 90px;
-    margin-top: 0;
     margin-bottom: 0;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   }
 
   .book1, .book2, .book3 {
-    margin-top: 0;
+    margin-top: var(--book-margin-top);
     margin-left: 0;
   }
 
   .middle-box {
-    padding: 30px 10px;
+    padding: var(--section-spacing) var(--container-padding);
   }
 
   .bestseller-showcase {
-    padding: 15px 10px;
-    gap: 15px;
-    margin-bottom: 25px;
+    padding: var(--element-spacing) var(--container-padding);
+    gap: var(--element-spacing);
+    margin-bottom: var(--section-spacing);
     flex-direction: column;
-    border-radius: 8px;
+    border-radius: clamp(6px, 1vw, 10px);
   }
 
   .bestseller-book {
-    min-width: 180px;
+    min-width: clamp(160px, 25vw, 200px);
     margin: 0 auto;
-    max-width: 220px;
+    max-width: clamp(200px, 35vw, 250px);
   }
 
   .bestseller-badge-container {
-    top: -10px;
-    left: -10px;
+    top: clamp(-8px, -1vw, -12px);
+    left: clamp(-8px, -1vw, -12px);
   }
 
   .bestseller-badge {
-    width: 60px;
+    width: clamp(50px, 5vw, 70px);
   }
 
   .bestseller-details {
     min-width: auto;
-    padding: 10px 0;
+    padding: var(--element-spacing) 0;
     text-align: center;
   }
 
   .bestseller-title {
-    font-size: 1.8rem;
+    font-size: clamp(1.4rem, 2.5vw, 2rem);
   }
 
   .bestseller-author {
-    font-size: 0.9rem;
-    margin-bottom: 8px;
+    font-size: clamp(0.8rem, 1.1vw, 1rem);
+    margin-bottom: var(--element-spacing);
   }
 
   .bestseller-rating {
     justify-content: center;
-    margin-bottom: 12px;
+    margin-bottom: var(--element-spacing);
   }
 
   .bestseller-rating .stars {
-    font-size: 1.1rem;
+    font-size: clamp(1rem, 1.3vw, 1.2rem);
   }
 
   .bestseller-rating .count {
-    font-size: 0.8rem;
+    font-size: clamp(0.7rem, 1vw, 0.9rem);
   }
 
   .bestseller-description {
-    font-size: 0.85rem;
-    margin-bottom: 12px;
+    font-size: clamp(0.75rem, 1vw, 0.9rem);
+    margin-bottom: var(--element-spacing);
     text-align: left;
     line-height: 1.5;
   }
 
   .bestseller-meta {
     justify-content: center;
-    gap: 12px;
-    margin-bottom: 15px;
+    gap: var(--element-spacing);
+    margin-bottom: var(--element-spacing);
   }
 
   .meta-item {
-    min-width: 70px;
+    min-width: clamp(60px, 8vw, 80px);
   }
 
   .meta-label {
-    font-size: 0.7rem;
+    font-size: clamp(0.6rem, 0.8vw, 0.8rem);
   }
 
   .meta-value {
-    font-size: 0.9rem;
+    font-size: clamp(0.8rem, 1vw, 1rem);
   }
 
   .bestseller-button {
-    padding: 8px 18px;
-    font-size: 0.85rem;
+    padding: clamp(0.5rem, 1vw, 0.7rem) clamp(0.8rem, 1.5vw, 1.2rem);
+    font-size: clamp(0.75rem, 1vw, 0.9rem);
   }
 
   .featured-section {
-    margin-top: 30px;
-    padding: 5px;
+    margin-top: var(--section-spacing);
+    padding: var(--container-padding);
   }
 
   .section-title {
-    font-size: 1.8rem;
+    font-size: clamp(1.4rem, 2.5vw, 2rem);
   }
 
   .section-subtitle {
-    font-size: 0.8rem;
-    margin-bottom: 25px;
+    font-size: clamp(0.7rem, 1vw, 0.9rem);
+    margin-bottom: var(--section-spacing);
   }
 
   .featured-books-container {
-    gap: 10px;
+    gap: var(--element-spacing);
   }
 
   .featured-book {
-    width: 140px;
+    width: clamp(120px, 20vw, 160px);
   }
 
   .book-cover {
-    height: 190px;
+    height: clamp(170px, 25vw, 210px);
   }
 
   .book-info {
-    padding: 10px;
+    padding: var(--element-spacing);
   }
 
   .book-info h3 {
-    font-size: 0.9rem;
+    font-size: clamp(0.8rem, 1.1vw, 1rem);
   }
 
   .author {
-    font-size: 0.75rem;
-    margin-bottom: 5px;
+    font-size: clamp(0.65rem, 0.9vw, 0.8rem);
+    margin-bottom: clamp(0.3rem, 0.5vw, 0.5rem);
   }
 
   .rating {
-    font-size: 0.8rem;
+    font-size: clamp(0.7rem, 0.9vw, 0.9rem);
   }
 
   .rating-count {
-    font-size: 0.7rem;
+    font-size: clamp(0.6rem, 0.8vw, 0.8rem);
   }
 
   .view-all-btn {
-    padding: 8px 15px;
-    font-size: 0.8rem;
+    padding: clamp(0.5rem, 1vw, 0.7rem) clamp(0.8rem, 1.5vw, 1.2rem);
+    font-size: clamp(0.7rem, 0.9vw, 0.9rem);
   }
 }
 
 /* Extra small screens (below 360px) */
 @media screen and (max-width: 360px) {
-  .photo {
-    width: 80px;
+  :root {
+    --container-padding: clamp(0.3rem, 1vw, 0.8rem);
+    --section-spacing: clamp(0.8rem, 2vw, 1.5rem);
+    --element-spacing: clamp(0.3rem, 0.8vw, 0.6rem);
+    --quote-container-padding: clamp(0.2rem, 0.8vw, 0.6rem);
+    --book-width: clamp(70px, 12vw, 90px);
+    --book-spacing-x: clamp(3px, 1vw, 8px);
+    --book-spacing-y: 0px;
+    --book-margin-top: 0px;
+    --navbar-height-compensation: clamp(6rem, 12vh, 7.5rem);
+    --quote-scale: 1; /* Reset quote scaling on extra small screens */
+    --quote-max-width: 100%; /* Full width on extra small screens */
+    --main-books-width: 100%; /* Full width on extra small screens */
+    --main-books-scale: 1; /* Reset books scaling on extra small screens */
+  }
+
+  .main-box {
+    padding: var(--navbar-height-compensation) var(--container-padding) 0;
+  }
+
+  .quote-container {
+    transform: none;
+    max-width: 100%;
+    margin: 0 auto var(--element-spacing);
+    padding: 0 var(--container-padding);
+    text-align: center;
+    justify-content: center;
+    align-items: center;
   }
 
   .main-books {
-    gap: 5px;
+    gap: var(--book-spacing-x);
   }
 
   .quote-line {
-    font-size: 2.2rem;
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
   }
 
   .line {
-    font-size: 0.75rem;
+    font-size: clamp(0.65rem, 1vw, 0.8rem);
   }
 
   .bestseller-showcase {
-    padding: 12px 8px;
-    gap: 10px;
-    margin-bottom: 20px;
+    padding: var(--element-spacing) var(--container-padding);
+    gap: var(--element-spacing);
+    margin-bottom: var(--section-spacing);
   }
 
   .bestseller-book {
-    min-width: 150px;
-    max-width: 180px;
+    min-width: clamp(130px, 22vw, 170px);
+    max-width: clamp(160px, 30vw, 200px);
   }
 
   .bestseller-badge {
-    width: 50px;
+    width: clamp(40px, 4.5vw, 60px);
   }
 
   .bestseller-title {
-    font-size: 1.6rem;
+    font-size: clamp(1.2rem, 2.2vw, 1.8rem);
   }
 
   .bestseller-author {
-    font-size: 0.85rem;
+    font-size: clamp(0.7rem, 1vw, 0.9rem);
   }
 
   .bestseller-description {
-    font-size: 0.8rem;
+    font-size: clamp(0.65rem, 0.9vw, 0.85rem);
     line-height: 1.4;
   }
 
   .bestseller-meta {
-    gap: 8px;
+    gap: var(--element-spacing);
     flex-wrap: wrap;
     justify-content: space-around;
   }
 
   .meta-item {
-    min-width: 60px;
+    min-width: clamp(50px, 7vw, 70px);
   }
 
   .bestseller-button {
-    padding: 7px 15px;
-    font-size: 0.8rem;
+    padding: clamp(0.4rem, 0.8vw, 0.6rem) clamp(0.6rem, 1.2vw, 1rem);
+    font-size: clamp(0.65rem, 0.9vw, 0.85rem);
   }
 
   .featured-books-container {
-    gap: 8px;
+    gap: var(--element-spacing);
   }
 
   .featured-book {
-    width: 130px;
+    width: clamp(110px, 18vw, 140px);
   }
 
   .book-cover {
-    height: 170px;
+    height: clamp(150px, 22vw, 190px);
   }
 
   .book-info h3 {
-    font-size: 0.85rem;
+    font-size: clamp(0.7rem, 1vw, 0.9rem);
   }
 
   .author {
-    font-size: 0.7rem;
+    font-size: clamp(0.6rem, 0.8vw, 0.75rem);
   }
 
   .view-all-btn {
-    padding: 8px 12px;
-    font-size: 0.75rem;
+    padding: clamp(0.4rem, 0.8vw, 0.6rem) clamp(0.6rem, 1.2vw, 1rem);
+    font-size: clamp(0.65rem, 0.9vw, 0.8rem);
   }
 }
 
+/* Handle extreme zoom levels and prevent cutting */
+@media screen and (max-width: 280px) {
+  .main-box {
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+    max-width: none !important;
+    min-width: 280px;
+    overflow-x: visible;
+  }
 
+  .quote-container {
+    max-width: 100%;
+    margin: 0 auto var(--element-spacing);
+    padding: 0 var(--container-padding);
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .main-books {
+    position: relative !important;
+    left: auto !important;
+    transform: none !important;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
+  }
+
+  .book1, .book2, .book3 {
+    margin: 0 !important;
+    margin-left: 0 !important;
+  }
+}
+
+/* Force smaller scaling for common zoom levels */
+@media screen and (min-width: 992px) {
+  .quote-container {
+    max-width: min(40%, 400px);
+    margin-left: 0;
+    padding-left: clamp(2rem, 4vw, 4rem);
+  }
+
+  .main-books {
+    max-width: 600px; /* Force smaller books container */
+  }
+}
+
+/* Additional zoom handling - only scale individual elements */
+@supports (zoom: 1) {
+  .main-box {
+    width: 100vw;
+    max-width: 100vw;
+    margin: 0;
+    padding-left: max(5px, 2vw);
+    padding-right: max(5px, 2vw);
+  }
+
+  .quote-container {
+    transform: scale(0.8) !important;
+    transform-origin: left center !important;
+    margin-left: 0;
+    padding-left: clamp(1rem, 3vw, 3rem);
+  }
+
+  /* DO NOT scale main-books container - keep it beautiful */
+  .photo {
+    transform: scale(0.8) !important; /* Scale individual books only */
+  }
+}
+
+/* ULTIMATE CENTERING SOLUTION - CLEAN AND SIMPLE */
+@media screen and (max-width: 991px) {
+  .main-box {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    padding: var(--navbar-height-compensation) 0 0 !important;
+  }
+
+  .quote-container {
+    width: 100% !important;
+    text-align: center !important;
+    margin: 0 auto !important;
+    padding: 0 2rem !important;
+    display: block !important;
+  }
+
+  .quote-line {
+    text-align: center !important;
+    width: 100% !important;
+  }
+
+  .line {
+    text-align: center !important;
+    width: 100% !important;
+  }
+
+  .explore {
+    text-align: center !important;
+    margin: 2rem auto !important;
+    display: inline-block !important;
+  }
+}
+
+/* PERFECT CENTERING - ADJUSTED FOR SLIGHT LEFT SHIFT */
+@media screen and (max-width: 991px) {
+  .quote-container {
+    position: relative !important;
+    left: 44% !important;
+    transform: translateX(-50%) !important;
+    width: calc(100% - 4rem) !important;
+    max-width: calc(100% - 4rem) !important;
+    margin: 0 !important;
+    padding: 0 2rem !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+  }
+
+  .quote-line,
+  .line,
+  .explore {
+    text-align: center !important;
+    position: relative !important;
+    left: 0 !important;
+    transform: none !important;
+  }
+}

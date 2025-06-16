@@ -331,6 +331,35 @@ height: 100%;
   }
 }
 
+/* No books message styling */
+.no-books-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+  background-color: white;
+  border-radius: 15px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin: 20px auto;
+  max-width: 500px;
+  color: #845b32;
+}
+
+.no-books-message h3 {
+  margin: 0 0 15px 0;
+  font-size: 1.5rem;
+  color: #A67C52;
+}
+
+.no-books-message p {
+  margin: 8px 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #666;
+}
+
 /* Very small screens */
 @media screen and (max-width: 360px) {
   .allbooks-list {
@@ -353,5 +382,18 @@ height: 100%;
   .clearall-button {
     padding: 6px 12px;
     font-size: 0.8rem;
+  }
+
+  .no-books-message {
+    padding: 30px 15px;
+    margin: 15px auto;
+  }
+
+  .no-books-message h3 {
+    font-size: 1.3rem;
+  }
+
+  .no-books-message p {
+    font-size: 0.9rem;
   }
 }

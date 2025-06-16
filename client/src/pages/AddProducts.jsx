@@ -1,21 +1,61 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './AddProducts.css';
+import api from '../services/api';
 
 const AddProducts = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: '',
     author: '',
     description: '',
     genre: '',
     price: '',
-    categories: [],
+    categories: '',
     isBestSeller: false,
     isFeatured: false,
     isNewRelease: false
   });
   const [coverImage, setCoverImage] = useState(null);
   const [bookFile, setBookFile] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Check if user is admin on component mount
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        setLoading(true);
+
+        const response = await api.get('/router/check-admin');
+
+        if (response.data.isAdmin) {
+          setIsAdmin(true);
+        } else {
+          setError('You do not have admin privileges to access this page');
+          setTimeout(() => {
+            navigate('/');
+          }, 3000);
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+
+        // Check if it's an authentication error
+        if (error.response && error.response.status === 401) {
+          setError('You must be logged in to access this page');
+          navigate('/login');
+        } else {
+          setError('Failed to verify admin status. Please try again later.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [navigate]);
 
   // Available categories
   const availableCategories = [
@@ -37,19 +77,22 @@ const AddProducts = () => {
 
   const handleCategoryChange = (category) => {
     setFormData(prevData => {
-      const updatedCategories = [...prevData.categories];
+      // Convert string to array for processing
+      const currentCategories = prevData.categories ? prevData.categories.split(',').map(cat => cat.trim()).filter(cat => cat) : [];
 
-      if (updatedCategories.includes(category)) {
+      if (currentCategories.includes(category)) {
         // Remove category if already selected
+        const updatedCategories = currentCategories.filter(cat => cat !== category);
         return {
           ...prevData,
-          categories: updatedCategories.filter(cat => cat !== category)
+          categories: updatedCategories.join(', ')
         };
       } else {
         // Add category if not already selected
+        const updatedCategories = [...currentCategories, category];
         return {
           ...prevData,
-          categories: [...updatedCategories, category]
+          categories: updatedCategories.join(', ')
         };
       }
     });
@@ -57,21 +100,61 @@ const AddProducts = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const uploadData = new FormData();
 
-    // Add basic form fields
-    for (let key in formData) {
-      if (key === 'categories') {
-        // Convert categories array to JSON string
-        uploadData.append(key, JSON.stringify(formData[key]));
-      } else {
-        uploadData.append(key, formData[key]);
-      }
+    // Validate required fields before submitting
+    if (!formData.title || !formData.author || !formData.description || !formData.genre || !formData.price) {
+      alert('Please fill in all required fields: Title, Author, Description, Genre, and Price');
+      return;
     }
 
-    // Add files
-    uploadData.append('coverImage', coverImage);
-    uploadData.append('bookFile', bookFile);
+    if (!coverImage || !bookFile) {
+      alert('Please select both cover image and EPUB file');
+      return;
+    }
+
+    // Validate file types
+    if (!bookFile.name.toLowerCase().endsWith('.epub')) {
+      alert('Please select an EPUB file for the book. Only EPUB format is supported.');
+      return;
+    }
+
+    if (!coverImage.type.startsWith('image/')) {
+      alert('Please select a valid image file for the cover');
+      return;
+    }
+
+    setUploading(true);
+    setError(null);
+
+    console.log('📤 Uploading book with data:');
+    console.log('Title:', formData.title);
+    console.log('Author:', formData.author);
+    console.log('Price:', formData.price);
+    console.log('EPUB file:', bookFile.name);
+    console.log('Cover image:', coverImage.name);
+
+    const uploadData = new FormData();
+
+    // Add form fields exactly as expected by BookRouter
+    uploadData.append('title', formData.title);
+    uploadData.append('author', formData.author);
+    uploadData.append('description', formData.description);
+    uploadData.append('genre', formData.genre);
+    uploadData.append('price', formData.price);
+    uploadData.append('categories', formData.categories); // Send as string, backend will split
+    uploadData.append('isBestSeller', formData.isBestSeller);
+    uploadData.append('isFeatured', formData.isFeatured);
+    uploadData.append('isNewRelease', formData.isNewRelease);
+
+    // Add files with correct field names for new API
+    uploadData.append('coverimage', coverImage);  // Changed from 'coverImage' to 'coverimage'
+    uploadData.append('epub', bookFile);          // Changed from 'bookFile' to 'epub'
+
+    // Log what's being sent
+    console.log('FormData contents:');
+    for (let [key, value] of uploadData.entries()) {
+      console.log(`${key}:`, value);
+    }
 
     try {
       const token = localStorage.getItem('authToken');
@@ -83,34 +166,88 @@ const AddProducts = () => {
 
       const res = await axios.post('https://s89-akhil-bookaura-3.onrender.com/router/uploadBook', uploadData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`
+          'Content-Type': 'multipart/form-data'
         }
       });
 
-      console.log(res.data);
-      alert('Upload successful!');
+      console.log('✅ Upload successful:', res.data);
+
+      // Show success message with book details
+      alert(
+        `✅ Book uploaded successfully!\n\n` +
+        `Title: ${res.data.title}\n` +
+        `Author: ${res.data.author}\n` +
+        `Price: ₹${res.data.price}\n\n` +
+        `Your book is now available in the marketplace with direct Cloudinary storage for optimal performance!`
+      );
+
+      // Reset form after successful upload
+      setFormData({
+        title: '',
+        author: '',
+        description: '',
+        genre: '',
+        price: '',
+        categories: '',
+        isBestSeller: false,
+        isFeatured: false,
+        isNewRelease: false
+      });
+      setCoverImage(null);
+      setBookFile(null);
+
+      // Reset file inputs
+      const coverInput = document.getElementById('coverImage');
+      const bookInput = document.getElementById('bookFile');
+      if (coverInput) coverInput.value = '';
+      if (bookInput) bookInput.value = '';
     } catch (error) {
+      console.error('❌ Upload error:', error);
+
       if (error.response) {
         // Server responded with a status other than 2xx
-        console.error('Server Error:', error.response.data);
-        alert(`Error: ${error.response.data.message || 'Failed to upload book'}\nDetails: ${error.response.data.error || ''}`);
+        const errorMessage = error.response.data.error || error.response.data.message || 'Failed to upload book';
+        setError(errorMessage);
+
+        // Check if it's an authentication error
+        if (error.response.status === 401) {
+          alert('❌ Authentication error. Please log in again.');
+          navigate('/login');
+        } else if (error.response.status === 403) {
+          alert('❌ You do not have permission to upload books. Admin access required.');
+        } else {
+          alert(`❌ Upload failed: ${errorMessage}`);
+        }
       } else if (error.request) {
         // Request was made but no response received
-        console.error('No Response:', error.request);
-        alert('No response from server. Please try again later.');
+        const errorMessage = 'No response from server. Please check your internet connection.';
+        setError(errorMessage);
+        alert(`❌ ${errorMessage}`);
       } else {
         // Something else caused the error
-        console.error('Error:', error.message);
-        alert('An error occurred. Please try again.');
+        const errorMessage = error.message || 'An unexpected error occurred.';
+        setError(errorMessage);
+        alert(`❌ Upload failed: ${errorMessage}`);
       }
+    } finally {
+      setUploading(false);
     }
   };
 
   return (
     <div className="add-product-container">
       <h2>Add New Book</h2>
-      <form onSubmit={handleSubmit} className="add-product-form">
+
+      {loading ? (
+        <div className="loading-message">
+          <p>Verifying admin privileges...</p>
+        </div>
+      ) : error ? (
+        <div className="error-message">
+          <p>{error}</p>
+        </div>
+      ) : isAdmin ? (
+        <form onSubmit={handleSubmit} className="add-product-form">
         <div className="form-group">
           <label htmlFor="title">Book Title</label>
           <input
@@ -189,7 +326,7 @@ const AddProducts = () => {
                 <input
                   type="checkbox"
                   id={`category-${index}`}
-                  checked={formData.categories.includes(category)}
+                  checked={formData.categories ? formData.categories.split(',').map(cat => cat.trim()).includes(category) : false}
                   onChange={() => handleCategoryChange(category)}
                 />
                 <label htmlFor={`category-${index}`}>{category}</label>
@@ -246,22 +383,47 @@ const AddProducts = () => {
             required
           />
           <small>Upload a high-quality cover image (JPG, PNG)</small>
+          {coverImage && (
+            <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#e8f5e8', borderRadius: '4px', fontSize: '14px' }}>
+              ✅ Selected: {coverImage.name}
+            </div>
+          )}
         </div>
 
         <div className="form-group">
-          <label htmlFor="bookFile">Book File</label>
+          <label htmlFor="bookFile">EPUB Book File</label>
           <input
             type="file"
             id="bookFile"
-            accept=".pdf,.epub,.mobi"
+            accept=".epub"
             onChange={(e) => setBookFile(e.target.files[0])}
             required
           />
-          <small>Upload the book file (PDF, EPUB, or MOBI)</small>
+          <small>Upload the EPUB book file only. Other formats are not supported in the new system.</small>
+          {bookFile && (
+            <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#e8f5e8', borderRadius: '4px', fontSize: '14px' }}>
+              ✅ Selected: {bookFile.name}
+            </div>
+          )}
         </div>
 
-        <button type="submit" className="submit-button">Upload Book</button>
+        <button
+          type="submit"
+          className="submit-button"
+          disabled={uploading}
+          style={{
+            opacity: uploading ? 0.7 : 1,
+            cursor: uploading ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {uploading ? '📤 Uploading...' : '📚 Upload Book'}
+        </button>
       </form>
+      ) : (
+        <div className="unauthorized-message">
+          <p>You are not authorized to access this page.</p>
+        </div>
+      )}
     </div>
   );
 };

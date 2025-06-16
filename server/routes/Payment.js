@@ -3,6 +3,17 @@ const router = express.Router();
 
 // Load environment variables using our centralized utility
 require('../utils/envConfig');
+
+// Verify Stripe secret key is available
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.error('STRIPE_SECRET_KEY is not defined in environment variables');
+  throw new Error('Stripe secret key is missing. Payment functionality will not work.');
+}
+
+// Log Stripe configuration (without revealing the actual key)
+console.log('Stripe Configuration:');
+console.log('- STRIPE_SECRET_KEY:', process.env.STRIPE_SECRET_KEY ? 'Set' : 'Not set');
+
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const { verifyToken } = require("../middleware/auth");
 const { loadModel } = require("../utils/modelLoader");
@@ -29,6 +40,7 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
         },
         quantity: 1,
       }));
+      //17,51,79
     } else if (book) {
       lineItems = [{
         price_data: {
@@ -48,9 +60,27 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
 
     const totalAmount = (books || [book]).reduce((sum, b) => sum + b.price, 0);
     const purchaseId = new mongoose.Types.ObjectId();
+    const cartData = books || [book];
+
+    // Store cart data in user document for recovery
+    try {
+      const User = require('../model/usermodel');
+      await User.findByIdAndUpdate(req.user.id, {
+        pendingPurchase: {
+          purchaseId: purchaseId.toString(),
+          books: cartData,
+          totalAmount,
+          createdAt: new Date()
+        }
+      });
+      console.log('💾 Stored pending purchase in user document:', purchaseId.toString());
+    } catch (storeError) {
+      console.error('Error storing pending purchase:', storeError);
+      // Continue - this is just a backup mechanism
+    }
 
     // Get frontend URL from environment variable or use default
-    const frontendUrl = process.env.FRONTEND_URL || 'https://bookauraba.netlify.app';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -60,76 +90,152 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
       metadata: {
         purchaseId: purchaseId.toString(),
         userId: req.user.id,
-        totalAmount: totalAmount.toString()
+        totalAmount: totalAmount.toString(),
+        bookCount: cartData.length.toString()
       }
     });
 
-    req.session.pendingPurchase = {
-      _id: purchaseId,
-      userId: req.user.id,
-      books: books || [book],
-      totalAmount,
-      paymentStatus: 'pending'
-    };
+    // Store pending purchase in session if available
+    try {
+      if (req.session) {
+        req.session.pendingPurchase = {
+          _id: purchaseId,
+          userId: req.user.id,
+          books: cartData,
+          totalAmount,
+          paymentStatus: 'pending'
+        };
+        console.log('Stored pending purchase in session:', purchaseId.toString());
+      } else {
+        console.warn('Session object not available, cannot store pending purchase');
+      }
+    } catch (sessionError) {
+      console.error('Error storing purchase in session:', sessionError);
+      // Continue without session storage - we'll rely on the success URL parameters
+    }
 
     res.json({ url: session.url });
   } catch (error) {
-    res.status(500).json({ error: "Failed to create checkout session" });
+    console.error('Stripe checkout session creation error:', error);
+
+    // Provide more detailed error information
+    let errorMessage = "Failed to create checkout session";
+    let statusCode = 500;
+
+    // Handle specific Stripe errors
+    if (error.type === 'StripeCardError') {
+      errorMessage = error.message;
+      statusCode = 400;
+    } else if (error.type === 'StripeInvalidRequestError') {
+      errorMessage = 'Invalid request to Stripe API';
+      statusCode = 400;
+    } else if (error.type === 'StripeAPIError') {
+      errorMessage = 'Stripe API error';
+    } else if (error.type === 'StripeConnectionError') {
+      errorMessage = 'Failed to connect to Stripe API';
+    } else if (error.type === 'StripeAuthenticationError') {
+      errorMessage = 'Stripe authentication failed';
+      console.error('Stripe API key may be invalid or missing');
+    }
+
+    res.status(statusCode).json({
+      error: errorMessage,
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
 // Save purchase after payment success
-router.post("/save-purchase", async (req, res) => {
+router.post("/save-purchase", verifyToken, async (req, res) => {
   try {
-    const { sessionId, purchaseId, books, userId: bodyUserId } = req.body;
-
-    // First try to get userId from the authenticated user
-    let userId = req.user?.id;
-
-    // If no authenticated user, try to get userId from request body
-    if (!userId && bodyUserId) {
-      userId = bodyUserId;
-      console.log('Using userId from request body:', userId);
+    console.log('💰 Starting save-purchase process...');
+    const { sessionId, purchaseId, books } = req.body;
+    if (!req.user?.id || !purchaseId || !Array.isArray(books) || books.length === 0) {
+      console.log('💰 Invalid request data:', { userId: req.user?.id, purchaseId, booksCount: books?.length });
+      return res.status(400).json({ error: "Invalid request" });
     }
 
-    // If still no userId, try to get it from the session metadata via Stripe
-    if (!userId && sessionId) {
-      try {
-        const session = await stripe.checkout.sessions.retrieve(sessionId);
-        if (session && session.metadata && session.metadata.userId) {
-          userId = session.metadata.userId;
-          console.log('Retrieved userId from Stripe session metadata:', userId);
-        }
-      } catch (stripeError) {
-        console.error('Error retrieving session from Stripe:', stripeError);
-      }
-    }
-
-    // Final validation check
-    if (!userId || !purchaseId || !Array.isArray(books) || books.length === 0) {
-      return res.status(400).json({
-        error: "Invalid request",
-        details: {
-          hasUserId: !!userId,
-          hasPurchaseId: !!purchaseId,
-          booksValid: Array.isArray(books) && books.length > 0
-        }
-      });
-    }
-
-    console.log('Processing purchase for userId:', userId, 'purchaseId:', purchaseId);
+    const userId = req.user.id;
     const requiredFields = ['_id', 'title', 'author', 'coverimage', 'price'];
+    console.log(`💰 Processing purchase for user ${userId}, ${books.length} books`);
 
-    const processedBooks = books.map(book => {
-      const missing = requiredFields.filter(field => !book[field]);
-      if (missing.length) throw new Error(`Book is missing fields: ${missing.join(', ')}`);
+    // Fetch fresh book data from database to ensure correct URLs
+    const processedBooks = await Promise.all(books.map(async (book, index) => {
+      console.log(`Processing book ${index + 1}:`, {
+        _id: book._id,
+        title: book.title,
+        author: book.author,
+        coverimage: book.coverimage,
+        price: book.price,
+        url: book.url,
+        epubUrl: book.epubUrl
+      });
 
-      let url = book.url || 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
+      // Try to fetch fresh book data from database
+      let freshBook = book;
+      try {
+        const Book = require('../models/Book');
+        const dbBook = await Book.findById(book._id);
+        if (dbBook) {
+          console.log(`✅ Found fresh book data for ${book.title}:`, {
+            _id: dbBook._id,
+            url: dbBook.url,
+            epubUrl: dbBook.epubUrl,
+            coverimage: dbBook.coverimage,
+            price: dbBook.price
+          });
+          freshBook = {
+            _id: dbBook._id,
+            title: dbBook.title,
+            author: dbBook.author,
+            description: dbBook.description,
+            genre: dbBook.genre,
+            price: dbBook.price,
+            coverimage: dbBook.coverimage,
+            url: dbBook.url,
+            epubUrl: dbBook.epubUrl || dbBook.url, // Ensure epubUrl is set
+            categories: dbBook.categories,
+            isBestSeller: dbBook.isBestSeller,
+            isFeatured: dbBook.isFeatured,
+            isNewRelease: dbBook.isNewRelease,
+            publishedDate: dbBook.publishedDate
+          };
+        } else {
+          console.log(`❌ No fresh book data found for ${book.title} (ID: ${book._id}), using provided data`);
+          // Ensure epubUrl is set even for provided data
+          freshBook = {
+            ...book,
+            epubUrl: book.epubUrl || book.url
+          };
+        }
+      } catch (dbError) {
+        console.log(`❌ Error fetching fresh book data for ${book.title}:`, dbError.message);
+        // Ensure epubUrl is set even on error
+        freshBook = {
+          ...book,
+          epubUrl: book.epubUrl || book.url
+        };
+      }
+
+      const missing = requiredFields.filter(field => {
+        // Special handling for price field - 0 is a valid price
+        if (field === 'price') {
+          return freshBook[field] === undefined || freshBook[field] === null;
+        }
+        return !freshBook[field];
+      });
+      if (missing.length) {
+        console.error(`Book ${index + 1} is missing fields:`, missing);
+        console.error('Book data:', freshBook);
+        throw new Error(`Book "${freshBook.title || 'Unknown'}" is missing fields: ${missing.join(', ')}`);
+      }
+
+      let url = freshBook.url || 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
       if (url.includes('cloudinary.com') && url.includes('raw') && url.endsWith('.pdf')) {
         url = url.slice(0, -4);
       }
-      return { ...book, url };
-    });
+      return { ...freshBook, url };
+    }));
 
     const totalAmount = processedBooks.reduce((sum, b) => sum + b.price, 0);
     const user = await User.findById(userId);
@@ -143,6 +249,7 @@ router.post("/save-purchase", async (req, res) => {
       coverimage: b.coverimage,
       price: b.price,
       url: b.url,
+      epubUrl: b.epubUrl || b.url, // Add epubUrl for compatibility
       purchaseDate: new Date(),
       paymentId: sessionId || 'dev-session'
     }));
@@ -159,7 +266,8 @@ router.post("/save-purchase", async (req, res) => {
         author: b.author,
         coverimage: b.coverimage,
         price: b.price,
-        url: b.url
+        url: b.url,
+        epubUrl: b.epubUrl || b.url // Add epubUrl for compatibility
       })),
       totalAmount,
       paymentId: sessionId || 'dev-session',
@@ -167,210 +275,225 @@ router.post("/save-purchase", async (req, res) => {
     });
 
     await purchase.save();
+
+    // Clean up pending purchase data after successful save
+    try {
+      await User.findByIdAndUpdate(userId, {
+        $unset: { pendingPurchase: 1 }
+      });
+      console.log('🧹 Cleaned up pending purchase data');
+    } catch (cleanupError) {
+      console.error('Error cleaning up pending purchase:', cleanupError);
+      // Continue - this is not critical
+    }
+
+    console.log('💰 Purchase saved successfully!');
+    console.log('💰 Sample book in user purchased books:', {
+      title: newBooks[0]?.title,
+      url: newBooks[0]?.url,
+      epubUrl: newBooks[0]?.epubUrl
+    });
+
     res.status(201).json({ success: true, message: "Purchase saved", purchaseId });
   } catch (error) {
+    console.error('💰 Error saving purchase:', error);
     res.status(500).json({ error: "Failed to save purchase", message: error.message });
   }
 });
 
-// Fetch user purchases - with improved error handling
+// Fetch user purchases
 router.get("/my-purchases", verifyToken, async (req, res) => {
   try {
-    console.log('Fetching purchases for user:', req.user?.id);
-
-    if (!req.user || !req.user.id) {
-      console.log('No user ID found in request');
-      return res.status(401).json({
-        error: "Authentication required",
-        message: "Please log in to view your purchased books"
-      });
-    }
-
-    // Try to find the user
+    console.log('📚 Fetching purchased books for user:', req.user.id);
     const user = await User.findById(req.user.id);
-    if (!user) {
-      console.log('User not found:', req.user.id);
-      return res.status(404).json({
-        error: "User not found",
-        message: "We couldn't find your user account. Please try logging in again."
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    if (!user.purchasedBooks?.length) {
+      console.log('📚 No purchased books in user model, checking Purchase collection...');
+      const purchases = await Purchase.find({ userId: req.user.id }).sort({ purchaseDate: -1 });
+      if (!purchases.length) {
+        console.log('📚 No purchases found in Purchase collection');
+        return res.status(200).json({ success: true, purchasedBooks: [] });
+      }
+
+      console.log(`📚 Found ${purchases.length} purchases, migrating to user model...`);
+      const migratedBooks = purchases.flatMap(purchase => purchase.books.map(b => ({
+        bookId: b.bookId,
+        title: b.title,
+        author: b.author,
+        coverimage: b.coverimage,
+        price: b.price,
+        url: b.url?.endsWith('.pdf') ? b.url.slice(0, -4) : b.url,
+        epubUrl: b.epubUrl || (b.url?.endsWith('.pdf') ? b.url.slice(0, -4) : b.url), // Add epubUrl
+        purchaseDate: b.purchaseDate || purchase.purchaseDate,
+        paymentId: purchase.paymentId
+      })));
+
+      user.purchasedBooks = migratedBooks;
+      user.lastPurchaseDate = purchases[0].purchaseDate;
+      await user.save();
+      console.log(`📚 Migrated ${migratedBooks.length} books to user model`);
+    }
+
+    console.log(`📚 Returning ${user.purchasedBooks.length} purchased books`);
+    // Log first book for debugging
+    if (user.purchasedBooks.length > 0) {
+      console.log('📚 Sample purchased book:', {
+        title: user.purchasedBooks[0].title,
+        url: user.purchasedBooks[0].url,
+        epubUrl: user.purchasedBooks[0].epubUrl
       });
     }
 
-    // Check if user has purchased books in their profile
-    if (!user.purchasedBooks?.length) {
-      console.log('No purchased books in user profile, checking Purchase collection');
-
-      // If not, try to find purchases in the Purchase collection
-      try {
-        const purchases = await Purchase.find({ userId: req.user.id }).sort({ purchaseDate: -1 });
-
-        if (!purchases.length) {
-          console.log('No purchases found for user:', req.user.id);
-          return res.status(200).json({ success: true, purchasedBooks: [] });
-        }
-
-        console.log(`Found ${purchases.length} purchases in Purchase collection`);
-
-        // Migrate books from purchases to user profile
-        const migratedBooks = purchases.flatMap(purchase => purchase.books.map(b => ({
-          bookId: b.bookId,
-          title: b.title,
-          author: b.author,
-          coverimage: b.coverimage,
-          price: b.price,
-          url: b.url?.endsWith('.pdf') ? b.url.slice(0, -4) : b.url,
-          purchaseDate: b.purchaseDate || purchase.purchaseDate,
-          paymentId: purchase.paymentId
-        })));
-
-        console.log(`Migrated ${migratedBooks.length} books to user profile`);
-
-        // Update user profile with migrated books
-        user.purchasedBooks = migratedBooks;
-        user.lastPurchaseDate = purchases[0].purchaseDate;
-        await user.save();
-
-        console.log('User profile updated with purchased books');
-      } catch (purchaseError) {
-        console.error('Error finding purchases:', purchaseError);
-        // Continue with empty purchased books rather than failing
-        user.purchasedBooks = [];
-      }
-    }
-
-    // Ensure purchasedBooks is always an array
-    const purchasedBooks = user.purchasedBooks || [];
-    console.log(`Returning ${purchasedBooks.length} purchased books`);
-
-    // Fix any missing or invalid URLs
-    const processedBooks = purchasedBooks.map(book => {
-      // Ensure the book has all required fields
-      return {
-        ...book.toObject ? book.toObject() : book,
-        url: book.url || 'https://res.cloudinary.com/dg3i8akzq/raw/upload/v1746792433/bookstore/bookFiles/zspcnbobqoimglk83yz6'
-      };
-    });
-
-    res.status(200).json({
-      success: true,
-      purchasedBooks: processedBooks,
-      count: processedBooks.length
-    });
+    res.status(200).json({ success: true, purchasedBooks: user.purchasedBooks });
   } catch (error) {
-    console.error('Error fetching purchased books:', error);
-    res.status(500).json({
-      error: "Failed to fetch purchased books",
-      message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    console.error('📚 Error fetching purchased books:', error);
+    res.status(500).json({ error: "Failed to fetch purchased books" });
   }
 });
 
-// Verify purchase by ID - No authentication required
-router.get("/verify-purchase", async (req, res) => {
+// Get pending purchase data for recovery
+router.get("/get-pending-purchase", verifyToken, async (req, res) => {
   try {
-    const { purchaseId, userId: queryUserId } = req.query;
-    console.log('Verifying purchase:', purchaseId);
-
-    // Try to get userId from different sources
-    let userId = req.user?.id || queryUserId;
+    const { purchaseId } = req.query;
+    const userId = req.user.id;
 
     if (!purchaseId) {
-      console.log('Missing purchase ID');
       return res.status(400).json({ error: "Missing purchase ID" });
     }
 
-    // If we have a userId, try to find the purchase for that user
-    if (userId) {
-      console.log('Checking purchase for user:', userId);
-      const purchase = await Purchase.findOne({ _id: purchaseId, userId });
+    console.log('🔍 Looking for pending purchase:', purchaseId, 'for user:', userId);
 
-      if (purchase) {
-        console.log('Purchase found for user:', userId);
-        return res.status(200).json({
-          success: true,
-          message: "Purchase verified",
-          purchase: {
-            _id: purchase._id,
-            totalAmount: purchase.totalAmount,
-            purchaseDate: purchase.purchaseDate,
-            bookCount: purchase.books.length
-          }
-        });
-      }
-
-      const user = await User.findById(userId);
-      const userBooks = user?.purchasedBooks?.filter(b => b.paymentId?.includes(purchaseId)) || [];
-
-      if (userBooks.length) {
-        console.log('Purchase found in user books for user:', userId);
-        return res.status(200).json({
-          success: true,
-          message: "Purchase verified from user books",
-          purchase: {
-            _id: purchaseId,
-            bookCount: userBooks.length,
-            purchaseDate: userBooks[0].purchaseDate
-          }
-        });
-      }
-    }
-
-    // If no userId or purchase not found for that user, try to find the purchase by ID only
-    console.log('Checking purchase by ID only:', purchaseId);
-    const purchaseByIdOnly = await Purchase.findById(purchaseId);
-
-    if (purchaseByIdOnly) {
-      console.log('Purchase found by ID only. User ID:', purchaseByIdOnly.userId);
+    // First check if purchase already exists
+    const existingPurchase = await Purchase.findOne({ _id: purchaseId, userId });
+    if (existingPurchase) {
+      console.log('✅ Purchase already exists, returning success');
       return res.status(200).json({
         success: true,
-        message: "Purchase verified by ID only",
+        alreadyExists: true,
         purchase: {
-          _id: purchaseByIdOnly._id,
-          userId: purchaseByIdOnly.userId, // Include userId for client to use
-          totalAmount: purchaseByIdOnly.totalAmount,
-          purchaseDate: purchaseByIdOnly.purchaseDate,
-          bookCount: purchaseByIdOnly.books.length
+          _id: existingPurchase._id,
+          totalAmount: existingPurchase.totalAmount,
+          purchaseDate: existingPurchase.purchaseDate,
+          bookCount: existingPurchase.books.length
         }
       });
     }
 
-    console.log('Purchase not found:', purchaseId);
-    res.status(404).json({ success: false, message: "Purchase not found" });
+    // Look for pending purchase data
+    const User = require('../model/usermodel');
+    const user = await User.findById(userId);
+
+    if (user?.pendingPurchase?.purchaseId === purchaseId) {
+      console.log('📦 Found pending purchase data in user document');
+      return res.status(200).json({
+        success: true,
+        pendingPurchase: user.pendingPurchase
+      });
+    }
+
+    // Check session if available
+    if (req.session?.pendingPurchase?._id?.toString() === purchaseId) {
+      console.log('📦 Found pending purchase data in session');
+      return res.status(200).json({
+        success: true,
+        pendingPurchase: req.session.pendingPurchase
+      });
+    }
+
+    console.log('❌ No pending purchase data found');
+    return res.status(404).json({
+      success: false,
+      message: "No pending purchase data found"
+    });
+
   } catch (error) {
-    console.error('Error verifying purchase:', error.message);
-    res.status(500).json({ error: "Failed to verify purchase", message: error.message });
+    console.error('Error getting pending purchase:', error);
+    res.status(500).json({ error: "Failed to get pending purchase data" });
   }
 });
 
-// Verify Stripe session - No authentication required
-router.get("/verify-session", async (req, res) => {
+// Clean up old pending purchases (older than 24 hours)
+router.post("/cleanup-pending-purchases", verifyToken, async (req, res) => {
   try {
-    const { sessionId } = req.query;
-    console.log('Verifying session:', sessionId);
+    const User = require('../model/usermodel');
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    if (!sessionId) {
-      console.log('Missing session ID');
-      return res.status(400).json({ error: "Missing session ID" });
+    const result = await User.updateMany(
+      {
+        'pendingPurchase.createdAt': { $lt: twentyFourHoursAgo }
+      },
+      {
+        $unset: { pendingPurchase: 1 }
+      }
+    );
+
+    console.log(`🧹 Cleaned up ${result.modifiedCount} old pending purchases`);
+    res.status(200).json({
+      success: true,
+      message: `Cleaned up ${result.modifiedCount} old pending purchases`
+    });
+  } catch (error) {
+    console.error('Error cleaning up pending purchases:', error);
+    res.status(500).json({ error: "Failed to cleanup pending purchases" });
+  }
+});
+
+// Verify purchase by ID
+router.get("/verify-purchase", verifyToken, async (req, res) => {
+  try {
+    const { purchaseId } = req.query;
+    const userId = req.user.id;
+    if (!purchaseId) return res.status(400).json({ error: "Missing purchase ID" });
+
+    const purchase = await Purchase.findOne({ _id: purchaseId, userId });
+    if (purchase) {
+      return res.status(200).json({
+        success: true,
+        message: "Purchase verified",
+        purchase: {
+          _id: purchase._id,
+          totalAmount: purchase.totalAmount,
+          purchaseDate: purchase.purchaseDate,
+          bookCount: purchase.books.length
+        }
+      });
     }
 
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-    console.log('Session retrieved:', session.id, 'Status:', session.status, 'Payment status:', session.payment_status);
+    const user = await User.findById(userId);
+    const userBooks = user?.purchasedBooks?.filter(b => b.paymentId?.includes(purchaseId)) || [];
 
-    if (!session || (session.status !== 'complete' && session.payment_status !== 'paid')) {
-      console.log('Payment not completed for session:', sessionId);
+    if (userBooks.length) {
+      return res.status(200).json({
+        success: true,
+        message: "Purchase verified from user books",
+        purchase: {
+          _id: purchaseId,
+          bookCount: userBooks.length,
+          purchaseDate: userBooks[0].purchaseDate
+        }
+      });
+    }
+
+    res.status(404).json({ success: false, message: "Purchase not found" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to verify purchase" });
+  }
+});
+
+// Verify Stripe session
+router.get("/verify-session", verifyToken, async (req, res) => {
+  try {
+    const { sessionId } = req.query;
+    if (!sessionId) return res.status(400).json({ error: "Missing session ID" });
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    if (!session || session.status !== 'complete' && session.payment_status !== 'paid') {
       return res.status(400).json({ success: false, message: "Payment not completed" });
     }
 
     const purchaseId = session.metadata?.purchaseId;
-    const userId = session.metadata?.userId;
-
-    if (!purchaseId) {
-      console.log('Missing purchase ID in session metadata');
-      return res.status(400).json({ success: false, message: "Missing purchase ID" });
-    }
-
-    console.log('Session verified successfully. Purchase ID:', purchaseId, 'User ID:', userId);
+    if (!purchaseId) return res.status(400).json({ success: false, message: "Missing purchase ID" });
 
     res.status(200).json({
       success: true,
@@ -378,15 +501,69 @@ router.get("/verify-session", async (req, res) => {
       session: {
         id: session.id,
         purchaseId,
-        userId, // Include userId from metadata
         amount: session.amount_total / 100,
         paymentStatus: session.payment_status,
         customerEmail: session.customer_details?.email
       }
     });
   } catch (error) {
-    console.error('Error verifying session:', error.message);
-    res.status(500).json({ error: "Failed to verify session", message: error.message });
+    res.status(500).json({ error: "Failed to verify session" });
+  }
+});
+
+// Admin utility: Clean up old purchased books with broken URLs
+router.post("/admin/cleanup-old-books", verifyToken, async (req, res) => {
+  try {
+    console.log('🧹 Starting cleanup of old purchased books...');
+
+    // Find all users with purchased books
+    const users = await User.find({ 'purchasedBooks.0': { $exists: true } });
+    console.log(`📚 Found ${users.length} users with purchased books`);
+
+    let totalCleaned = 0;
+    let totalUsers = 0;
+
+    for (const user of users) {
+      let userCleaned = 0;
+
+      // Filter out books with old Cloudinary URLs that don't work
+      user.purchasedBooks = user.purchasedBooks.filter(book => {
+        const hasOldCloudinaryUrl = book.url && (
+          book.url.includes('/bookstore/bookFiles/') ||
+          book.url.includes('/bookFiles/') ||
+          book.url.includes('/ebooks/')
+        ) && !book.url.includes('/api/books/file/') && !book.url.includes('s89-akhil-bookaura-3.onrender.com/api/books/file/');
+
+        if (hasOldCloudinaryUrl) {
+          console.log(`🗑️ Removing old book: "${book.title}" by ${book.author} (URL: ${book.url})`);
+          userCleaned++;
+          return false; // Remove this book
+        }
+        return true; // Keep this book
+      });
+
+      if (userCleaned > 0) {
+        await user.save();
+        totalUsers++;
+        totalCleaned += userCleaned;
+        console.log(`✅ Cleaned ${userCleaned} books for user ${user.username || user.email}`);
+      }
+    }
+
+    console.log(`🎉 Cleanup complete! Removed ${totalCleaned} old books from ${totalUsers} users`);
+
+    res.status(200).json({
+      success: true,
+      message: `Cleanup complete! Removed ${totalCleaned} old books from ${totalUsers} users`,
+      stats: {
+        usersAffected: totalUsers,
+        booksRemoved: totalCleaned
+      }
+    });
+
+  } catch (error) {
+    console.error('🚨 Error during cleanup:', error);
+    res.status(500).json({ error: "Failed to cleanup old books", message: error.message });
   }
 });
 

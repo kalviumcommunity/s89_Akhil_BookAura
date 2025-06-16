@@ -1,155 +1,105 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import axios from 'axios';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import BasicPdfViewer from '../../components/BasicPdfViewer';
-import ErrorBoundary from '../../components/ErrorBoundary';
+
 import { Book, Calendar, ArrowLeft, FileText } from 'lucide-react';
 import { SafeImage } from '../../utils/imageUtils';
-import { getMyPurchasesUrl } from '../../utils/apiConfig';
 import './MyBooksPage.css';
 import LoadingAnimation from '../../components/LoadingAnimation';
+import api from '../../services/api';
+import SimpleEpubViewer from '../../components/SimpleEpubViewer';
+import BasicGoogleTranslate from '../../components/BasicGoogleTranslate';
+import ErrorBoundary from '../../components/ErrorBoundary';
+
 
 const MyBooksPage = () => {
-  const [purchasedBooks, setPurchasedBooks] = useState([]);
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [errorDetails, setErrorDetails] = useState(null);
-  const [selectedPdf, setSelectedPdf] = useState(null);
   const [groupedBooks, setGroupedBooks] = useState([]);
-  const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 2; // Maximum number of automatic retries
+  const [selectedBook, setSelectedBook] = useState(null);
 
+  // Fetch books inside useEffect directly
   useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    const isLoggedIn = document.cookie.includes('isLoggedIn=true') || !!token;
+
+    if (!isLoggedIn) {
+      console.log('User is not logged in, redirecting to login page');
+      navigate('/login');
+      return;
+    }
+
     const fetchPurchasedBooks = async () => {
       try {
         setLoading(true);
         setError(null);
-        setErrorDetails(null);
-        console.log('Fetching purchased books... (Attempt', retryCount + 1, 'of', maxRetries + 1, ')');
-
-        // Check if auth token exists
-        const authToken = localStorage.getItem('authToken');
-        if (!authToken) {
-          console.log('No auth token found, user may not be logged in');
-        }
-
-        // Create a minimal request configuration to avoid CORS issues
-        const response = await axios.get(getMyPurchasesUrl(), {
-          withCredentials: true,
-          headers: {
-            'Authorization': `Bearer ${authToken || ''}`
-            // No additional headers that might trigger CORS preflight
-          }
-        });
+        const response = await api.get('/api/payment/my-purchases');
 
         if (response.data.success) {
-          console.log('Purchased books fetched successfully:', response.data);
-          console.log(`Received ${response.data.count || 0} purchased books from server`);
+          const bookMap = new Map();
+          const processedBooks = [];
 
-          console.log(`Processing ${response.data.purchasedBooks?.length || 0} books`);
+          // Process all books but prioritize epub format
+          (response.data.purchasedBooks || []).forEach(book => {
+            const bookId = book.bookId.toString();
+            let processedBook = book;
 
-          // Use our processBooks function to handle the data
-          const processedBooks = response.data.purchasedBooks || [];
-          setPurchasedBooks(processedBooks);
+            // Check if the book has a URL
+            if (book.url) {
+              // Process the book regardless of format
+              processedBook = { ...book };
 
-          // Group the books by payment ID
-          const groupedArray = processBooks(processedBooks);
-          setGroupedBooks(groupedArray);
-
-          console.log(`Processed ${processedBooks.length} books into ${groupedArray.length} purchase groups`);
-
-          // Reset retry count on success
-          setRetryCount(0);
-        } else {
-          console.error('Server returned error:', response.data);
-          setError(response.data.message || 'Failed to fetch your purchased books');
-          setErrorDetails(response.data);
-
-          // Retry if we haven't reached max retries
-          if (retryCount < maxRetries) {
-            console.log(`Retrying in 2 seconds... (${retryCount + 1}/${maxRetries})`);
-            setTimeout(() => {
-              setRetryCount(prev => prev + 1);
-            }, 2000);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching purchased books:', error);
-
-        // Handle authentication errors
-        if (error.response?.status === 401) {
-          setError('Authentication required. Please log in to view your purchased books.');
-          setErrorDetails({
-            status: 401,
-            message: 'You need to be logged in to view your purchased books',
-            solution: 'Please log in and try again'
-          });
-
-          // Redirect to login page after a delay
-          setTimeout(() => {
-            window.location.href = '/login?redirect=/my-books';
-          }, 3000);
-        } else if (error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
-          // Handle CORS errors or network issues
-          setError('Network error while fetching your purchased books');
-          setErrorDetails({
-            message: 'This may be due to a CORS issue or network connectivity problem',
-            status: 'NETWORK_ERROR',
-            solution: 'Please try refreshing the page or using a different browser'
-          });
-
-          console.log('Detected network/CORS error, trying alternative approach...');
-
-          // Try an alternative approach without credentials for CORS issues
-          try {
-            // Create a fallback request without credentials or complex headers
-            const fallbackResponse = await axios.get(getMyPurchasesUrl(), {
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-              },
-              // No withCredentials to avoid CORS preflight
-              timeout: 15000
-            });
-
-            if (fallbackResponse.data.success) {
-              console.log('Fallback request successful!');
-              // Process the successful response
-              setPurchasedBooks(fallbackResponse.data.purchasedBooks || []);
-              setGroupedBooks(processBooks(fallbackResponse.data.purchasedBooks || []));
-              setError(null);
-              setErrorDetails(null);
-              return; // Exit the error handler since we recovered
+              if (!bookMap.has(bookId)) {
+                bookMap.set(bookId, processedBook);
+                processedBooks.push(processedBook);
+              }
             }
-          } catch (fallbackError) {
-            console.error('Fallback request also failed:', fallbackError);
-          }
-
-          // If we're here, both approaches failed
-          // Retry if we haven't reached max retries
-          if (retryCount < maxRetries) {
-            console.log(`Retrying in 3 seconds... (${retryCount + 1}/${maxRetries})`);
-            setTimeout(() => {
-              setRetryCount(prev => prev + 1);
-            }, 3000);
-          }
-        } else {
-          // Handle other types of errors
-          setError('An error occurred while fetching your purchased books');
-          setErrorDetails({
-            message: error.message,
-            status: error.response?.status,
-            data: error.response?.data
           });
 
-          // Retry if we haven't reached max retries and it's not an auth error
-          if (retryCount < maxRetries && error.response?.status !== 401) {
-            console.log(`Retrying in 2 seconds... (${retryCount + 1}/${maxRetries})`);
-            setTimeout(() => {
-              setRetryCount(prev => prev + 1);
-            }, 2000);
+          // Group by payment ID
+          const groupedByPaymentId = {};
+          processedBooks.forEach(book => {
+            const paymentId = book.paymentId || 'unknown';
+            const purchaseDate = book.purchaseDate;
+
+            if (!groupedByPaymentId[paymentId]) {
+              groupedByPaymentId[paymentId] = {
+                _id: paymentId,
+                purchaseDate,
+                books: [],
+                totalAmount: 0
+              };
+            }
+
+            groupedByPaymentId[paymentId].books.push(book);
+            groupedByPaymentId[paymentId].totalAmount += book.price;
+          });
+
+          const groupedArray = Object.values(groupedByPaymentId).sort((a, b) =>
+            new Date(b.purchaseDate) - new Date(a.purchaseDate)
+          );
+
+          setGroupedBooks(groupedArray);
+        } else {
+          setError('Failed to fetch your purchased books');
+        }
+        
+      } catch (error) {
+        if (error.response) {
+          if (error.response.status === 401) {
+            setError('Authentication error. Please log in again.');
+            setTimeout(() => navigate('/login'), 2000);
+          } else if (error.response.status === 404) {
+            setError('No purchased books found.');
+          } else {
+            setError(`Server error (${error.response.status}): ${error.response.data.message || 'An error occurred.'}`);
           }
+        } else if (error.request) {
+          setError('Could not connect to server. Check your internet.');
+        } else {
+          setError('An error occurred while preparing your request.');
         }
       } finally {
         setLoading(false);
@@ -157,86 +107,8 @@ const MyBooksPage = () => {
     };
 
     fetchPurchasedBooks();
-  }, [retryCount, maxRetries]);
+  }, [navigate]);
 
-  // Function to process books and group them by payment ID
-  const processBooks = (books) => {
-    try {
-      // Process books to ensure URLs are valid and remove duplicates
-      const bookMap = new Map();
-      const processedBooks = [];
-
-      // Process each book
-      (books || []).forEach(book => {
-        try {
-          // Safely access bookId with fallback
-          const bookId = (book.bookId?.toString() || book._id?.toString() || Math.random().toString());
-
-          // Process the book URL
-          let processedBook = book;
-
-          // Ensure book has a valid URL
-          if (!book.url || book.url === 'placeholder' || book.url.includes('placeholder.url')) {
-            console.log(`Book ${book.title} has invalid URL: ${book.url}, using default PDF`);
-            processedBook = {
-              ...book,
-              url: '/assets/better-placeholder.pdf'
-            };
-          } else {
-            // Keep the original URL - we'll add .pdf extension only when needed for display/download
-            processedBook = { ...book };
-          }
-
-          // Check if this is a duplicate book
-          if (!bookMap.has(bookId)) {
-            // First time seeing this book, add it
-            bookMap.set(bookId, processedBook);
-            processedBooks.push(processedBook);
-          } else {
-            console.log(`Skipping duplicate book: ${book.title} (${bookId})`);
-          }
-        } catch (err) {
-          console.error('Error processing book:', err, book);
-          // Continue with next book
-        }
-      });
-
-      // Group books by payment ID (same transaction)
-      const groupedByPaymentId = {};
-
-      processedBooks.forEach(book => {
-        try {
-          const paymentId = book.paymentId || 'unknown';
-          const purchaseDate = book.purchaseDate || new Date();
-
-          if (!groupedByPaymentId[paymentId]) {
-            groupedByPaymentId[paymentId] = {
-              _id: paymentId,
-              purchaseDate: purchaseDate,
-              books: [],
-              totalAmount: 0
-            };
-          }
-
-          groupedByPaymentId[paymentId].books.push(book);
-          groupedByPaymentId[paymentId].totalAmount += (book.price || 0);
-        } catch (err) {
-          console.error('Error grouping book:', err, book);
-          // Continue with next book
-        }
-      });
-
-      // Convert to array and sort by date (newest first)
-      return Object.values(groupedByPaymentId).sort((a, b) =>
-        new Date(b.purchaseDate || 0) - new Date(a.purchaseDate || 0)
-      );
-    } catch (error) {
-      console.error('Error in processBooks:', error);
-      return [];
-    }
-  };
-
-  // Function to format date
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -245,6 +117,117 @@ const MyBooksPage = () => {
       day: 'numeric'
     });
   };
+
+  const handleReadBook = async (book) => {
+    console.log('📖 Opening book:', book.title);
+    console.log('📖 Original EPUB URL:', book.epubUrl || book.url);
+
+    // Try to fetch fresh book data from the database
+    let bookToRead = book;
+    try {
+      console.log('🔄 Fetching fresh book data from database...');
+      const response = await api.get(`/api/books`);
+      const allBooks = response.data || [];
+
+      // Find the book by ID or title
+      const freshBook = allBooks.find(dbBook =>
+        (dbBook._id === book.bookId) ||
+        (dbBook._id === book._id) ||
+        (dbBook.title === book.title && dbBook.author === book.author)
+      );
+
+      if (freshBook) {
+        console.log('✅ Found fresh book data:', freshBook.title);
+        console.log('📖 Fresh EPUB URL:', freshBook.epubUrl || freshBook.url);
+        bookToRead = {
+          ...book,
+          epubUrl: freshBook.epubUrl || freshBook.url,
+          url: freshBook.url,
+          _id: freshBook._id
+        };
+      } else {
+        console.log('⚠️ Could not find fresh book data, using original');
+      }
+    } catch (error) {
+      console.log('⚠️ Error fetching fresh book data:', error.message);
+    }
+
+    // Check URL type for logging
+    const epubUrl = bookToRead.epubUrl || bookToRead.url;
+    if (epubUrl && epubUrl.includes('res.cloudinary.com') && epubUrl.includes('/ebooks/')) {
+      console.log('✅ Direct Cloudinary URL detected - should work perfectly');
+    } else if (epubUrl && epubUrl.includes('/api/books/file/')) {
+      console.log('⚠️ In-memory storage URL detected - may not work after server restart');
+    } else if (epubUrl && epubUrl.includes('bookstore/bookFiles')) {
+      console.log('⚠️ Old broken Cloudinary URL detected - will use fallback');
+    } else {
+      console.log('❓ Unknown URL type:', epubUrl);
+    }
+
+    setSelectedBook(bookToRead);
+  };
+
+  const handleCloseReader = () => {
+    setSelectedBook(null);
+  };
+
+  // ESC key handler - must be before conditional return
+  useEffect(() => {
+    if(!selectedBook) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleCloseReader();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedBook]);
+
+  // If a book is selected, show the reader
+  if (selectedBook) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+        {/* Basic Google Translate for Book Reader */}
+        <ErrorBoundary>
+          <BasicGoogleTranslate position="middle-right" />
+        </ErrorBoundary>
+
+        <div style={{
+          padding: '10px 20px',
+          backgroundColor: '#f8f9fa',
+          borderBottom: '1px solid #dee2e6',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <h2 style={{ margin: '0', color: '#495057' }}>📖 {selectedBook.title}</h2>
+          <button
+            onClick={handleCloseReader}
+            style={{
+              backgroundColor: '#6c757d',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            ✕ Close Reader
+          </button>
+        </div>
+        <div style={{ flex: 1 }}>
+          <SimpleEpubViewer
+            epubUrl={selectedBook.epubUrl || selectedBook.url}
+            title={selectedBook.title}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -268,42 +251,13 @@ const MyBooksPage = () => {
           ) : error ? (
             <div className="error-container">
               <p className="error-message">{error}</p>
-              <p>Please try again later or contact support if the problem persists.</p>
-
-              {errorDetails?.status === 401 ? (
-                <div className="auth-error">
-                  <p>You need to be logged in to view your purchased books.</p>
-                  <Link to="/login?redirect=/my-books" className="login-button">
-                    Log In
-                  </Link>
-                </div>
-              ) : errorDetails?.status === 'NETWORK_ERROR' ? (
-                <div className="network-error">
-                  <p>{errorDetails.message}</p>
-                  <p>{errorDetails.solution}</p>
-                  <div className="error-actions">
-                    <button
-                      className="retry-button"
-                      onClick={() => setRetryCount(prev => prev + 1)}
-                    >
-                      Retry Now
-                    </button>
-                    <button
-                      className="refresh-button"
-                      onClick={() => window.location.reload()}
-                    >
-                      Refresh Page
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  className="retry-button"
-                  onClick={() => setRetryCount(prev => prev + 1)}
-                >
-                  Retry Now
-                </button>
-              )}
+              <p>Please try again or contact support if the problem persists.</p>
+              <button
+                className="retry-button"
+                onClick={() => window.location.reload()}
+              >
+                <ArrowLeft size={16} style={{ transform: 'rotate(225deg)' }} /> Retry Loading Books
+              </button>
             </div>
           ) : groupedBooks.length === 0 ? (
             <div className="empty-books">
@@ -312,6 +266,14 @@ const MyBooksPage = () => {
               </div>
               <h2>You haven't purchased any books yet</h2>
               <p>Explore our marketplace to find your next favorite read!</p>
+              <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#fff3cd', borderRadius: '8px', fontSize: '14px', border: '1px solid #ffeaa7' }}>
+                <strong>⚠️ Important Notice:</strong> Due to server limitations, EPUB files are stored temporarily in memory and get cleared when the server restarts.
+                <br/><br/>
+                <strong>📚 If you can't read your books:</strong>
+                <br/>• Upload them again using the "Add Products" page
+                <br/>• The system will work perfectly with newly uploaded books
+                <br/>• This is a temporary limitation of the current hosting setup
+              </div>
               <Link to="/books" className="browse-books-btn">
                 Browse Books
               </Link>
@@ -345,21 +307,12 @@ const MyBooksPage = () => {
                           <h3 className="book-title">{book.title}</h3>
                           <p className="book-author">by {book.author}</p>
                           <div className="book-actions">
-                            {/* Always show Read Now button, even if URL is missing */}
                             <button
                               className="read-button"
-                              onClick={() => {
-                                // Check if the URL is valid before setting it
-                                if (book.url && book.url.startsWith('http')) {
-                                  console.log(`Setting PDF URL for ${book.title}:`, book.url);
-                                  setSelectedPdf(book.url);
-                                } else {
-                                  console.log(`Using placeholder PDF for ${book.title}, original URL was:`, book.url);
-                                  setSelectedPdf('/assets/better-placeholder.pdf');
-                                }
-                              }}
+                              onClick={() => handleReadBook(book)}
                             >
-                              <FileText size={16} /> Read Now
+                             
+                              📖 Read Book
                             </button>
                           </div>
                         </div>
@@ -371,37 +324,13 @@ const MyBooksPage = () => {
             </div>
           )}
         </div>
-        {selectedPdf && (
-          <div className="pdf-viewer-overlay">
-            <div className="pdf-viewer-wrapper">
-              <div className="pdf-viewer-header">
-                <h3>Reading Book</h3>
-                <button
-                  className="close-button"
-                  onClick={() => setSelectedPdf(null)}
-                >
-                  Close
-                </button>
-              </div>
-              <div className="pdf-viewer-content">
-                <div className="pdf-viewer-container-wrapper">
-                  {/* Use a key to force remount when selectedPdf changes */}
-                  <ErrorBoundary showDetails={false}>
-                    <BasicPdfViewer
-                      key={selectedPdf}
-                      fileUrl={selectedPdf}
-                    />
-                  </ErrorBoundary>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+
 
       </div>
       <Footer />
     </>
   );
+  
 };
 
 export default MyBooksPage;

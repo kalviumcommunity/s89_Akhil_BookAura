@@ -9,6 +9,7 @@
   font-style: normal;
 }
 
+
 * {
   margin: 0;
   padding: 0;
@@ -18,7 +19,14 @@
   font-weight: 400;
   font-style: normal;
   font-variation-settings: "wdth" 100;
+
+  /* Simple Custom Cursor */
 }
+body{
+  cursor: url('https://cdnl.iconscout.com/lottie/premium/preview-watermark/mouse-cursor-animated-icon-download-in-lottie-json-gif-static-svg-file-formats--click-pointer-pin-pack-maps-and-navigation-icons-9505940.mp4') 10,10 auto;
+}
+
+
 
 html {
   font-size: 16px;
